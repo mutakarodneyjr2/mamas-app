@@ -1,0 +1,6 @@
+{
+  "name": "MAMAS Alumni Association Portal",
+  "description": "Web portal for MAMAS Old Students Association managing welfare, contributions, campaigns, and membership.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

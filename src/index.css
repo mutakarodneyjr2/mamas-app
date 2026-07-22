@@ -1,0 +1,30 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --color-mamas-primary: #0A2540;
+  --color-mamas-primary-hover: #113459;
+  --color-mamas-accent: #C9A227;
+  --color-mamas-accent-hover: #D6AF2E;
+  --color-mamas-bg: #F7F9FC;
+  --color-mamas-card: #FFFFFF;
+  --color-mamas-text: #1E293B;
+  --color-mamas-text-muted: #64748B;
+  --color-mamas-success: #0F766E;
+  --color-mamas-warning: #D97706;
+  --color-mamas-danger: #B91C1C;
+}
+
+body {
+  background-color: var(--color-mamas-bg);
+  color: var(--color-mamas-text);
+  font-family: var(--font-sans);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+}

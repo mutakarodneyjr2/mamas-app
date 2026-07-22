@@ -1,0 +1,105 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+    
+    function isSuperAdmin() {
+      return getUserRole() == 'super_admin';
+    }
+    
+    function hasRole(allowedRoles) {
+      return getUserRole() in allowedRoles;
+    }
+
+    // =========================================
+    // 1. Users Collection
+    // Read: All authenticated members (for Directory and profile checks)
+    // Create: Users on registration
+    // Update: User can update own profile (excluding role); Super Admin can change roles/status
+    // =========================================
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      allow update: if isSuperAdmin() || (request.auth.uid == userId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']));
+      allow delete: if isSuperAdmin();
+    }
+
+    // =========================================
+    // 2. Contributions Collection
+    // Read: Authenticated members can view contribution records
+    // Create: Authenticated members can log their own contributions
+    // Update: Super Admin, Chairperson, Treasurer can verify/update status
+    // Delete: Strictly disabled (financial audit trail integrity)
+    // =========================================
+    match /contributions/{contributionId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if hasRole(['super_admin', 'chairperson', 'treasurer']);
+      allow delete: if false;
+    }
+
+    // =========================================
+    // 3. Welfare Requests Collection
+    // Read: Authenticated members can view requests
+    // Create: Authenticated members can submit requests
+    // Update: Executive Committee (Super Admin, Chairperson, Secretary, Treasurer)
+    // Delete: Strictly disabled
+    // =========================================
+    match /welfareRequests/{requestId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if hasRole(['super_admin', 'chairperson', 'secretary', 'treasurer']);
+      allow delete: if false;
+    }
+
+    // =========================================
+    // 4. School Campaigns Collection
+    // Read: All approved members can view active & past school campaigns
+    // Write: Super Admin and Chairperson can create/edit campaigns
+    // =========================================
+    match /schoolCampaigns/{campaignId} {
+      allow read: if isAuthenticated();
+      allow write: if hasRole(['super_admin', 'chairperson']);
+    }
+
+    // =========================================
+    // 5. Notices Collection
+    // Read: All approved members can read announcements
+    // Write: Super Admin, Chairperson, Secretary
+    // =========================================
+    match /notices/{noticeId} {
+      allow read: if isAuthenticated();
+      allow write: if hasRole(['super_admin', 'chairperson', 'secretary']);
+    }
+
+    // =========================================
+    // 6. Activity Logs Collection
+    // Read: Super Admin, Chairperson, Auditor
+    // Create: System logs created on user actions
+    // Delete/Update: Immutable append-only audit trail
+    // =========================================
+    match /activityLogs/{logId} {
+      allow read: if hasRole(['super_admin', 'chairperson', 'auditor']);
+      allow create: if isAuthenticated();
+      allow update, delete: if false;
+    }
+
+    // =========================================
+    // 7. App Settings Collection
+    // Read: All authenticated users
+    // Write: Super Admin, Chairperson, Vice Chairperson, Treasurer
+    // =========================================
+    match /appSettings/{document=**} {
+      allow read: if isAuthenticated();
+      allow write: if hasRole(['super_admin', 'chairperson', 'vice_chairperson', 'treasurer']);
+    }
+  }
+}
