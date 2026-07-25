@@ -35,6 +35,10 @@ export default function AdminUsers() {
       usersData.sort((a, b) => a.fullName.localeCompare(b.fullName));
       setUsers(usersData);
       setLoading(false);
+    }, (error) => {
+      console.error("Error loading users:", error);
+      setErrorMsg("Failed to load users. Please check your permissions or try again.");
+      setLoading(false);
     });
 
     return () => unsubscribe();

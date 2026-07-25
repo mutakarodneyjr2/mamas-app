@@ -68,6 +68,10 @@ export default function AdminContributions() {
       }
       setContributions(data);
       setLoading(false);
+    }, (error) => {
+      console.error("Error loading contributions:", error);
+      setErrorMsg("Failed to load contributions. Please check your permissions or try again.");
+      setLoading(false);
     });
 
     return () => unsubscribe();

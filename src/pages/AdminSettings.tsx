@@ -135,8 +135,9 @@ export default function AdminSettings() {
   };
 
   const toggleApprover = async (uid: string) => {
-    const isCurrentlyApprover = settings.welfareApprovers.includes(uid);
-    let newApprovers = [...settings.welfareApprovers];
+    const approvers = settings?.welfareApprovers || [];
+    const isCurrentlyApprover = approvers.includes(uid);
+    let newApprovers = [...approvers];
     
     if (isCurrentlyApprover) {
       newApprovers = newApprovers.filter(id => id !== uid);
@@ -487,7 +488,7 @@ export default function AdminSettings() {
             
             <div className="space-y-2.5 max-h-60 overflow-y-auto pr-1">
               {committeeMembers.map(member => {
-                const isApprover = settings.welfareApprovers.includes(member.uid);
+                const isApprover = (settings?.welfareApprovers || []).includes(member.uid);
                 return (
                   <div key={member.uid} className={`flex items-center justify-between p-3 rounded-2xl border transition-colors ${isApprover ? 'bg-teal-50/70 border-teal-200' : 'bg-slate-50 border-slate-200'}`}>
                     <div>

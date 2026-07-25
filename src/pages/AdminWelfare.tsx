@@ -32,10 +32,12 @@ export default function AdminWelfare() {
   const [payAmount, setPayAmount] = useState<Record<string, string>>({});
 
   useEffect(() => {
+    if (!currentUser) return;
     const fetchSettings = async () => {
       const docSnap = await getDoc(doc(db, 'appSettings', 'main'));
       if (docSnap.exists()) {
-        setSettings({ id: 'main', ...docSnap.data() } as AppSettings);
+        const data = docSnap.data();
+        setSettings({ id: 'main', welfareCategories: [], allowedRelationships: [], maxAmounts: {}, ...data, welfareApprovers: data.welfareApprovers || [] } as AppSettings);
       }
     };
     fetchSettings();
@@ -66,16 +68,20 @@ export default function AdminWelfare() {
 
       setRequests(data);
       setLoading(false);
+    }, (error) => {
+      console.error("Error loading welfare requests:", error);
+      setErrorMsg("Failed to load welfare requests. Please check your permissions or try again.");
+      setLoading(false);
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [currentUser]);
 
   if (!currentUser || !userProfile) return null;
   if (loading && !settings) return <div className="p-8 text-center text-mamas-text-muted">Loading welfare review...</div>;
   const activeSettings = settings || { welfareApprovers: [], allowedRelationships: [], welfareCategories: [] };
 
-  const isApprover = activeSettings.welfareApprovers.includes(currentUser.uid) && !isAuditor;
+  const isApprover = (activeSettings.welfareApprovers || []).includes(currentUser.uid) && !isAuditor;
   const isSuperAdmin = userProfile.role === 'super_admin';
   const isTreasurer = userProfile.role === 'treasurer';
   const isChairperson = userProfile.role === 'chairperson';

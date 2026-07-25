@@ -52,6 +52,7 @@ export default function MoneyOut() {
   };
 
   useEffect(() => {
+    if (!currentUser) return;
     const q = query(collection(db, 'moneyOut'), orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data: MoneyOutRecord[] = [];
@@ -81,10 +82,14 @@ export default function MoneyOut() {
       });
 
       setLoading(false);
+    }, (error) => {
+      console.error("Error loading money out records:", error);
+      setErrorMsg("Failed to load transactions. Please check your permissions or try again.");
+      setLoading(false);
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [currentUser]);
 
   if (loading) {
     return (

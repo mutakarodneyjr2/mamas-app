@@ -41,11 +41,13 @@ export default function Expenses() {
   const canCreateExpense = userProfile && ['super_admin', 'chairperson', 'vice_chairperson', 'treasurer', 'secretary'].includes(userProfile.role);
 
   useEffect(() => {
+    if (!currentUser) return;
     const fetchSettingsAndCampaigns = async () => {
       try {
         const sDoc = await getDoc(doc(db, 'appSettings', 'main'));
         if (sDoc.exists()) {
-          setSettings({ id: 'main', ...sDoc.data() } as AppSettings);
+          const sData = sDoc.data();
+          setSettings({ id: 'main', welfareCategories: [], allowedRelationships: [], maxAmounts: {}, ...sData, welfareApprovers: sData.welfareApprovers || [] } as AppSettings);
         }
         const campSnap = await getDocs(collection(db, 'schoolCampaigns'));
         const camps = campSnap.docs.map(d => ({ id: d.id, ...d.data() } as SchoolCampaign));
@@ -84,15 +86,19 @@ export default function Expenses() {
       });
 
       setLoading(false);
+    }, (error) => {
+      console.error("Error loading expenses:", error);
+      setErrorMsg("Failed to load expenses. Please check your permissions or try again.");
+      setLoading(false);
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [currentUser]);
 
   if (!currentUser || !userProfile) return null;
 
   const activeSettings = settings || { welfareApprovers: [] };
-  const isApprover = activeSettings.welfareApprovers.includes(currentUser.uid);
+  const isApprover = (activeSettings.welfareApprovers || []).includes(currentUser.uid);
   const isTreasurer = userProfile.role === 'treasurer' || userProfile.role === 'super_admin';
 
   const handleCreateSubmit = async (e: React.FormEvent) => {

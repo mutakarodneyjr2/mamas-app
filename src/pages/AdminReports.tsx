@@ -217,10 +217,10 @@ export default function AdminReports() {
             <p className="text-xs text-slate-400 italic text-center py-6">No campaigns found.</p>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {campaigns.map(camp => {
+              {campaigns.map((camp, index) => {
                 const progress = camp.targetAmount > 0 ? (camp.raisedAmount / camp.targetAmount) * 100 : 0;
                 return (
-                  <div key={camp.id} className="bg-slate-50/70 border border-slate-200/80 rounded-xl p-4 flex flex-col justify-between gap-3">
+                  <div key={camp.id || index} className="bg-slate-50/70 border border-slate-200/80 rounded-xl p-4 flex flex-col justify-between gap-3">
                     <div>
                       <div className="flex items-center justify-between gap-2 mb-1.5">
                         <span className={`px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider rounded-md border ${

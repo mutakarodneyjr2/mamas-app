@@ -73,7 +73,7 @@ service cloud.firestore {
     match /welfareRequests/{requestId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid && request.resource.data.recipientPhoneNumber is string;
-      allow update: if (hasRole(['super_admin', 'chairperson', 'secretary', 'treasurer']) || (isAuthenticated() && resource.data.userId == request.auth.uid && resource.data.status == 'pending')) && notUpdatingRelworxFields();
+      allow update: if (hasRole(['super_admin', 'chairperson', 'vice_chairperson', 'secretary', 'treasurer']) || (isAuthenticated() && resource.data.userId == request.auth.uid && resource.data.status == 'pending')) && notUpdatingRelworxFields();
       allow delete: if false;
     }
 
@@ -83,7 +83,16 @@ service cloud.firestore {
     match /expenses/{expenseId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() && hasRole(['super_admin', 'chairperson', 'vice_chairperson', 'treasurer', 'secretary']) && request.resource.data.userId == request.auth.uid && request.resource.data.recipientPhoneNumber is string;
-      allow update: if (hasRole(['super_admin', 'chairperson', 'secretary', 'treasurer']) || (isAuthenticated() && resource.data.userId == request.auth.uid && resource.data.status == 'pending')) && notUpdatingRelworxFields();
+      allow update: if (hasRole(['super_admin', 'chairperson', 'vice_chairperson', 'secretary', 'treasurer']) || (isAuthenticated() && resource.data.userId == request.auth.uid && resource.data.status == 'pending')) && notUpdatingRelworxFields();
+      allow delete: if false;
+    }
+
+    // =========================================
+    // Money Out Collection
+    // =========================================
+    match /moneyOut/{recordId} {
+      allow read: if isAuthenticated();
+      allow create, update: if hasRole(['super_admin', 'chairperson', 'vice_chairperson', 'treasurer', 'secretary']);
       allow delete: if false;
     }
 

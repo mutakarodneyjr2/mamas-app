@@ -78,6 +78,9 @@ export default function AdminDashboard() {
       setTotalMembers(approvedCount);
       setPendingApprovals(pendingCount);
       setMemberActivityStats({ active: activeContrib, inactive: inactiveContrib, pending: pendingCount });
+    }, (err) => {
+      console.error("Error loading users stats:", err);
+      setLoading(false);
     });
 
     // 2. Welfare Requests stats
@@ -96,6 +99,9 @@ export default function AdminDashboard() {
       setPendingWelfareRequests(pendingReq);
       setPendingPayouts(pendingPay);
       setTotalPaidOut(paidSum);
+    }, (err) => {
+      console.error("Error loading welfare stats:", err);
+      setLoading(false);
     });
 
     // 3. Contributions stats & 6-month trend
@@ -135,17 +141,24 @@ export default function AdminDashboard() {
 
       // We'll calculate net welfare balance dynamically as welfareCollected - totalPaidOut
       setWelfareBalance(welfareCollected);
+    }, (err) => {
+      console.error("Error loading contribution stats:", err);
+      setLoading(false);
     });
 
     // 4. Active Campaigns count
     const qCampaigns = query(collection(db, 'schoolCampaigns'), where('status', '==', 'active'));
     const unsubCampaigns = onSnapshot(qCampaigns, (snap) => {
       setActiveCampaigns(snap.size);
+    }, (err) => {
+      console.error("Error loading campaigns stats:", err);
     });
 
     // 5. Notices count
     const unsubNotices = onSnapshot(collection(db, 'notices'), (snap) => {
       setRecentNoticesCount(snap.size);
+    }, (err) => {
+      console.error("Error loading notices count:", err);
     });
 
     // 6. Recent Activity Logs
@@ -156,6 +169,9 @@ export default function AdminDashboard() {
         logs.push({ id: d.id, ...d.data() } as ActivityLog);
       });
       setRecentActivities(logs);
+      setLoading(false);
+    }, (err) => {
+      console.error("Error loading activity logs:", err);
       setLoading(false);
     });
 
