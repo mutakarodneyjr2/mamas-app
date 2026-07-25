@@ -7,6 +7,14 @@ import { getFirestore, collection, getDocs, getDoc, query, where, doc, updateDoc
 import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
 import { Resend } from "resend";
 import crypto from "crypto";
+import {
+  initiateCollection,
+  initiateDisbursement,
+  verifyWebhookSignature,
+  handleCollectionWebhook,
+  handleDisbursementWebhook
+} from "./src/server/relworxService";
+
 
 const firebaseConfig = {
   apiKey: "AIzaSyDkZQ-sp3W8qwCXfadZRsGbEnUezQlInFs",
@@ -261,6 +269,82 @@ async function startServer() {
     } catch (error) {
       console.error("Error fetching directory:", error);
       res.status(500).json({ error: "Failed to fetch directory" });
+    }
+  });
+
+  // =========================================
+  // RELWORX WEBHOOKS & API
+  // =========================================
+  
+  app.post("/api/relworx/initiate-collection", async (req, res) => {
+    try {
+      // In a real app, you would also verify the user's authentication token here
+      const { amount, phoneNumber, network, userId, metadata } = req.body;
+      
+      if (!amount || !phoneNumber || !userId) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      const result = await initiateCollection(amount, phoneNumber, network, userId, metadata);
+      res.json(result);
+    } catch (error: any) {
+      console.error("Error initiating collection:", error);
+      res.status(500).json({ error: error.message || "Failed to initiate collection" });
+    }
+  });
+
+  app.post("/api/relworx/initiate-disbursement", async (req, res) => {
+    try {
+      // In a real app, verify authentication token and admin roles here
+      const { amount, phoneNumber, network, reference, metadata } = req.body;
+      
+      if (!amount || !phoneNumber || !reference) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      const result = await initiateDisbursement(amount, phoneNumber, network, reference, metadata);
+      res.json(result);
+    } catch (error: any) {
+      console.error("Error initiating disbursement:", error);
+      res.status(500).json({ error: error.message || "Failed to initiate disbursement" });
+    }
+  });
+
+  app.post("/api/relworx/collection-webhook", async (req, res) => {
+    try {
+      const signature = req.headers['x-signature'] as string;
+      const payloadString = JSON.stringify(req.body);
+      const secret = process.env.RELWORX_WEBHOOK_SECRET || '';
+
+      if (secret && !verifyWebhookSignature(signature, payloadString, secret)) {
+        console.warn("Invalid webhook signature for collection");
+        return res.status(401).json({ error: "Invalid signature" });
+      }
+
+      await handleCollectionWebhook(req.body);
+      res.status(200).send("OK");
+    } catch (error: any) {
+      console.error("Error handling collection webhook:", error);
+      res.status(500).send("Internal Server Error");
+    }
+  });
+
+  app.post("/api/relworx/disbursement-webhook", async (req, res) => {
+    try {
+      const signature = req.headers['x-signature'] as string;
+      const payloadString = JSON.stringify(req.body);
+      const secret = process.env.RELWORX_WEBHOOK_SECRET || '';
+
+      if (secret && !verifyWebhookSignature(signature, payloadString, secret)) {
+        console.warn("Invalid webhook signature for disbursement");
+        return res.status(401).json({ error: "Invalid signature" });
+      }
+
+      await handleDisbursementWebhook(req.body);
+      res.status(200).send("OK");
+    } catch (error: any) {
+      console.error("Error handling disbursement webhook:", error);
+      res.status(500).send("Internal Server Error");
     }
   });
 

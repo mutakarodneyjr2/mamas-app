@@ -19,6 +19,23 @@ service cloud.firestore {
       return getUserRole() in allowedRoles;
     }
 
+    function notUpdatingRelworxFields() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+        'paymentStatus', 'gatewayResponse', 'relworxTransactionId', 'relworxReference', 
+        'paidAt', 'relworxDisbursementId', 'disbursementStatus'
+      ]);
+    }
+
+    // =========================================
+    // Transactions Collection (Relworx integration)
+    // Read: Admins
+    // Write: Cloud Functions only (so no client writes)
+    // =========================================
+    match /transactions/{transactionId} {
+      allow read: if hasRole(['super_admin', 'treasurer', 'chairperson', 'secretary', 'auditor']);
+      allow write: if false; 
+    }
+
     // =========================================
     // 1. Users Collection
     // Read: All authenticated members (for Directory and profile checks)
@@ -42,7 +59,7 @@ service cloud.firestore {
     match /contributions/{contributionId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      allow update: if hasRole(['super_admin', 'chairperson', 'treasurer']);
+      allow update: if hasRole(['super_admin', 'chairperson', 'treasurer']) && notUpdatingRelworxFields();
       allow delete: if false;
     }
 
@@ -55,8 +72,18 @@ service cloud.firestore {
     // =========================================
     match /welfareRequests/{requestId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      allow update: if hasRole(['super_admin', 'chairperson', 'secretary', 'treasurer']);
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid && request.resource.data.recipientPhoneNumber is string;
+      allow update: if (hasRole(['super_admin', 'chairperson', 'secretary', 'treasurer']) || (isAuthenticated() && resource.data.userId == request.auth.uid && resource.data.status == 'pending')) && notUpdatingRelworxFields();
+      allow delete: if false;
+    }
+
+    // =========================================
+    // Expenses Collection
+    // =========================================
+    match /expenses/{expenseId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && hasRole(['super_admin', 'chairperson', 'vice_chairperson', 'treasurer', 'secretary']) && request.resource.data.userId == request.auth.uid && request.resource.data.recipientPhoneNumber is string;
+      allow update: if (hasRole(['super_admin', 'chairperson', 'secretary', 'treasurer']) || (isAuthenticated() && resource.data.userId == request.auth.uid && resource.data.status == 'pending')) && notUpdatingRelworxFields();
       allow delete: if false;
     }
 
@@ -94,12 +121,55 @@ service cloud.firestore {
 
     // =========================================
     // 7. App Settings Collection
-    // Read: All authenticated users
+    // Read: All users (even unauthenticated for login support contacts & banners)
     // Write: Super Admin, Chairperson, Vice Chairperson, Treasurer
     // =========================================
     match /appSettings/{document=**} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow write: if hasRole(['super_admin', 'chairperson', 'vice_chairperson', 'treasurer']);
+    }
+    // =========================================
+    // 8. Banners Collection
+    // Read: All users (even unauthenticated, for the landing page)
+    // Write: Super Admin
+    // =========================================
+    match /banners/{document=**} {
+      allow read: if true;
+      allow write: if isSuperAdmin();
+    }
+
+    // =========================================
+    // 9. Notifications Collection
+    // Read: User can read notifications targeted to them or broadcast ("ALL_APPROVED")
+    // Create: Authenticated users/admins can create notification logs
+    // Update: Authenticated users can update notification status (mark as read)
+    // =========================================
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || resource.data.userId == 'ALL_APPROVED');
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid || resource.data.userId == 'ALL_APPROVED');
+      allow delete: if isSuperAdmin();
+    }
+
+    // =========================================
+    // 10. Help Articles Collection
+    // Read: Public (published articles viewable by all)
+    // Write: Admins / Executives
+    // =========================================
+    match /helpArticles/{articleId} {
+      allow read: if true;
+      allow write: if hasRole(['super_admin', 'chairperson', 'vice_chairperson', 'secretary']);
+    }
+
+    // =========================================
+    // 11. Support Tickets Collection
+    // Create: Anyone (members or applicants needing help)
+    // Read/Update: Super Admin, Chairperson, Secretary, Vice Chairperson
+    // =========================================
+    match /supportTickets/{ticketId} {
+      allow create: if true;
+      allow read, update, delete: if hasRole(['super_admin', 'chairperson', 'vice_chairperson', 'secretary']);
     }
   }
 }
+

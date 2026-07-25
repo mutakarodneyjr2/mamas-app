@@ -27,12 +27,16 @@ export default function Directory() {
     fetchMembers();
   }, []);
 
-  const years = Array.from(new Set(members.map(m => m.yearLeftSchool))).sort((a, b) => String(b).localeCompare(String(a)));
-  const districts = Array.from(new Set(members.map(m => m.district))).sort();
+  const safeMembers = Array.isArray(members) ? members : [];
+  const years = Array.from(new Set(safeMembers.map(m => m?.yearLeftSchool).filter(Boolean))).sort((a, b) => String(b).localeCompare(String(a)));
+  const districts = Array.from(new Set(safeMembers.map(m => m?.district).filter(Boolean))).sort();
 
-  const filteredMembers = members.filter(m => {
-    const matchesSearch = m.fullName.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesYear = yearFilter ? m.yearLeftSchool === yearFilter : true;
+  const filteredMembers = safeMembers.filter(m => {
+    if (!m) return false;
+    const s = String(searchTerm || '').toLowerCase();
+    const fullName = String(m.fullName || '').toLowerCase();
+    const matchesSearch = fullName.includes(s);
+    const matchesYear = yearFilter ? String(m.yearLeftSchool || '') === yearFilter : true;
     const matchesDistrict = districtFilter ? m.district === districtFilter : true;
     return matchesSearch && matchesYear && matchesDistrict;
   });

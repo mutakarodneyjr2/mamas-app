@@ -8,6 +8,7 @@ import { Megaphone, Pin, Trash2, Shield } from 'lucide-react';
 
 export default function AdminNotices() {
   const { currentUser, userProfile } = useAuth();
+  const canPost = ["super_admin", "chairperson", "vice_chairperson", "secretary"].includes(userProfile?.role || "");
   const [notices, setNotices] = useState<Notice[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -16,6 +17,7 @@ export default function AdminNotices() {
   const [isPinned, setIsPinned] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
 
   useEffect(() => {
     const q = query(collection(db, 'notices'), orderBy('createdAt', 'desc'));
@@ -52,8 +54,11 @@ export default function AdminNotices() {
       setTitle('');
       setBody('');
       setIsPinned(false);
+      setSuccessMsg("Notice posted successfully.");
+      setTimeout(() => setSuccessMsg(''), 3000);
     } catch (err: any) {
       setError(err.message || 'Failed to post notice.');
+      setTimeout(() => setError(''), 5000);
     } finally {
       setIsSubmitting(false);
     }
@@ -61,31 +66,39 @@ export default function AdminNotices() {
 
   const handleDelete = async (id: string) => {
     if (window.confirm("Are you sure you want to delete this notice?")) {
+      setError(''); setSuccessMsg('');
       try {
         await deleteDoc(doc(db, 'notices', id));
+        setSuccessMsg("Notice deleted.");
+        setTimeout(() => setSuccessMsg(''), 3000);
       } catch (err) {
-        alert('Failed to delete notice.');
+        setError('Failed to delete notice.');
+        setTimeout(() => setError(''), 5000);
       }
     }
   };
 
   const togglePin = async (notice: Notice) => {
+    setError(''); setSuccessMsg('');
     try {
       await setDoc(doc(db, 'notices', notice.id), { ...notice, isPinned: !notice.isPinned });
+      setSuccessMsg(notice.isPinned ? "Notice unpinned." : "Notice pinned.");
+      setTimeout(() => setSuccessMsg(''), 3000);
     } catch (err) {
-      alert('Failed to update notice.');
+      setError('Failed to update notice.');
+      setTimeout(() => setError(''), 5000);
     }
   };
 
   if (!currentUser || !userProfile) return null;
 
-  const allowedRoles = ['super_admin', 'chairperson', 'secretary'];
+  const allowedRoles = ['super_admin', 'chairperson', 'vice_chairperson', 'secretary'];
   if (!allowedRoles.includes(userProfile.role)) {
     return (
       <div className="flex flex-col items-center justify-center p-12 text-center">
         <Shield className="w-16 h-16 text-slate-300 mb-4" />
         <h2 className="text-xl font-bold text-mamas-text">Access Denied</h2>
-        <p className="text-mamas-text-muted mt-2">Only Super Admin, Chairperson, or Secretary can post notices.</p>
+        <p className="text-mamas-text-muted mt-2">Only authorized executive roles can post notices.</p>
       </div>
     );
   }
@@ -98,6 +111,12 @@ export default function AdminNotices() {
         </h2>
         <p className="text-mamas-text-muted text-sm mt-1">Broadcast messages to all association members.</p>
       </div>
+
+      {successMsg && (
+        <div className="bg-teal-50 border border-teal-200 text-teal-800 p-4 rounded-2xl text-sm font-medium animate-in fade-in">
+          {successMsg}
+        </div>
+      )}
 
       <div className="bg-mamas-card rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
         <div className="px-6 md:px-8 py-5 border-b border-slate-100 bg-slate-50/50">
@@ -188,7 +207,6 @@ export default function AdminNotices() {
                   </p>
                   <p className="text-slate-700 whitespace-pre-wrap text-sm leading-relaxed">{notice.body}</p>
                 </div>
-                
                 <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-end gap-3 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                   <button 
                     onClick={() => togglePin(notice)}

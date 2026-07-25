@@ -4,6 +4,7 @@ import { db } from '../firebase';
 import { SchoolCampaign } from '../types';
 import { Link } from 'react-router-dom';
 import { formatUGX } from '../lib/utils';
+import { Target } from 'lucide-react';
 
 export default function Campaigns() {
   const [campaigns, setCampaigns] = useState<SchoolCampaign[]>([]);
@@ -37,8 +38,14 @@ export default function Campaigns() {
       </div>
 
       {campaigns.length === 0 ? (
-        <div className="bg-mamas-card rounded-lg shadow-sm border border-slate-200 p-12 text-center text-mamas-text-muted">
-          No active school campaigns at the moment.
+        <div className="bg-mamas-card rounded-3xl shadow-sm border border-slate-100 p-16 flex flex-col items-center justify-center text-center">
+          <div className="w-16 h-16 bg-mamas-primary/10 text-mamas-primary rounded-full flex items-center justify-center mb-4">
+            <Target className="w-8 h-8" />
+          </div>
+          <h3 className="text-xl font-bold text-mamas-text mb-2">No Active Campaigns</h3>
+          <p className="text-slate-500 max-w-md mx-auto text-sm">
+            There are no ongoing school support campaigns at this time. Check back later for new initiatives to support our alma mater.
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -49,6 +56,11 @@ export default function Campaigns() {
 
             return (
               <div key={campaign.id} className="bg-mamas-card rounded-lg shadow-sm border border-slate-200 overflow-hidden flex flex-col">
+                {campaign.imageUrls && campaign.imageUrls.length > 0 && (
+                  <div className="w-full h-48 bg-slate-100">
+                    <img src={campaign.imageUrls[0]} alt={campaign.title} className="w-full h-full object-cover" />
+                  </div>
+                )}
                 <div className="p-6 flex-1">
                   <div className="flex justify-between items-start mb-2">
                     <h3 className="text-xl font-bold text-mamas-text">{campaign.title}</h3>

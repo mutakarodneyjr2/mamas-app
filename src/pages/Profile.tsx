@@ -4,7 +4,9 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { db, storage } from '../firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Link } from 'react-router-dom';
-import { User, Camera, Shield, FileText, CheckCircle2, AlertCircle, Upload } from 'lucide-react';
+import { User, Camera, Shield, FileText, CheckCircle2, AlertCircle, Upload, HelpCircle, SunMedium, Sparkles } from 'lucide-react';
+import { ThemeToggle } from '../components/ThemeToggle';
+import { OnboardingTour } from '../components/OnboardingTour';
 
 const compressImageToBlob = async (file: File, maxWidth = 500, maxHeight = 500, quality = 0.8): Promise<Blob> => {
   return new Promise((resolve, reject) => {
@@ -69,6 +71,7 @@ export default function Profile() {
   const [loading, setLoading] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [error, setError] = useState('');
+  const [showTour, setShowTour] = useState(false);
 
   useEffect(() => {
     if (userProfile) {
@@ -229,7 +232,7 @@ export default function Profile() {
                     name="email" 
                     value={formData.email} 
                     onChange={handleChange} 
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:bg-white focus:ring-2 focus:ring-mamas-accent outline-none text-mamas-text font-semibold" 
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-mamas-accent outline-none text-mamas-text font-semibold" 
                   />
                 </div>
                 <div>
@@ -239,7 +242,7 @@ export default function Profile() {
                     name="occupation" 
                     value={formData.occupation} 
                     onChange={handleChange} 
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:bg-white focus:ring-2 focus:ring-mamas-accent outline-none text-mamas-text font-semibold" 
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-mamas-accent outline-none text-mamas-text font-semibold" 
                   />
                 </div>
                 <div>
@@ -249,7 +252,7 @@ export default function Profile() {
                     name="district" 
                     value={formData.district} 
                     onChange={handleChange} 
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:bg-white focus:ring-2 focus:ring-mamas-accent outline-none text-mamas-text font-semibold" 
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-mamas-accent outline-none text-mamas-text font-semibold" 
                   />
                 </div>
                 <div>
@@ -259,7 +262,7 @@ export default function Profile() {
                     name="placeOfResidence" 
                     value={formData.placeOfResidence} 
                     onChange={handleChange} 
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:bg-white focus:ring-2 focus:ring-mamas-accent outline-none text-mamas-text font-semibold" 
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-mamas-accent outline-none text-mamas-text font-semibold" 
                   />
                 </div>
               </div>
@@ -277,7 +280,7 @@ export default function Profile() {
                     required 
                     value={formData.nextOfKinName} 
                     onChange={handleChange} 
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:bg-white focus:ring-2 focus:ring-mamas-accent outline-none text-mamas-text font-semibold" 
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-mamas-accent outline-none text-mamas-text font-semibold" 
                   />
                 </div>
                 <div>
@@ -288,7 +291,7 @@ export default function Profile() {
                     required 
                     value={formData.nextOfKinPhone} 
                     onChange={handleChange} 
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:bg-white focus:ring-2 focus:ring-mamas-accent outline-none text-mamas-text font-semibold" 
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-mamas-accent outline-none text-mamas-text font-semibold" 
                   />
                 </div>
               </div>
@@ -297,28 +300,70 @@ export default function Profile() {
             {/* Privacy Settings */}
             <div className="pt-2">
               <h3 className="text-base font-bold text-mamas-text mb-4">Directory Privacy</h3>
-              <div className="space-y-4 bg-slate-50 p-5 rounded-2xl border border-slate-200/80">
+              <div className="space-y-4 bg-slate-50 dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-700">
                 <label className="flex items-center justify-between cursor-pointer">
                   <div>
                     <p className="font-bold text-sm text-mamas-text">Show Phone Number in Directory</p>
-                    <p className="text-xs text-slate-500 mt-0.5">Allow other approved alumni members to view your phone number.</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Allow other approved alumni members to view your phone number.</p>
                   </div>
                   <div className="relative">
                     <input type="checkbox" name="showPhone" checked={formData.showPhone} onChange={handleChange} className="sr-only peer" />
-                    <div className="w-11 h-6 bg-slate-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-mamas-primary"></div>
+                    <div className="w-11 h-6 bg-slate-200 dark:bg-slate-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-mamas-primary"></div>
                   </div>
                 </label>
-                <div className="h-px w-full bg-slate-200"></div>
+                <div className="h-px w-full bg-slate-200 dark:bg-slate-700"></div>
                 <label className="flex items-center justify-between cursor-pointer">
                   <div>
                     <p className="font-bold text-sm text-mamas-text">Show Email Address in Directory</p>
-                    <p className="text-xs text-slate-500 mt-0.5">Allow other approved alumni members to view your email address.</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Allow other approved alumni members to view your email address.</p>
                   </div>
                   <div className="relative">
                     <input type="checkbox" name="showEmail" checked={formData.showEmail} onChange={handleChange} className="sr-only peer" />
-                    <div className="w-11 h-6 bg-slate-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-mamas-primary"></div>
+                    <div className="w-11 h-6 bg-slate-200 dark:bg-slate-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-mamas-primary"></div>
                   </div>
                 </label>
+              </div>
+            </div>
+
+            {/* Appearance / Theme Preference */}
+            <div className="pt-2">
+              <h3 className="text-base font-bold text-mamas-text mb-4 flex items-center gap-2">
+                <SunMedium className="w-5 h-5 text-mamas-accent" /> Appearance & Theme
+              </h3>
+              <div className="bg-slate-50 dark:bg-slate-800/50 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 space-y-3">
+                <div>
+                  <p className="font-bold text-sm text-mamas-text">Interface Theme Preference</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Choose between Light, Dark, or System theme across all MAMAS screens.</p>
+                </div>
+                <div className="pt-2 max-w-sm">
+                  <ThemeToggle />
+                </div>
+              </div>
+            </div>
+
+            {/* App Onboarding Tour */}
+            <div className="pt-2">
+              <h3 className="text-base font-bold text-mamas-text mb-4 flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-teal-600" /> App Guidance & Onboarding
+              </h3>
+              <div className="bg-slate-50 dark:bg-slate-800/50 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                  <p className="font-bold text-sm text-mamas-text">App Onboarding Tour</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Review how to make contributions, apply for welfare, view statements, and manage privacy settings.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await updateDoc(doc(db, 'users', currentUser.uid), {
+                      hasCompletedOnboarding: false,
+                      updatedAt: Date.now()
+                    });
+                    setShowTour(true);
+                  }}
+                  className="bg-white dark:bg-slate-700 hover:bg-slate-100 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600 font-bold py-2.5 px-4 rounded-xl text-xs transition-all shadow-sm flex items-center gap-1.5 whitespace-nowrap"
+                >
+                  <HelpCircle className="w-4 h-4 text-mamas-primary" /> Restart Tour
+                </button>
               </div>
             </div>
           </div>
@@ -335,8 +380,16 @@ export default function Profile() {
         </form>
       </div>
 
+      {showTour && (
+        <OnboardingTour userProfile={userProfile} onComplete={() => setShowTour(false)} />
+      )}
+
       <div className="text-center pt-4 pb-8 text-sm text-slate-500">
-        <div className="flex justify-center gap-4">
+        <div className="flex justify-center items-center gap-4">
+          <Link to="/help" className="font-bold text-mamas-primary hover:underline flex items-center gap-1">
+            <HelpCircle className="w-4 h-4" /> Help Center & Support
+          </Link>
+          <span>&middot;</span>
           <Link to="/terms" className="hover:text-mamas-primary transition-colors">Terms of Service</Link>
           <span>&middot;</span>
           <Link to="/privacy" className="hover:text-mamas-primary transition-colors">Privacy Policy</Link>

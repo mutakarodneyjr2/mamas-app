@@ -3,6 +3,7 @@ import { User as FirebaseUser, RecaptchaVerifier, signInWithPhoneNumber, Confirm
 import { auth, db } from "../firebase";
 import { User as UserProfile } from "../types";
 import { doc, onSnapshot } from "firebase/firestore";
+import { registerFCMToken } from "../lib/fcmService";
 
 interface AuthContextType {
   currentUser: FirebaseUser | null;
@@ -28,6 +29,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
       if (user) {
+        // Register FCM token for user
+        registerFCMToken(user.uid).catch((err) =>
+          console.error("Failed to register FCM token:", err)
+        );
+
         // Listen to profile changes
         const unsubscribeProfile = onSnapshot(doc(db, "users", user.uid), (doc) => {
           if (doc.exists()) {

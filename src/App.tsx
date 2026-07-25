@@ -6,19 +6,26 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Outlet, Navigate, Link, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import { Logo } from './components/Logo';
+import { NotificationBell } from './components/NotificationBell';
+import { OnboardingTour } from './components/OnboardingTour';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Landing from './pages/Landing';
 import AdminUsers from './pages/AdminUsers';
 import AdminRoles from './pages/AdminRoles';
 import SetupSuperAdmin from './pages/SetupSuperAdmin';
+import MoneyOut from './pages/MoneyOut';
 
 function Layout() {
   const { logout, userProfile } = useAuth();
   
   return (
     <div className="min-h-screen bg-mamas-bg flex flex-col font-sans">
+      {userProfile && userProfile.status === 'approved' && userProfile.hasCompletedOnboarding !== true && (
+        <OnboardingTour userProfile={userProfile} onComplete={() => {}} />
+      )}
       <header className="bg-mamas-primary border-b border-mamas-primary-hover sticky top-0 z-10 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-8">
@@ -30,12 +37,15 @@ function Layout() {
                 <Link to="/dashboard" className="text-sm font-medium text-slate-300 hover:text-white transition-colors">Dashboard</Link>
                 <Link to="/directory" className="text-sm font-medium text-slate-300 hover:text-white transition-colors">Directory</Link>
                 <Link to="/welfare" className="text-sm font-medium text-slate-300 hover:text-white transition-colors">Welfare</Link>
+                <Link to="/expenses" className="text-sm font-medium text-slate-300 hover:text-white transition-colors">Expenses</Link>
                 <Link to="/campaigns" className="text-sm font-medium text-slate-300 hover:text-white transition-colors">Campaigns</Link>
                 <Link to="/statement" className="text-sm font-medium text-slate-300 hover:text-white transition-colors">Statement</Link>
+                <Link to="/help" className="text-sm font-medium text-slate-300 hover:text-white transition-colors">Help</Link>
               </nav>
             )}
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
+            {userProfile && <NotificationBell />}
             {userProfile && (
               <Link to="/profile" className="text-sm text-slate-300 hover:text-white hidden sm:block font-medium">
                 {userProfile.fullName} <span className="opacity-70 text-xs ml-1 bg-mamas-primary-hover px-2 py-1 rounded">({userProfile.role.replace('_', ' ')})</span>
@@ -87,16 +97,19 @@ import Contribute from './pages/Contribute';
 import Statement from './pages/Statement';
 import Welfare from './pages/Welfare';
 import ApplyWelfare from './pages/ApplyWelfare';
+import Expenses from './pages/Expenses';
 import Directory from './pages/Directory';
 import Profile from './pages/Profile';
 import AdminContributions from './pages/AdminContributions';
 import AdminSettings from './pages/AdminSettings';
+import AdminMedia from './pages/AdminMedia';
 import AdminWelfare from './pages/AdminWelfare';
 
 import AdminCampaigns from './pages/AdminCampaigns';
 import Campaigns from './pages/Campaigns';
 import AdminReports from './pages/AdminReports';
 import AdminNotices from './pages/AdminNotices';
+import AdminLogs from "./pages/AdminLogs";
 import AdminDashboard from './pages/AdminDashboard';
 import Help from './pages/Help';
 import TermsOfService from './pages/TermsOfService';
@@ -112,23 +125,26 @@ const AdminLayout = () => {
   const role = userProfile.role;
 
   const canSeeRoles = role === 'super_admin';
-  const canSeeContribs = ['super_admin', 'chairperson', 'vice_chairperson', 'treasurer'].includes(role);
-  const canSeeWelfare = ['super_admin', 'chairperson', 'vice_chairperson', 'secretary', 'treasurer'].includes(role);
-  const canSeeCampaigns = true; // All admins
+  const canSeeContribs = ['super_admin', 'chairperson', 'vice_chairperson', 'treasurer', 'auditor'].includes(role);
+  const canSeeWelfare = ['super_admin', 'chairperson', 'vice_chairperson', 'secretary', 'treasurer', 'auditor'].includes(role);
+  const canSeeCampaigns = ['super_admin', 'chairperson', 'vice_chairperson'].includes(role);
   const canSeeReports = ['super_admin', 'chairperson', 'vice_chairperson', 'treasurer', 'auditor'].includes(role);
-  const canSeeNotices = ['super_admin', 'chairperson', 'vice_chairperson', 'secretary', 'mobiliser'].includes(role);
+  const canSeeNotices = ['super_admin', 'chairperson', 'vice_chairperson', 'secretary'].includes(role);
   const canSeeSettings = ['super_admin', 'chairperson', 'vice_chairperson', 'treasurer'].includes(role);
+  const canSeeLogs = ['super_admin', 'chairperson', 'vice_chairperson', 'treasurer', 'secretary', 'auditor'].includes(role);
 
   const navItems = [
     { label: 'Admin Home', path: '/admin', show: true },
-    { label: 'User Approvals', path: '/admin/users', show: true },
-    { label: 'Role Management', path: '/admin/roles', show: canSeeRoles },
+    { label: 'User Approvals', path: '/admin/users', show: ['super_admin', 'chairperson', 'vice_chairperson', 'treasurer', 'secretary'].includes(role) },
+    { label: 'Role Mgmt', path: '/admin/roles', show: canSeeRoles },
     { label: 'Contributions', path: '/admin/contributions', show: canSeeContribs },
     { label: 'Welfare Review', path: '/admin/welfare', show: canSeeWelfare },
     { label: 'Campaigns', path: '/admin/campaigns', show: canSeeCampaigns },
     { label: 'Reports', path: '/admin/reports', show: canSeeReports },
     { label: 'Notices', path: '/admin/notices', show: canSeeNotices },
     { label: 'Settings', path: '/admin/settings', show: canSeeSettings },
+    { label: 'Activity Logs', path: '/admin/logs', show: canSeeLogs },
+    { label: 'Media', path: '/admin/media', show: canSeeRoles },
   ].filter(i => i.show);
 
   return (
@@ -161,43 +177,49 @@ const AdminLayout = () => {
 export default function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/" element={<Landing />} />
-          <Route path="/terms" element={<TermsOfService />} />
-          <Route path="/privacy" element={<PrivacyPolicy />} />
-          
-          <Route element={<ProtectedRoute allowPending><Layout /></ProtectedRoute>}>
-            <Route path="/setup" element={<SetupSuperAdmin />} />
-          </Route>
-
-          <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/contribute" element={<Contribute />} />
-            <Route path="/statement" element={<Statement />} />
-            <Route path="/welfare" element={<Welfare />} />
-            <Route path="/welfare/apply" element={<ApplyWelfare />} />
-            <Route path="/directory" element={<Directory />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/campaigns" element={<Campaigns />} />
-            <Route path="/help" element={<Help />} />
+      <ThemeProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/" element={<Landing />} />
+            <Route path="/terms" element={<TermsOfService />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
             
-            <Route path="/admin" element={<ProtectedRoute requiredRole={["super_admin", "secretary", "chairperson", "treasurer", "auditor"]}><AdminLayout /></ProtectedRoute>}>
-              <Route index element={<AdminDashboard />} />
-              <Route path="users" element={<ProtectedRoute requiredRole={["super_admin", "secretary", "chairperson", "treasurer"]}><AdminUsers /></ProtectedRoute>} />
-              <Route path="roles" element={<ProtectedRoute requiredRole={["super_admin"]}><AdminRoles /></ProtectedRoute>} />
-              <Route path="contributions" element={<ProtectedRoute requiredRole={["super_admin", "treasurer", "chairperson"]}><AdminContributions /></ProtectedRoute>} />
-              <Route path="welfare" element={<ProtectedRoute requiredRole={["super_admin", "chairperson", "secretary", "treasurer"]}><AdminWelfare /></ProtectedRoute>} />
-              <Route path="campaigns" element={<ProtectedRoute requiredRole={["super_admin", "chairperson"]}><AdminCampaigns /></ProtectedRoute>} />
-              <Route path="reports" element={<ProtectedRoute requiredRole={["super_admin", "chairperson", "treasurer", "auditor"]}><AdminReports /></ProtectedRoute>} />
-              <Route path="notices" element={<ProtectedRoute requiredRole={["super_admin", "chairperson", "secretary"]}><AdminNotices /></ProtectedRoute>} />
-              <Route path="settings" element={<ProtectedRoute requiredRole={["super_admin", "chairperson", "treasurer"]}><AdminSettings /></ProtectedRoute>} />
+            <Route element={<ProtectedRoute allowPending><Layout /></ProtectedRoute>}>
+              <Route path="/setup" element={<SetupSuperAdmin />} />
             </Route>
-          </Route>
-        </Routes>
-      </BrowserRouter>
+
+            <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/contribute" element={<Contribute />} />
+              <Route path="/statement" element={<Statement />} />
+              <Route path="/welfare" element={<Welfare />} />
+              <Route path="/welfare/apply" element={<ApplyWelfare />} />
+              <Route path="/directory" element={<Directory />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/campaigns" element={<Campaigns />} />
+              <Route path="/help" element={<Help />} />
+              <Route path="/money-out" element={<MoneyOut />} />
+              <Route path="/expenses" element={<Expenses />} />
+              
+              <Route path="/admin" element={<ProtectedRoute requiredRole={["super_admin", "secretary", "chairperson", "vice_chairperson", "treasurer", "auditor"]}><AdminLayout /></ProtectedRoute>}>
+                <Route index element={<AdminDashboard />} />
+                <Route path="users" element={<ProtectedRoute requiredRole={["super_admin", "secretary", "chairperson", "vice_chairperson", "treasurer"]}><AdminUsers /></ProtectedRoute>} />
+                <Route path="roles" element={<ProtectedRoute requiredRole={["super_admin"]}><AdminRoles /></ProtectedRoute>} />
+                <Route path="contributions" element={<ProtectedRoute requiredRole={["super_admin", "treasurer", "chairperson", "vice_chairperson", "auditor"]}><AdminContributions /></ProtectedRoute>} />
+                <Route path="welfare" element={<ProtectedRoute requiredRole={["super_admin", "chairperson", "vice_chairperson", "secretary", "treasurer", "auditor"]}><AdminWelfare /></ProtectedRoute>} />
+                <Route path="campaigns" element={<ProtectedRoute requiredRole={["super_admin", "chairperson", "vice_chairperson"]}><AdminCampaigns /></ProtectedRoute>} />
+                <Route path="reports" element={<ProtectedRoute requiredRole={["super_admin", "chairperson", "vice_chairperson", "treasurer", "auditor"]}><AdminReports /></ProtectedRoute>} />
+                <Route path="notices" element={<ProtectedRoute requiredRole={["super_admin", "chairperson", "vice_chairperson", "secretary"]}><AdminNotices /></ProtectedRoute>} />
+                <Route path="settings" element={<ProtectedRoute requiredRole={["super_admin", "chairperson", "vice_chairperson", "treasurer"]}><AdminSettings /></ProtectedRoute>} />
+                <Route path="logs" element={<ProtectedRoute requiredRole={["super_admin", "chairperson", "vice_chairperson", "treasurer", "secretary", "auditor"]}><AdminLogs /></ProtectedRoute>} />
+                <Route path="media" element={<ProtectedRoute requiredRole={["super_admin"]}><AdminMedia /></ProtectedRoute>} />
+              </Route>
+            </Route>
+          </Routes>
+        </BrowserRouter>
+      </ThemeProvider>
     </AuthProvider>
   );
 }

@@ -1,0 +1,5 @@
+                {campaign.imageUrls && campaign.imageUrls.length > 0 && (
+                  <div className="w-full h-48 bg-slate-100">
+                    <img src={campaign.imageUrls[0]} alt={campaign.title} className="w-full h-full object-cover" />
+                  </div>
+                )}

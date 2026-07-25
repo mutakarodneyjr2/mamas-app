@@ -1,0 +1,14 @@
+/await createSchoolCampaign(currentUser.uid, {/,/imageUrls: \[\]/c\
+      let imageUrls: string[] = [];\
+      if (coverImage) {\
+        const path = `campaigns/${Date.now()}_${coverImage.name}`;\
+        const url = await uploadImage(coverImage, path);\
+        imageUrls.push(url);\
+      }\
+\
+      await createSchoolCampaign(currentUser.uid, {\
+        title,\
+        description,\
+        targetAmount: amount,\
+        imageUrls\
+      });\

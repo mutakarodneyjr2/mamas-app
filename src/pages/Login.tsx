@@ -2,7 +2,22 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { LogoLarge } from '../components/Logo';
-import { Mail, Phone, KeyRound, ArrowRight } from 'lucide-react';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../firebase';
+import { 
+  Mail, 
+  Phone, 
+  KeyRound, 
+  ArrowRight, 
+  GraduationCap, 
+  HelpCircle, 
+  PhoneCall, 
+  MessageSquare, 
+  ChevronDown, 
+  ChevronUp, 
+  CheckCircle2, 
+  UserCheck 
+} from 'lucide-react';
 
 type LoginStep = 'phone' | 'otp' | 'recovery-email' | 'recovery-code' | 'recovery-new-phone' | 'recovery-new-otp';
 
@@ -17,6 +32,11 @@ export default function Login() {
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [showLoginHelp, setShowLoginHelp] = useState(false);
+
+  // Support contacts
+  const [supportPhone, setSupportPhone] = useState('+256 770 000000');
+  const [supportWhatsApp, setSupportWhatsApp] = useState('+256 700 000000');
 
   // Recovery States
   const [recoveryEmail, setRecoveryEmail] = useState('');
@@ -25,6 +45,23 @@ export default function Login() {
   const [recoveryRequestId, setRecoveryRequestId] = useState('');
   const [recoveryNewPhone, setRecoveryNewPhone] = useState('');
   const [recoveryNewOtp, setRecoveryNewOtp] = useState('');
+
+  useEffect(() => {
+    // Fetch support phone numbers from appSettings/main
+    const fetchSettings = async () => {
+      try {
+        const snap = await getDoc(doc(db, 'appSettings', 'main'));
+        if (snap.exists()) {
+          const data = snap.data();
+          if (data.supportPhone) setSupportPhone(data.supportPhone);
+          if (data.supportWhatsApp) setSupportWhatsApp(data.supportWhatsApp);
+        }
+      } catch (e) {
+        console.error("Error loading support contacts:", e);
+      }
+    };
+    fetchSettings();
+  }, []);
 
   useEffect(() => {
     setupRecaptcha('recaptcha-container');
@@ -245,9 +282,72 @@ export default function Login() {
 
       <div className="mt-4 sm:mx-auto sm:w-full sm:max-w-md z-10">
         <div className="bg-mamas-card py-10 px-6 shadow-xl shadow-mamas-primary/5 sm:rounded-2xl sm:px-12 border border-slate-100">
-          <h2 className="text-2xl font-display font-bold text-mamas-primary text-center mb-8">
+          <h2 className="text-2xl font-display font-bold text-mamas-primary text-center mb-6">
             {step.startsWith('recovery') ? 'Account Recovery' : 'Welcome Back'}
           </h2>
+
+          {/* Matuumu SS Alumni Notice Banner */}
+          <div className="mb-6 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/80 rounded-2xl p-4 text-left shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-amber-100 text-amber-900 rounded-xl shrink-0 mt-0.5">
+                <GraduationCap className="w-5 h-5 text-amber-800" />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-amber-950 uppercase tracking-wider">
+                  Matuumu S.S. Alumni Members Only
+                </h4>
+                <p className="text-xs text-amber-900/90 leading-relaxed mt-1">
+                  This platform is strictly for <strong>Old Boys and Old Girls (OBs & OGs)</strong> of <strong>Matuumu Secondary School, Kamuli</strong>. Non-alumni individuals are strictly prohibited from joining.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Help Guide for New Members */}
+          <div className="mb-6 border border-slate-200 rounded-2xl overflow-hidden bg-slate-50/60 text-left">
+            <button
+              type="button"
+              onClick={() => setShowLoginHelp(!showLoginHelp)}
+              className="w-full p-3.5 flex items-center justify-between text-left text-xs font-bold text-mamas-primary hover:bg-slate-100/80 transition-colors"
+            >
+              <span className="flex items-center gap-2">
+                <HelpCircle className="w-4 h-4 text-mamas-accent shrink-0" />
+                How Login, Registration & Approvals Work
+              </span>
+              {showLoginHelp ? <ChevronUp className="w-4 h-4 text-slate-400 shrink-0" /> : <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />}
+            </button>
+
+            {showLoginHelp && (
+              <div className="p-4 pt-0 text-xs text-slate-600 space-y-3 border-t border-slate-200/60 bg-white">
+                <p className="font-semibold text-mamas-text mt-3">Steps to join and access MAMAS:</p>
+                <ol className="list-decimal pl-4 space-y-2 leading-relaxed">
+                  <li><strong>Phone OTP Login:</strong> Enter your active Ugandan phone number (+256...) and enter the 6-digit SMS verification code.</li>
+                  <li><strong>Complete Registration:</strong> If you are a new member, fill in your full name, year left Matuumu S.S., index/class details, and email.</li>
+                  <li><strong>Executive Approval:</strong> The Executive Committee verifies your alumni records. You will receive an instant push notification when approved.</li>
+                </ol>
+
+                <div className="pt-3 border-t border-slate-100">
+                  <p className="font-bold text-slate-700 mb-2">Need Help or Instant Approval?</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <a
+                      href={`tel:${supportPhone}`}
+                      className="flex items-center justify-center gap-1.5 p-2.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-xl hover:bg-emerald-100 font-bold transition-colors text-xs"
+                    >
+                      <PhoneCall className="w-3.5 h-3.5" /> Call Executive
+                    </a>
+                    <a
+                      href={`https://wa.me/${supportWhatsApp.replace(/[^0-9]/g, '')}?text=Hello%20MAMAS%20Executive,%20I%20need%20help%20with%20my%20Matuumu%20Alumni%20registration/login`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-1.5 p-2.5 bg-teal-50 text-teal-800 border border-teal-200 rounded-xl hover:bg-teal-100 font-bold transition-colors text-xs"
+                    >
+                      <MessageSquare className="w-3.5 h-3.5" /> WhatsApp Help
+                    </a>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
 
           {error && (
             <div className="mb-6 bg-rose-50 border-l-4 border-mamas-danger text-mamas-danger px-4 py-3 rounded-r text-sm font-medium shadow-sm">

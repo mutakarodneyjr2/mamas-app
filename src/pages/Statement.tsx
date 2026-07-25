@@ -128,7 +128,14 @@ export default function Statement() {
 
           <ul className="divide-y divide-slate-100">
             {welfareContributions.length === 0 ? (
-              <li className="px-6 py-8 text-center text-xs text-mamas-text-muted italic">No welfare dues logged yet.</li>
+              <li className="px-6 py-12 text-center flex flex-col items-center justify-center">
+                <div className="w-12 h-12 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center mb-3">
+                  <Wallet className="w-6 h-6" />
+                </div>
+                <p className="text-sm font-bold text-mamas-text">No Welfare Dues Yet</p>
+                <p className="text-xs text-slate-500 mt-1 max-w-xs">You haven't made any welfare contributions yet. Your dues keep the association strong.</p>
+                <a href="/contribute" className="mt-4 text-xs font-bold bg-mamas-primary hover:bg-mamas-primary-hover text-white px-4 py-2 rounded-xl transition-colors">Make a Contribution</a>
+              </li>
             ) : (
               welfareContributions.map(c => (
                 <li key={c.id} className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/50 transition-colors">
@@ -166,7 +173,14 @@ export default function Statement() {
 
           <ul className="divide-y divide-slate-100">
             {campaignContributions.length === 0 ? (
-              <li className="px-6 py-8 text-center text-xs text-mamas-text-muted italic">No campaign contributions logged yet.</li>
+              <li className="px-6 py-12 text-center flex flex-col items-center justify-center">
+                <div className="w-12 h-12 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center mb-3">
+                  <Target className="w-6 h-6" />
+                </div>
+                <p className="text-sm font-bold text-mamas-text">No Campaign Support Yet</p>
+                <p className="text-xs text-slate-500 mt-1 max-w-xs">You haven't participated in any school support campaigns.</p>
+                <a href="/campaigns" className="mt-4 text-xs font-bold bg-mamas-primary hover:bg-mamas-primary-hover text-white px-4 py-2 rounded-xl transition-colors">View Active Campaigns</a>
+              </li>
             ) : (
               campaignContributions.map(c => (
                 <li key={c.id} className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/50 transition-colors">
@@ -205,7 +219,14 @@ export default function Statement() {
 
           <ul className="divide-y divide-slate-100">
             {welfareRequests.length === 0 ? (
-              <li className="px-6 py-8 text-center text-xs text-mamas-text-muted italic">No welfare aid claims submitted.</li>
+              <li className="px-6 py-12 text-center flex flex-col items-center justify-center">
+                <div className="w-12 h-12 bg-rose-50 text-rose-300 rounded-full flex items-center justify-center mb-3">
+                  <Heart className="w-6 h-6" />
+                </div>
+                <p className="text-sm font-bold text-mamas-text">No Welfare Claims</p>
+                <p className="text-xs text-slate-500 mt-1 max-w-xs">You haven't submitted any welfare aid requests.</p>
+                <a href="/apply-welfare" className="mt-4 text-xs font-bold bg-white border border-slate-200 hover:bg-slate-50 text-mamas-text px-4 py-2 rounded-xl transition-colors">Apply for Support</a>
+              </li>
             ) : (
               welfareRequests.map(r => (
                 <li key={r.id} className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/50 transition-colors">

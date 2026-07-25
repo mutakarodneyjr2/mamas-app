@@ -1,0 +1,22 @@
+  const canSeeRoles = role === 'super_admin';
+  const canSeeContribs = ['super_admin', 'chairperson', 'treasurer'].includes(role);
+  const canSeeWelfare = ['super_admin', 'chairperson', 'secretary', 'treasurer'].includes(role);
+  const canSeeCampaigns = ['super_admin', 'chairperson'].includes(role); // Updated based on earlier router requirement
+  const canSeeReports = ['super_admin', 'chairperson', 'treasurer', 'auditor'].includes(role);
+  const canSeeNotices = ['super_admin', 'chairperson', 'secretary'].includes(role);
+  const canSeeSettings = ['super_admin', 'chairperson'].includes(role);
+  const canSeeLogs = ['super_admin', 'chairperson', 'treasurer', 'secretary', 'auditor'].includes(role);
+
+  const navItems = [
+    { label: 'Admin Home', path: '/admin', show: true },
+    { label: 'User Approvals', path: '/admin/users', show: ['super_admin', 'chairperson', 'treasurer', 'secretary'].includes(role) },
+    { label: 'Role Mgmt', path: '/admin/roles', show: canSeeRoles },
+    { label: 'Contributions', path: '/admin/contributions', show: canSeeContribs },
+    { label: 'Welfare Review', path: '/admin/welfare', show: canSeeWelfare },
+    { label: 'Campaigns', path: '/admin/campaigns', show: canSeeCampaigns },
+    { label: 'Reports', path: '/admin/reports', show: canSeeReports },
+    { label: 'Notices', path: '/admin/notices', show: canSeeNotices },
+    { label: 'Settings', path: '/admin/settings', show: canSeeSettings },
+    { label: 'Activity Logs', path: '/admin/logs', show: canSeeLogs },
+    { label: 'Media', path: '/admin/media', show: canSeeRoles }, // Super admin only
+  ].filter(i => i.show);

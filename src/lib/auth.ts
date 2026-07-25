@@ -100,6 +100,15 @@ export const approveMember = async (targetUid: string) => {
   });
   const { logActivity } = await import('./services');
   await logActivity('APPROVE_MEMBER', 'admin', targetUid, 'Approved member registration');
+
+  const { notifyUser } = await import('./fcmService');
+  await notifyUser(targetUid, {
+    title: 'Account Approved!',
+    body: 'Welcome to MAMAS! Your membership registration has been approved.',
+    type: 'approval',
+    targetId: targetUid,
+    targetUrl: '/dashboard'
+  }).catch(err => console.error("Notification error:", err));
 };
 
 export const rejectMember = async (targetUid: string) => {

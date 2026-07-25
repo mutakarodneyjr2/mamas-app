@@ -6,7 +6,8 @@ import { db, storage } from '../firebase';
 import { AppSettings, User } from '../types';
 import { updateWelfareApprovers, logActivity } from '../lib/services';
 import { formatUGX } from '../lib/utils';
-import { Settings2, Plus, X, Shield, Eye, Image as ImageIcon, CheckCircle, AlertCircle, Save, Loader2 } from 'lucide-react';
+import { Settings2, Plus, X, Shield, Eye, Image as ImageIcon, CheckCircle, AlertCircle, Save, Loader2, SunMedium } from 'lucide-react';
+import { ThemeToggle } from '../components/ThemeToggle';
 
 export default function AdminSettings() {
   const { currentUser, userProfile } = useAuth();
@@ -43,7 +44,9 @@ export default function AdminSettings() {
           showTopContributors: !!data.showTopContributors,
           minimumWeeklyContribution: data.minimumWeeklyContribution || 5000,
           banners: currentBanners,
-          landingBanners: currentBanners
+          landingBanners: currentBanners,
+          supportPhone: data.supportPhone || '+256 770 000000',
+          supportWhatsApp: data.supportWhatsApp || '+256 700 000000'
         };
         setSettings(fullSettings);
         setMaxAmountsState(data.maxAmounts || {});
@@ -58,7 +61,9 @@ export default function AdminSettings() {
           showTopContributors: true,
           minimumWeeklyContribution: 5000,
           banners: [],
-          landingBanners: []
+          landingBanners: [],
+          supportPhone: '+256 770 000000',
+          supportWhatsApp: '+256 700 000000'
         };
         setSettings(defaultSettings);
         setMaxAmountsState(defaultSettings.maxAmounts);
@@ -234,7 +239,9 @@ export default function AdminSettings() {
         showTopContributors: settings.showTopContributors,
         minimumWeeklyContribution: settings.minimumWeeklyContribution,
         banners: settings.banners || [],
-        landingBanners: settings.banners || []
+        landingBanners: settings.banners || [],
+        supportPhone: settings.supportPhone || '+256 770 000000',
+        supportWhatsApp: settings.supportWhatsApp || '+256 700 000000'
       }, { merge: true });
 
       await logActivity('UPDATE_SETTINGS', currentUser.uid, 'main', 'Saved all system settings');
@@ -304,6 +311,7 @@ export default function AdminSettings() {
   };
 
   const canEditWelfare = isSuperAdmin || isChairperson || isViceChairperson;
+  const canEditApprovers = isSuperAdmin || isChairperson;
   const canEditBanners = isSuperAdmin || isChairperson || isViceChairperson;
   const isOnlyTreasurer = isTreasurer && !isSuperAdmin && !isChairperson && !isViceChairperson;
 
@@ -486,7 +494,7 @@ export default function AdminSettings() {
                       <p className="font-bold text-sm text-mamas-text">{member.fullName}</p>
                       <p className="text-xs text-slate-500 capitalize">{member.role.replace('_', ' ')} • {member.phoneNumber}</p>
                     </div>
-                    {canEditWelfare ? (
+                    {canEditApprovers ? (
                       <label className="relative inline-flex items-center cursor-pointer">
                         <input 
                           type="checkbox" 
@@ -554,6 +562,55 @@ export default function AdminSettings() {
                   </div>
                 </label>
               )}
+            </div>
+          </div>
+
+          {/* Support Phone & WhatsApp Numbers */}
+          <div className="bg-mamas-card border border-slate-200 rounded-3xl p-6 shadow-sm">
+            <h3 className="font-bold text-mamas-text mb-1 text-lg flex items-center gap-2">
+              <Shield className="w-5 h-5 text-emerald-600" /> Executive Support Contacts
+            </h3>
+            <p className="text-xs text-mamas-text-muted mb-4">
+              Direct Phone Call and WhatsApp contact numbers shown on Login Page and In-App Help Center.
+            </p>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                  Support Call Phone Number
+                </label>
+                <input
+                  type="text"
+                  value={settings.supportPhone || ''}
+                  onChange={(e) => setSettings({ ...settings, supportPhone: e.target.value })}
+                  placeholder="+256 770 000000"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-sm font-semibold text-mamas-text focus:bg-white focus:ring-2 focus:ring-mamas-accent outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                  Support WhatsApp Number
+                </label>
+                <input
+                  type="text"
+                  value={settings.supportWhatsApp || ''}
+                  onChange={(e) => setSettings({ ...settings, supportWhatsApp: e.target.value })}
+                  placeholder="+256 700 000000"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-sm font-semibold text-mamas-text focus:bg-white focus:ring-2 focus:ring-mamas-accent outline-none"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Theme & Appearance Preference */}
+          <div className="bg-mamas-card border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm">
+            <h3 className="font-bold text-mamas-text mb-1 text-lg flex items-center gap-2">
+              <SunMedium className="w-5 h-5 text-mamas-accent" /> System Theme & Appearance
+            </h3>
+            <p className="text-xs text-mamas-text-muted mb-4">
+              Select your preferred system theme mode (Light, Dark, or System).
+            </p>
+            <div className="max-w-sm">
+              <ThemeToggle />
             </div>
           </div>
 

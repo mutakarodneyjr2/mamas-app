@@ -4,7 +4,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { formatUGX } from '../lib/utils';
 import { collection, query, where, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
-import { AppSettings, SchoolCampaign, Notice, User, WelfareRequest } from '../types';
+import { AppSettings, SchoolCampaign, Notice, User, WelfareRequest, Banner } from '../types';
+import { getActiveBanners } from '../lib/bannerService';
 import { 
   Wallet, 
   Heart, 
@@ -19,7 +20,9 @@ import {
   ShieldCheck,
   X,
   Calendar,
-  Sparkles
+  Sparkles,
+  Banknote,
+  Receipt
 } from 'lucide-react';
 
 export default function Dashboard() {
@@ -35,9 +38,32 @@ export default function Dashboard() {
   const [needsWeeklyContribution, setNeedsWeeklyContribution] = useState<boolean>(false);
   const [recentWeeklyPaid, setRecentWeeklyPaid] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(true);
+  const [banners, setBanners] = useState<Banner[]>([]);
+  const [currentBannerIdx, setCurrentBannerIdx] = useState(0);
 
   // Selected notice for modal view
   const [selectedNotice, setSelectedNotice] = useState<Notice | null>(null);
+
+  useEffect(() => {
+    const fetchBanners = async () => {
+      try {
+        const activeBanners = await getActiveBanners();
+        setBanners(activeBanners);
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    fetchBanners();
+  }, []);
+
+  useEffect(() => {
+    if (banners.length > 1) {
+      const interval = setInterval(() => {
+        setCurrentBannerIdx(prev => (prev + 1) % banners.length);
+      }, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [banners.length]);
 
   useEffect(() => {
     // 1. Real-time App Settings
@@ -191,6 +217,31 @@ export default function Dashboard() {
         </Link>
       </div>
 
+      {/* Banners Carousel */}
+      {banners.length > 0 && (
+        <div className="relative w-full aspect-[21/9] sm:aspect-[3/1] bg-slate-200 rounded-3xl overflow-hidden shadow-sm border border-slate-200/80">
+          {banners.map((banner, idx) => (
+            <img 
+              key={banner.id}
+              src={banner.url} 
+              alt="Community Highlight" 
+              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${idx === currentBannerIdx ? 'opacity-100' : 'opacity-0'}`}
+            />
+          ))}
+          {banners.length > 1 && (
+            <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-2 z-10">
+              {banners.map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setCurrentBannerIdx(idx)}
+                  className={`w-2 h-2 rounded-full transition-all ${idx === currentBannerIdx ? 'bg-white w-4' : 'bg-white/50'}`}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* B. Status / Alert Banner (Dynamic) */}
       <div className="space-y-3">
         {/* Weekly Minimum Warning Banner */}
@@ -300,7 +351,7 @@ export default function Dashboard() {
       </div>
 
       {/* Admin Quick Access Bar for Committee */}
-      {['super_admin', 'secretary', 'chairperson', 'treasurer', 'auditor'].includes(userProfile.role) && (
+      {['super_admin', 'secretary', 'chairperson', 'vice_chairperson', 'treasurer', 'auditor'].includes(userProfile.role) && (
         <Link 
           to="/admin" 
           className="bg-mamas-card border border-slate-200/90 hover:border-mamas-primary/40 rounded-2xl p-4 flex items-center justify-between shadow-sm hover:shadow-md transition-all group"
@@ -364,6 +415,47 @@ export default function Dashboard() {
         )}
       </div>
 
+      {/* Money Out & Expenses Links */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
+        <Link 
+          to="/money-out" 
+          className="bg-rose-50 border border-rose-100 hover:border-rose-200 hover:bg-rose-100/80 rounded-2xl p-4 flex items-center justify-between shadow-sm transition-all group"
+        >
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-rose-200/50 text-rose-700 flex items-center justify-center group-hover:bg-rose-600 group-hover:text-white transition-colors">
+              <Banknote className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="font-bold text-sm text-rose-900 flex items-center gap-2">
+                Money Out
+                <span className="text-[10px] bg-white text-rose-600 px-2 py-0.5 rounded-md font-bold uppercase border border-rose-200">Public</span>
+              </p>
+              <p className="text-xs text-rose-700/80">View all association payouts</p>
+            </div>
+          </div>
+          <ArrowRight className="w-5 h-5 text-rose-400 group-hover:text-rose-600 group-hover:translate-x-1 transition-all" />
+        </Link>
+
+        <Link 
+          to="/expenses" 
+          className="bg-indigo-50 border border-indigo-100 hover:border-indigo-200 hover:bg-indigo-100/80 rounded-2xl p-4 flex items-center justify-between shadow-sm transition-all group"
+        >
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-indigo-200/50 text-indigo-700 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+              <Receipt className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="font-bold text-sm text-indigo-900 flex items-center gap-2">
+                Association Expenses
+                <span className="text-[10px] bg-white text-indigo-600 px-2 py-0.5 rounded-md font-bold uppercase border border-indigo-200">Controlled</span>
+              </p>
+              <p className="text-xs text-indigo-700/80">Requisitions, votes & payouts</p>
+            </div>
+          </div>
+          <ArrowRight className="w-5 h-5 text-indigo-400 group-hover:text-indigo-600 group-hover:translate-x-1 transition-all" />
+        </Link>
+      </div>
+
       {/* D. Active School Campaigns Section */}
       <div className="space-y-3">
         <div className="flex justify-between items-center px-1">
@@ -394,6 +486,11 @@ export default function Dashboard() {
               return (
                 <div key={campaign.id} className="bg-mamas-card border border-slate-200/90 rounded-2xl p-5 shadow-sm flex flex-col justify-between">
                   <div>
+                    {campaign.imageUrls && campaign.imageUrls.length > 0 && (
+                      <div className="w-full h-24 rounded-xl overflow-hidden mb-3 bg-slate-100 border border-slate-200">
+                        <img src={campaign.imageUrls[0]} alt={campaign.title} className="w-full h-full object-cover" />
+                      </div>
+                    )}
                     <div className="flex items-start justify-between gap-2 mb-2">
                       <h4 className="font-bold text-mamas-text text-base line-clamp-1">{campaign.title}</h4>
                       <span className="text-[10px] font-bold uppercase tracking-wider bg-teal-50 text-teal-700 px-2.5 py-0.5 rounded-full border border-teal-200 flex-shrink-0">

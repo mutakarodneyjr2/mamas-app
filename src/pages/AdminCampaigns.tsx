@@ -5,7 +5,8 @@ import { db } from '../firebase';
 import { SchoolCampaign } from '../types';
 import { createSchoolCampaign, updateCampaignStatus, logActivity, transferCampaignExcessFunds, deleteSchoolCampaign } from '../lib/services';
 import { formatUGX } from '../lib/utils';
-import { Target, Plus, Shield, CheckCircle, ArrowRightLeft, XCircle, Clock, Trash2 } from 'lucide-react';
+import { Target, Plus, Shield, CheckCircle, ArrowRightLeft, XCircle, Clock, Trash2, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { uploadImage } from '../lib/storage';
 
 export default function AdminCampaigns() {
   const { currentUser, userProfile } = useAuth();
@@ -15,6 +16,7 @@ export default function AdminCampaigns() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [targetAmount, setTargetAmount] = useState('');
+  const [coverImage, setCoverImage] = useState<File | null>(null);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -49,11 +51,19 @@ export default function AdminCampaigns() {
     setIsSubmitting(true);
 
     try {
+      let imageUrls: string[] = [];
+      if (coverImage) {
+        const path = `campaigns/${Date.now()}_${coverImage.name}`;
+        const url = await uploadImage(coverImage, path);
+        imageUrls.push(url);
+      }
+
       await createSchoolCampaign(currentUser.uid, {
         title,
         description,
         targetAmount: amount,
-        imageUrls: []
+        imageUrls
+
       });
       await logActivity('CREATE_CAMPAIGN', currentUser.uid, 'campaign', `Created campaign: ${title}`);
       setMessage('Campaign created successfully.');
@@ -61,6 +71,7 @@ export default function AdminCampaigns() {
       setTitle('');
       setDescription('');
       setTargetAmount('');
+      setCoverImage(null);
     } catch (err: any) {
       setError(err.message || 'Failed to create campaign.');
     } finally {
@@ -109,7 +120,7 @@ export default function AdminCampaigns() {
     }
   };
 
-  const isChairperson = userProfile?.role === 'chairperson' || userProfile?.role === 'super_admin';
+  const isChairperson = userProfile?.role === 'chairperson' || userProfile?.role === 'vice_chairperson' || userProfile?.role === 'super_admin';
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-10">
@@ -177,6 +188,26 @@ export default function AdminCampaigns() {
               />
             </div>
 
+            <div>
+              <label htmlFor="coverImage" className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Cover Image (Optional)</label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="file"
+                  id="coverImage"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) setCoverImage(file);
+                  }}
+                  className="w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 transition-colors"
+                />
+                {coverImage && (
+                  <button type="button" onClick={(e) => { e.preventDefault(); setCoverImage(null); (document.getElementById('coverImage') as HTMLInputElement).value = ''; }} className="text-rose-500 hover:text-rose-600 text-xs font-bold">
+                    Clear
+                  </button>
+                )}
+              </div>
+            </div>
             <div className="pt-2 flex justify-end">
               <button
                 type="submit"
@@ -197,8 +228,14 @@ export default function AdminCampaigns() {
         {loading ? (
           <div className="p-8 text-center text-slate-400 font-medium">Loading campaigns...</div>
         ) : campaigns.length === 0 ? (
-          <div className="bg-mamas-card border border-slate-200 rounded-3xl p-12 text-center text-slate-400">
-            No campaigns created yet.
+          <div className="bg-mamas-card border border-slate-100 rounded-3xl p-16 flex flex-col items-center justify-center text-center">
+            <div className="w-16 h-16 bg-slate-50 text-slate-300 rounded-full flex items-center justify-center mb-4">
+              <Target className="w-8 h-8" />
+            </div>
+            <h3 className="text-xl font-bold text-mamas-text mb-2">No Campaigns Yet</h3>
+            <p className="text-slate-500 max-w-sm mx-auto text-sm">
+              You haven't created any campaigns. Use the form above to start a new school support initiative.
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -224,6 +261,11 @@ export default function AdminCampaigns() {
                     </div>
 
                     <h4 className="font-bold text-mamas-text text-lg mb-1">{camp.title}</h4>
+                    {camp.imageUrls && camp.imageUrls.length > 0 && (
+                      <div className="w-full h-32 rounded-xl overflow-hidden mb-3 bg-slate-100 border border-slate-200">
+                        <img src={camp.imageUrls[0]} alt={camp.title} className="w-full h-full object-cover" />
+                      </div>
+                    )}
                     <p className="text-xs text-slate-500 line-clamp-3 leading-relaxed">{camp.description}</p>
 
                     {camp.actionNotes && (

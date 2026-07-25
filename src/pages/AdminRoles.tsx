@@ -72,10 +72,16 @@ export default function AdminRoles() {
     }
   };
 
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = user.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          user.phoneNumber.includes(searchTerm) ||
-                          (user.email && user.email.toLowerCase().includes(searchTerm.toLowerCase()));
+  const filteredUsers = (Array.isArray(users) ? users : []).filter(user => {
+    if (!user) return false;
+    const s = String(searchTerm || '').toLowerCase();
+    const fullName = String(user.fullName || '').toLowerCase();
+    const phone = String(user.phoneNumber || '');
+    const email = String(user.email || '').toLowerCase();
+
+    const matchesSearch = fullName.includes(s) ||
+                          phone.includes(s) ||
+                          email.includes(s);
     const matchesRole = roleFilter === 'all' || user.role === roleFilter;
     return matchesSearch && matchesRole;
   });
@@ -114,7 +120,7 @@ export default function AdminRoles() {
             placeholder="Search by name, phone, or email..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-xs outline-none focus:bg-white focus:ring-2 focus:ring-mamas-accent font-medium"
+            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-4 py-2.5 text-xs outline-none focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-mamas-accent font-medium text-mamas-text dark:text-white"
           />
         </div>
 
@@ -123,7 +129,7 @@ export default function AdminRoles() {
           <select
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
-            className="bg-slate-50 border border-slate-200 text-mamas-text text-xs rounded-xl px-3 py-2 outline-none font-bold"
+            className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-mamas-text dark:text-white text-xs rounded-xl px-3 py-2 outline-none font-bold"
           >
             <option value="all">All Roles</option>
             {ROLES.map(r => (
@@ -138,7 +144,7 @@ export default function AdminRoles() {
         {filteredUsers.map(user => {
           const isMe = user.uid === currentUser.uid;
           return (
-            <div key={user.uid} className="bg-mamas-card border border-slate-200/90 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all flex flex-col justify-between gap-3">
+            <div key={user.uid} className="bg-mamas-card border border-slate-200/90 dark:border-slate-700 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all flex flex-col justify-between gap-3">
               <div>
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <div className="flex items-center gap-3">
@@ -165,16 +171,16 @@ export default function AdminRoles() {
                   </div>
                 </div>
 
-                <p className="text-xs text-slate-500 font-medium">{user.phoneNumber} {user.email ? `• ${user.email}` : ''}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">{user.phoneNumber} {user.email ? `• ${user.email}` : ''}</p>
               </div>
 
-              <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
+              <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
                 <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Role:</span>
                 <select
                   value={user.role}
                   disabled={savingUid === user.uid}
                   onChange={(e) => handleRoleUpdate(user.uid, user.fullName, e.target.value as UserRole)}
-                  className="bg-slate-50 border border-slate-200 text-mamas-text text-xs rounded-xl px-2.5 py-1.5 outline-none font-bold focus:bg-white focus:ring-2 focus:ring-mamas-accent"
+                  className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-mamas-text dark:text-white text-xs rounded-xl px-2.5 py-1.5 outline-none font-bold focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-mamas-accent"
                 >
                   {ROLES.map(r => (
                     <option key={r.value} value={r.value}>{r.label}</option>

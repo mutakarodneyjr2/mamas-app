@@ -22,12 +22,16 @@ export default function ApplyWelfare() {
     district: '',
     villageTown: '',
     description: '',
-    amountRequested: ''
+    amountRequested: '',
+    recipientPhoneNumber: '',
+    recipientName: '',
+    recipientNetwork: 'MTN'
   });
   
   const [evidenceFiles, setEvidenceFiles] = useState<FileList | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isSuccess, setIsSuccess] = useState(false);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -77,6 +81,18 @@ export default function ApplyWelfare() {
       return;
     }
 
+    if (!formData.recipientPhoneNumber || formData.recipientPhoneNumber.trim() === "") {
+      setError("Please provide the Mobile Money number that will receive the funds.");
+      return;
+    }
+
+    const phoneRegex = /^(?:\+?256|0)?(7[012578]\d{7})$/;
+    const cleanPhone = formData.recipientPhoneNumber.replace(/\s+/g, '');
+    if (!phoneRegex.test(cleanPhone)) {
+      setError("Please enter a valid Ugandan Mobile Money phone number (e.g., 0772123456 or +256772123456).");
+      return;
+    }
+
     // Maximum amount validation
     if (maxAllowedForCategory && amount > maxAllowedForCategory) {
       setError(`The maximum allowed welfare payout for ${formData.category} is ${formatUGX(maxAllowedForCategory)}.`);
@@ -105,7 +121,7 @@ export default function ApplyWelfare() {
         evidenceUrls
       });
 
-      navigate('/welfare');
+      setIsSuccess(true);
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'Failed to submit welfare application.');
@@ -113,6 +129,44 @@ export default function ApplyWelfare() {
       setLoading(false);
     }
   };
+
+  if (isSuccess) {
+    return (
+      <div className="max-w-md mx-auto pt-8 pb-16 animate-in fade-in zoom-in-95 duration-300">
+        <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 p-8 text-center flex flex-col items-center">
+          <div className="w-16 h-16 bg-teal-50 dark:bg-teal-900/20 text-teal-600 dark:text-teal-400 rounded-full flex items-center justify-center mb-5 border border-teal-200 dark:border-teal-900/50">
+            <CheckCircle2 className="w-8 h-8" />
+          </div>
+          <h2 className="text-2xl font-display font-bold text-mamas-text dark:text-white mb-2">Application Submitted!</h2>
+          <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed mb-6">
+            Your welfare request has been successfully submitted and is now pending review by the Welfare Committee. You will be notified once a decision is made.
+          </p>
+
+          <div className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 rounded-2xl p-4 mb-6 text-left space-y-3">
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-slate-500 font-medium">Category</span>
+              <span className="font-bold text-mamas-text dark:text-white capitalize">{formData.category}</span>
+            </div>
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-slate-500 font-medium">Amount Requested</span>
+              <span className="font-bold text-mamas-text dark:text-white">UGX {new Intl.NumberFormat('en-UG').format(parseInt(formData.amountRequested, 10))}</span>
+            </div>
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-slate-500 font-medium">Recipient Name</span>
+              <span className="font-bold text-mamas-text dark:text-white capitalize">{formData.recipientName || 'Not provided'}</span>
+            </div>
+          </div>
+
+          <button
+            onClick={() => navigate('/welfare')}
+            className="w-full bg-mamas-primary hover:bg-mamas-primary-hover text-white font-bold py-3.5 px-6 rounded-2xl transition-colors shadow-md flex items-center justify-center"
+          >
+            Go to Welfare Directory
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 pb-12">
@@ -152,7 +206,7 @@ export default function ApplyWelfare() {
                   required
                   value={formData.category}
                   onChange={handleChange}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold text-mamas-text focus:bg-white focus:ring-2 focus:ring-mamas-accent outline-none"
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm font-semibold text-mamas-text focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-mamas-accent outline-none"
                 >
                   <option value="">-- Select Category --</option>
                   {settings?.welfareCategories?.map(cat => (
@@ -171,7 +225,7 @@ export default function ApplyWelfare() {
                   required
                   value={formData.relationship}
                   onChange={handleChange}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold text-mamas-text focus:bg-white focus:ring-2 focus:ring-mamas-accent outline-none"
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm font-semibold text-mamas-text focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-mamas-accent outline-none"
                 >
                   <option value="">-- Select Relationship --</option>
                   {settings?.allowedRelationships?.map(rel => (
@@ -192,7 +246,7 @@ export default function ApplyWelfare() {
                   placeholder="Full name of beneficiary"
                   value={formData.personName}
                   onChange={handleChange}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold text-mamas-text focus:bg-white focus:ring-2 focus:ring-mamas-accent outline-none"
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm font-semibold text-mamas-text focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-mamas-accent outline-none"
                 />
               </div>
 
@@ -209,7 +263,7 @@ export default function ApplyWelfare() {
                   placeholder="e.g. 500000"
                   value={formData.amountRequested}
                   onChange={handleChange}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-mamas-text focus:bg-white focus:ring-2 focus:ring-mamas-accent outline-none"
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm font-bold text-mamas-text focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-mamas-accent outline-none"
                 />
                 {maxAllowedForCategory !== undefined && (
                   <p className="mt-1.5 text-xs font-semibold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200 inline-block">
@@ -230,7 +284,7 @@ export default function ApplyWelfare() {
                   placeholder="e.g. Kampala, Mukono..."
                   value={formData.district}
                   onChange={handleChange}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold text-mamas-text focus:bg-white focus:ring-2 focus:ring-mamas-accent outline-none"
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm font-semibold text-mamas-text focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-mamas-accent outline-none"
                 />
               </div>
 
@@ -246,7 +300,63 @@ export default function ApplyWelfare() {
                   placeholder="e.g. Matuumu Village"
                   value={formData.villageTown}
                   onChange={handleChange}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold text-mamas-text focus:bg-white focus:ring-2 focus:ring-mamas-accent outline-none"
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm font-semibold text-mamas-text focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-mamas-accent outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="bg-amber-50/60 p-6 rounded-2xl border border-amber-200/80 space-y-4">
+              <h3 className="text-sm font-bold text-amber-900 uppercase tracking-wider flex items-center gap-2">
+                Mobile Money Payout Details
+              </h3>
+              <p className="text-xs text-amber-700">Provide the Mobile Money account where funds should be sent upon committee approval.</p>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="sm:col-span-1">
+                  <label htmlFor="recipientNetwork" className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
+                    Network <span className="text-rose-500">*</span>
+                  </label>
+                  <select
+                    id="recipientNetwork"
+                    name="recipientNetwork"
+                    value={formData.recipientNetwork}
+                    onChange={handleChange}
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-sm font-semibold text-mamas-text focus:ring-2 focus:ring-mamas-accent outline-none"
+                  >
+                    <option value="MTN">MTN Mobile Money</option>
+                    <option value="Airtel">Airtel Money</option>
+                  </select>
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label htmlFor="recipientPhoneNumber" className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
+                    Mobile Money Number <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    name="recipientPhoneNumber"
+                    id="recipientPhoneNumber"
+                    required
+                    placeholder="e.g. 0772123456 or +256772123456"
+                    value={formData.recipientPhoneNumber}
+                    onChange={handleChange}
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm font-bold text-mamas-text focus:ring-2 focus:ring-mamas-accent outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="recipientName" className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
+                  Name Registered on Number <span className="text-slate-400 font-normal">(Optional)</span>
+                </label>
+                <input
+                  type="text"
+                  name="recipientName"
+                  id="recipientName"
+                  placeholder="e.g. Namubiru Sarah"
+                  value={formData.recipientName}
+                  onChange={handleChange}
+                  className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm font-semibold text-mamas-text focus:ring-2 focus:ring-mamas-accent outline-none"
                 />
               </div>
             </div>
@@ -262,7 +372,7 @@ export default function ApplyWelfare() {
                 required
                 value={formData.description}
                 onChange={handleChange}
-                className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm font-medium text-mamas-text focus:bg-white focus:ring-2 focus:ring-mamas-accent outline-none"
+                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-sm font-medium text-mamas-text focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-mamas-accent outline-none"
                 placeholder="Provide detailed circumstances surrounding this welfare request..."
               />
             </div>

@@ -2,27 +2,24 @@ import React, { useEffect, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { LogoLarge } from '../components/Logo';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../firebase';
-import { AppSettings } from '../types';
+import { Banner } from '../types';
+import { getActiveBanners } from '../lib/bannerService';
 
 export default function Landing() {
   const { currentUser } = useAuth();
-  const [banners, setBanners] = useState<string[]>([]);
+  const [banners, setBanners] = useState<Banner[]>([]);
   const [currentBannerIdx, setCurrentBannerIdx] = useState(0);
 
   useEffect(() => {
-    const fetchSettings = async () => {
-      const snap = await getDoc(doc(db, 'appSettings', 'main'));
-      if (snap.exists()) {
-        const data = snap.data() as AppSettings;
-        const list = data.banners || data.landingBanners || [];
-        if (list.length > 0) {
-          setBanners(list);
-        }
+    const fetchBanners = async () => {
+      try {
+        const activeBanners = await getActiveBanners();
+        setBanners(activeBanners);
+      } catch (e) {
+        console.error(e);
       }
     };
-    fetchSettings();
+    fetchBanners();
   }, []);
 
   useEffect(() => {
@@ -70,10 +67,10 @@ export default function Landing() {
         <div className="flex-1 w-full relative">
           <div className="aspect-w-4 aspect-h-3 sm:aspect-w-16 sm:aspect-h-9 lg:aspect-w-4 lg:aspect-h-5 rounded-2xl overflow-hidden shadow-2xl relative bg-slate-200">
             {banners.length > 0 ? (
-              banners.map((url, idx) => (
+              banners.map((banner, idx) => (
                 <img 
-                  key={idx}
-                  src={url} 
+                  key={banner.id}
+                  src={banner.url} 
                   alt="MAMAS Community" 
                   className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${idx === currentBannerIdx ? 'opacity-100' : 'opacity-0'}`}
                 />
