@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, Navigate, Link } from 'react-router-dom';
 import { completeProfile } from '../lib/auth';
+import { setPin } from '../lib/auth-pin';
 import { LogoLarge } from '../components/Logo';
 
 export default function Register() {
@@ -22,7 +23,9 @@ export default function Register() {
     nextOfKinName: '',
     nextOfKinPhone: '',
     showPhone: true,
-    showEmail: true
+    showEmail: true,
+    pin: '',
+    confirmPin: ''
   });
 
   const [profilePicFile, setProfilePicFile] = useState<File | null>(null);
@@ -54,6 +57,17 @@ export default function Register() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    
+    if (formData.pin.length < 4 || formData.pin.length > 6) {
+      setError("PIN must be between 4 and 6 digits");
+      return;
+    }
+    
+    if (formData.pin !== formData.confirmPin) {
+      setError("PINs do not match");
+      return;
+    }
+    
     setLoading(true);
     
     try {
@@ -76,6 +90,10 @@ export default function Register() {
         },
         profilePicFile || undefined
       );
+      
+      // Set the PIN using synthetic email/password
+      await setPin(currentUser.uid, currentUser.phoneNumber || '', formData.pin);
+      
       // Wait for the context to update and redirect
     } catch (err: any) {
       console.error(err);
@@ -191,6 +209,25 @@ export default function Register() {
                     <label htmlFor="nextOfKinPhone" className="block text-sm font-medium text-slate-700">Next of Kin Phone</label>
                     <div className="mt-2">
                       <input type="tel" name="nextOfKinPhone" id="nextOfKinPhone" required value={formData.nextOfKinPhone} onChange={handleChange} className="appearance-none block w-full px-4 py-3 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-mamas-primary focus:border-transparent sm:text-sm transition-colors" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+                <div className="border-t border-slate-100 pt-8 mt-8">
+                <h4 className="text-lg font-display font-semibold text-mamas-primary mb-6">Security (PIN)</h4>
+                <p className="text-sm text-slate-500 mb-6">Create a 4 to 6 digit PIN to log in securely next time without waiting for SMS codes.</p>
+                <div className="grid grid-cols-1 gap-y-6 gap-x-6 sm:grid-cols-2">
+                  <div>
+                    <label htmlFor="pin" className="block text-sm font-medium text-slate-700">Create PIN</label>
+                    <div className="mt-2">
+                      <input type="password" inputMode="numeric" pattern="[0-9]{4,6}" name="pin" id="pin" required value={formData.pin} onChange={handleChange} placeholder="4-6 digits" className="appearance-none block w-full px-4 py-3 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-mamas-primary focus:border-transparent sm:text-sm transition-colors" />
+                    </div>
+                  </div>
+                  <div>
+                    <label htmlFor="confirmPin" className="block text-sm font-medium text-slate-700">Confirm PIN</label>
+                    <div className="mt-2">
+                      <input type="password" inputMode="numeric" pattern="[0-9]{4,6}" name="confirmPin" id="confirmPin" required value={formData.confirmPin} onChange={handleChange} placeholder="Re-enter PIN" className="appearance-none block w-full px-4 py-3 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-mamas-primary focus:border-transparent sm:text-sm transition-colors" />
                     </div>
                   </div>
                 </div>

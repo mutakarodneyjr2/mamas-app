@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { LogoLarge } from '../components/Logo';
 import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../firebase';
+import { verifyPin, setPin } from '../lib/auth-pin';
 import { 
   Mail, 
   Phone, 
@@ -19,13 +19,16 @@ import {
   UserCheck 
 } from 'lucide-react';
 
-type LoginStep = 'phone' | 'otp' | 'recovery-email' | 'recovery-code' | 'recovery-new-phone' | 'recovery-new-otp';
+type LoginStep = 'phone' | 'otp' | 'create-pin' | 'recovery-email' | 'recovery-code' | 'recovery-new-phone' | 'recovery-new-otp';
 
 export default function Login() {
   const { sendOtp, verifyOtp, setupRecaptcha, currentUser, userProfile } = useAuth();
   const navigate = useNavigate();
   
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [pin, setPinValue] = useState('');
+  const [newPin, setNewPin] = useState('');
+  const [confirmNewPin, setConfirmNewPin] = useState('');
   const [otp, setOtp] = useState('');
   const [step, setStep] = useState<LoginStep>('phone');
   const [error, setError] = useState('');
@@ -68,8 +71,8 @@ export default function Login() {
   }, [setupRecaptcha]);
 
   useEffect(() => {
-    // Only auto-redirect if we are not in the middle of a recovery phone update
-    if (currentUser && step !== 'recovery-new-phone' && step !== 'recovery-new-otp') {
+    // Only auto-redirect if we are not in the middle of a recovery phone update or create pin
+    if (currentUser && step !== 'recovery-new-phone' && step !== 'recovery-new-otp' && step !== 'create-pin') {
       if (userProfile) {
         navigate('/dashboard');
       } else {
@@ -78,8 +81,31 @@ export default function Login() {
     }
   }, [currentUser, userProfile, navigate, step]);
 
-  const handleSendOtp = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      let formattedPhone = phoneNumber;
+      if (formattedPhone.startsWith('0')) formattedPhone = '+256' + formattedPhone.substring(1);
+      else if (!formattedPhone.startsWith('+')) formattedPhone = '+' + formattedPhone;
+      
+      await verifyPin(formattedPhone, pin);
+      // If success, Firebase Auth logs them in and useEffect redirects
+    } catch (err: any) {
+      console.error(err);
+      if (err.message.includes("Account locked")) {
+         setError(err.message);
+      } else {
+         setError('Invalid phone number or PIN. If you haven\'t set a PIN yet, click "Forgot PIN" below to set one using SMS.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSendOtp = async () => {
     setError('');
     setLoading(true);
 
@@ -92,20 +118,7 @@ export default function Login() {
       setStep('otp');
     } catch (err: any) {
       console.error(err);
-      const msg = err.message || '';
-      if (err.code === 'auth/invalid-phone-number' || msg.includes('invalid-phone-number')) {
-        setError('Invalid phone number format. Please check the number and try again.');
-      } else if (err.code === 'auth/too-many-requests' || msg.includes('too-many-requests')) {
-        setError('Too many attempts. Please wait a few minutes before trying again.');
-      } else if (err.code === 'auth/network-request-failed' || msg.includes('network')) {
-        setError('Network error. Please check your internet connection and try again.');
-      } else if (err.code === 'auth/captcha-check-failed' || msg.includes('recaptcha')) {
-        setError('Security check failed. Please refresh the page and try again.');
-      } else if (err.code === 'auth/operation-not-allowed' || msg.includes('region')) {
-        setError('SMS login is not enabled. Please contact support.');
-      } else {
-        setError('Failed to send verification code. Please check your number and try again.');
-      }
+      setError('Failed to send verification code. Please check your number and try again.');
     } finally {
       setLoading(false);
     }
@@ -117,17 +130,48 @@ export default function Login() {
     setLoading(true);
     try {
       await verifyOtp(otp);
-      // navigation handled by useEffect
+      // Once OTP is verified, they need to set a new PIN
+      setStep('create-pin');
     } catch (err: any) {
       console.error(err);
-      const msg = err.message || '';
-      if (err.code === 'auth/invalid-verification-code' || msg.includes('invalid-verification-code')) {
-        setError('The verification code is incorrect. Please try again.');
-      } else if (err.code === 'auth/code-expired' || msg.includes('code-expired')) {
-        setError('The verification code has expired. Please request a new one.');
+      setError('Failed to verify code. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreatePin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    if (newPin.length < 4 || newPin.length > 6) {
+      setError("PIN must be between 4 and 6 digits");
+      return;
+    }
+    
+    if (newPin !== confirmNewPin) {
+      setError("PINs do not match");
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      if (!currentUser) throw new Error("Not authenticated");
+      let formattedPhone = phoneNumber;
+      if (formattedPhone.startsWith('0')) formattedPhone = '+256' + formattedPhone.substring(1);
+      else if (!formattedPhone.startsWith('+')) formattedPhone = '+' + formattedPhone;
+
+      await setPin(currentUser.uid, formattedPhone, newPin);
+      
+      // Navigate based on profile
+      if (userProfile) {
+        navigate('/dashboard');
       } else {
-        setError('Failed to verify code. Please try again.');
+        navigate('/register');
       }
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || 'Failed to set PIN. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -361,7 +405,7 @@ export default function Login() {
           )}
 
           {step === 'phone' && (
-            <form className="space-y-6" onSubmit={handleSendOtp}>
+            <form className="space-y-6" onSubmit={handleLogin}>
               <div>
                 <label htmlFor="phone" className="block text-sm font-medium text-slate-700">
                   Phone Number
@@ -378,6 +422,29 @@ export default function Login() {
                     placeholder="+256 700 000000"
                     value={phoneNumber}
                     onChange={(e) => setPhoneNumber(e.target.value)}
+                    className="appearance-none block w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-mamas-primary sm:text-base transition-colors"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="pin" className="block text-sm font-medium text-slate-700">
+                  PIN (4-6 digits)
+                </label>
+                <div className="mt-2 relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <KeyRound className="h-5 w-5 text-slate-400" />
+                  </div>
+                  <input
+                    id="pin"
+                    name="pin"
+                    type="password"
+                    inputMode="numeric"
+                    pattern="[0-9]{4,6}"
+                    required
+                    placeholder="Enter your PIN"
+                    value={pin}
+                    onChange={(e) => setPinValue(e.target.value)}
                     className="appearance-none block w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-mamas-primary sm:text-base transition-colors"
                   />
                 </div>
@@ -406,14 +473,22 @@ export default function Login() {
               <div>
                 <button
                   type="submit"
-                  disabled={loading || !agreedToTerms}
+                  disabled={loading || !phoneNumber || !pin || !agreedToTerms}
                   className="w-full flex justify-center py-3 px-4 border border-transparent rounded-full shadow-md text-sm font-medium text-white bg-mamas-primary hover:bg-mamas-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-mamas-primary disabled:opacity-50 transition-colors"
                 >
-                  {loading ? 'Sending Code...' : 'Send Verification Code'}
+                  {loading ? 'Logging in...' : 'Log In'}
                 </button>
               </div>
               
-              <div className="text-center mt-4">
+              <div className="text-center mt-4 flex flex-col gap-3">
+                <button
+                  type="button"
+                  onClick={handleSendOtp}
+                  disabled={loading || !phoneNumber || !agreedToTerms}
+                  className="text-sm font-semibold text-mamas-primary hover:text-mamas-primary-hover transition-colors"
+                >
+                  Forgot PIN or First Time User? Log in with SMS
+                </button>
                 <button
                   type="button"
                   onClick={() => { setError(''); setSuccess(''); setStep('recovery-email'); }}
@@ -463,6 +538,69 @@ export default function Login() {
                   className="text-sm font-medium text-mamas-text-muted hover:text-mamas-primary transition-colors"
                 >
                   Use a different phone number
+                </button>
+              </div>
+            </form>
+          )}
+
+          {step === 'create-pin' && (
+            <form className="space-y-6" onSubmit={handleCreatePin}>
+              <div>
+                <h3 className="text-lg font-bold text-slate-800 text-center mb-4">Set up a PIN</h3>
+                <p className="text-sm text-slate-500 text-center mb-6">Create a 4-6 digit PIN to easily log in next time.</p>
+                
+                <label htmlFor="newPin" className="block text-sm font-medium text-slate-700">
+                  New PIN (4-6 digits)
+                </label>
+                <div className="mt-2 relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <KeyRound className="h-5 w-5 text-slate-400" />
+                  </div>
+                  <input
+                    id="newPin"
+                    name="newPin"
+                    type="password"
+                    inputMode="numeric"
+                    pattern="[0-9]{4,6}"
+                    required
+                    placeholder="Enter new PIN"
+                    value={newPin}
+                    onChange={(e) => setNewPin(e.target.value)}
+                    className="appearance-none block w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-mamas-primary sm:text-base transition-colors"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="confirmNewPin" className="block text-sm font-medium text-slate-700">
+                  Confirm PIN
+                </label>
+                <div className="mt-2 relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <KeyRound className="h-5 w-5 text-slate-400" />
+                  </div>
+                  <input
+                    id="confirmNewPin"
+                    name="confirmNewPin"
+                    type="password"
+                    inputMode="numeric"
+                    pattern="[0-9]{4,6}"
+                    required
+                    placeholder="Re-enter PIN"
+                    value={confirmNewPin}
+                    onChange={(e) => setConfirmNewPin(e.target.value)}
+                    className="appearance-none block w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-mamas-primary sm:text-base transition-colors"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <button
+                  type="submit"
+                  disabled={loading || newPin.length < 4}
+                  className="w-full flex justify-center py-3 px-4 border border-transparent rounded-full shadow-md text-sm font-medium text-white bg-mamas-primary hover:bg-mamas-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-mamas-primary disabled:opacity-50 transition-colors"
+                >
+                  {loading ? 'Saving...' : 'Save PIN & Continue'}
                 </button>
               </div>
             </form>

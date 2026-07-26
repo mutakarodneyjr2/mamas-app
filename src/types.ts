@@ -22,6 +22,11 @@ export interface User {
   };
   contributionStatus: ContributionStatus;
   hasCompletedOnboarding?: boolean;
+  hasPin?: boolean;
+  pinHash?: string;
+  pinUpdatedAt?: number;
+  pinLockedUntil?: number | null;
+  failedPinAttempts?: number;
   createdAt: number;
   updatedAt: number;
   lastContributionDate?: number;

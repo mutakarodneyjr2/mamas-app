@@ -10,6 +10,7 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { Logo } from './components/Logo';
 import { NotificationBell } from './components/NotificationBell';
 import { OnboardingTour } from './components/OnboardingTour';
+import { ForcePinModal } from './components/ForcePinModal';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Landing from './pages/Landing';
@@ -23,6 +24,7 @@ function Layout() {
   
   return (
     <div className="min-h-screen bg-mamas-bg flex flex-col font-sans">
+      <ForcePinModal />
       {userProfile && userProfile.status === 'approved' && userProfile.hasCompletedOnboarding !== true && (
         <OnboardingTour userProfile={userProfile} onComplete={() => {}} />
       )}
