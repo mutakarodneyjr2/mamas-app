@@ -44,6 +44,8 @@ export async function setPin(uid: string, phoneNumber: string, pin: string) {
 
   // Fallback: update directly via client SDK using updated firestore rules
   const pinHash = await hashPinClient(pin);
+  const cleanPhone = normPhone.replace(/[^0-9]/g, '');
+
   await setDoc(doc(db, "users", uid), {
     phoneNumber: normPhone,
     pinHash,
@@ -54,6 +56,11 @@ export async function setPin(uid: string, phoneNumber: string, pin: string) {
   }, { merge: true });
 
   await setDoc(doc(db, "pinEmails", normPhone), {
+    uid,
+    updatedAt: Date.now()
+  }, { merge: true });
+
+  await setDoc(doc(db, "pinEmails", cleanPhone), {
     uid,
     updatedAt: Date.now()
   }, { merge: true });

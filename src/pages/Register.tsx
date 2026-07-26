@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, Navigate, Link } from 'react-router-dom';
 import { completeProfile } from '../lib/auth';
 import { setPin } from '../lib/auth-pin';
+import { normalizePhoneNumber } from '../lib/utils';
 import { LogoLarge } from '../components/Logo';
 import { Phone, ArrowRight, KeyRound } from 'lucide-react';
 
@@ -64,9 +65,7 @@ export default function Register() {
     setLoading(true);
 
     try {
-      let formattedPhone = phoneNumber;
-      if (formattedPhone.startsWith('0')) formattedPhone = '+256' + formattedPhone.substring(1);
-      else if (!formattedPhone.startsWith('+')) formattedPhone = '+' + formattedPhone;
+      const formattedPhone = normalizePhoneNumber(phoneNumber);
       
       await sendOtp(formattedPhone, 'recaptcha-register');
       setStep('otp');

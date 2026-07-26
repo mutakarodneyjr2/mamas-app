@@ -5,6 +5,7 @@ import { LogoLarge } from '../components/Logo';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { verifyPin, setPin } from '../lib/auth-pin';
+import { normalizePhoneNumber } from '../lib/utils';
 import { 
   Mail, 
   Phone, 
@@ -88,18 +89,11 @@ export default function Login() {
     setLoading(true);
 
     try {
-      let formattedPhone = phoneNumber;
-      if (formattedPhone.startsWith('0')) formattedPhone = '+256' + formattedPhone.substring(1);
-      else if (!formattedPhone.startsWith('+')) formattedPhone = '+' + formattedPhone;
-      
+      const formattedPhone = normalizePhoneNumber(phoneNumber);
       await verifyPin(formattedPhone, pin);
     } catch (err: any) {
       console.error(err);
-      if (err.message?.includes("Account locked")) {
-         setError(err.message);
-      } else {
-         setError('Invalid phone number or PIN. If you forgot your PIN, click "Forgot PIN?" below.');
-      }
+      setError(err.message || 'Invalid phone number or PIN. If you forgot your PIN, click "Forgot PIN?" below.');
     } finally {
       setLoading(false);
     }
@@ -111,9 +105,7 @@ export default function Login() {
     setLoading(true);
 
     try {
-      let formattedPhone = phoneNumber;
-      if (formattedPhone.startsWith('0')) formattedPhone = '+256' + formattedPhone.substring(1);
-      else if (!formattedPhone.startsWith('+')) formattedPhone = '+' + formattedPhone;
+      const formattedPhone = normalizePhoneNumber(phoneNumber);
       
       await sendOtp(formattedPhone, 'recaptcha-container-recovery');
       setStep('forgot-pin-otp');
@@ -157,9 +149,7 @@ export default function Login() {
     setLoading(true);
     try {
       if (!currentUser) throw new Error("Not authenticated");
-      let formattedPhone = phoneNumber;
-      if (formattedPhone.startsWith('0')) formattedPhone = '+256' + formattedPhone.substring(1);
-      else if (!formattedPhone.startsWith('+')) formattedPhone = '+' + formattedPhone;
+      const formattedPhone = normalizePhoneNumber(phoneNumber);
 
       await setPin(currentUser.uid, formattedPhone, newPin);
       
@@ -232,9 +222,7 @@ export default function Login() {
     setSuccess('');
     setLoading(true);
     try {
-      let formattedPhone = recoveryNewPhone;
-      if (formattedPhone.startsWith('0')) formattedPhone = '+256' + formattedPhone.substring(1);
-      else if (!formattedPhone.startsWith('+')) formattedPhone = '+' + formattedPhone;
+      const formattedPhone = normalizePhoneNumber(recoveryNewPhone);
       
       await sendOtp(formattedPhone, 'recaptcha-container-recovery');
       setStep('recovery-new-otp');

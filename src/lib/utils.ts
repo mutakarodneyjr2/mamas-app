@@ -10,15 +10,21 @@ export const formatUGX = (amount?: number | null) => {
 
 export function normalizePhoneNumber(phone: string): string {
   if (!phone) return '';
-  let cleaned = String(phone).trim();
-  if (cleaned.startsWith('0')) {
-    cleaned = '+256' + cleaned.substring(1);
-  } else if (!cleaned.startsWith('+')) {
-    cleaned = '+' + cleaned;
+  const digits = String(phone).replace(/[^0-9]/g, '');
+  if (!digits) return '';
+  if (digits.startsWith('256') && digits.length >= 12) {
+    return '+' + digits.slice(0, 12);
   }
-  const hasPlus = cleaned.startsWith('+');
-  const digitsOnly = cleaned.replace(/[^0-9]/g, '');
-  return hasPlus ? '+' + digitsOnly : digitsOnly;
+  if (digits.startsWith('0') && digits.length >= 10) {
+    return '+256' + digits.slice(1, 10);
+  }
+  if (digits.length === 9) {
+    return '+256' + digits;
+  }
+  if (String(phone).trim().startsWith('+')) {
+    return '+' + digits;
+  }
+  return '+' + digits;
 }
 
 export function exportToCSV(filename: string, rows: Record<string, any>[]) {

@@ -24,13 +24,14 @@ if (!getApps().length) {
         serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
       }
       initAdmin({
-        credential: cert(serviceAccount)
+        credential: cert(serviceAccount),
+        projectId: serviceAccount.project_id || "mama-alumin"
       });
       console.log("Firebase Admin initialized successfully with FIREBASE_SERVICE_ACCOUNT.");
     } catch (err) {
       console.error("Failed to parse FIREBASE_SERVICE_ACCOUNT JSON:", err);
       try {
-        initAdmin();
+        initAdmin({ projectId: "mama-alumin" });
       } catch (defaultErr) {
         console.error("Failed to initialize Firebase Admin with default credentials:", defaultErr);
       }
@@ -38,7 +39,7 @@ if (!getApps().length) {
   } else {
     console.warn("FIREBASE_SERVICE_ACCOUNT is not set. Initializing Firebase Admin with default credentials.");
     try {
-      initAdmin();
+      initAdmin({ projectId: "mama-alumin" });
     } catch (defaultErr) {
       console.error("Failed to initialize Firebase Admin with default credentials:", defaultErr);
     }
@@ -336,15 +337,21 @@ async function startServer() {
 
   function normalizePhoneServer(phone: string): string {
     if (!phone) return '';
-    let cleaned = String(phone).trim();
-    if (cleaned.startsWith('0')) {
-      cleaned = '+256' + cleaned.substring(1);
-    } else if (!cleaned.startsWith('+')) {
-      cleaned = '+' + cleaned;
+    const digits = String(phone).replace(/[^0-9]/g, '');
+    if (!digits) return '';
+    if (digits.startsWith('256') && digits.length >= 12) {
+      return '+' + digits.slice(0, 12);
     }
-    const hasPlus = cleaned.startsWith('+');
-    const digitsOnly = cleaned.replace(/[^0-9]/g, '');
-    return hasPlus ? '+' + digitsOnly : digitsOnly;
+    if (digits.startsWith('0') && digits.length >= 10) {
+      return '+256' + digits.slice(1, 10);
+    }
+    if (digits.length === 9) {
+      return '+256' + digits;
+    }
+    if (String(phone).trim().startsWith('+')) {
+      return '+' + digits;
+    }
+    return '+' + digits;
   }
 
   const PIN_SALT = "MAMAS_SECURE_SALT_2026";
@@ -401,6 +408,7 @@ async function startServer() {
         return res.status(400).json({ error: "Phone number is required for PIN setup." });
       }
 
+      const cleanPhone = normalizedPhone.replace(/[^0-9]/g, '');
       const pinHash = hashPinServer(pin);
 
       try {
@@ -414,8 +422,13 @@ async function startServer() {
           pinLockedUntil: null
         }, { merge: true });
 
-        // Update pinEmails mapping to point to uid
+        // Update pinEmails mapping for both normalized (+256...) and digits-only (256...)
         await db.collection("pinEmails").doc(normalizedPhone).set({
+          uid,
+          updatedAt: Date.now()
+        }, { merge: true });
+
+        await db.collection("pinEmails").doc(cleanPhone).set({
           uid,
           updatedAt: Date.now()
         }, { merge: true });
@@ -445,35 +458,49 @@ async function startServer() {
       }
 
       const normalizedPhone = normalizePhoneServer(phoneNumber);
-      const cleanPhone = normalizedPhone.replace(/[^a-zA-Z0-9+]/g, '');
+      const cleanPhone = normalizedPhone.replace(/[^0-9]/g, '');
 
       // Look up uid from pinEmails or users collection
       let uid = "";
-      let pinEmailDoc = await db.collection("pinEmails").doc(normalizedPhone).get();
-      if (!pinEmailDoc.exists) {
-        pinEmailDoc = await db.collection("pinEmails").doc(cleanPhone).get();
+      
+      try {
+        let pinEmailDoc = await db.collection("pinEmails").doc(normalizedPhone).get();
+        if (!pinEmailDoc.exists) {
+          pinEmailDoc = await db.collection("pinEmails").doc(cleanPhone).get();
+        }
+
+        if (pinEmailDoc.exists && pinEmailDoc.data()?.uid) {
+          uid = pinEmailDoc.data()?.uid;
+        }
+      } catch (docErr) {
+        console.warn("pinEmails doc read warning:", docErr);
       }
 
-      if (pinEmailDoc.exists && pinEmailDoc.data()?.uid) {
-        uid = pinEmailDoc.data()?.uid;
-      } else {
-        // Fallback: search users by phoneNumber
-        let usersSnap = await db.collection("users").where("phoneNumber", "==", normalizedPhone).get();
-        if (usersSnap.empty) {
-          usersSnap = await db.collection("users").where("phoneNumber", "==", phoneNumber).get();
-        }
-        if (!usersSnap.empty) {
-          uid = usersSnap.docs[0].id;
+      if (!uid) {
+        try {
+          // Fallback: search users by phoneNumber
+          let usersSnap = await db.collection("users").where("phoneNumber", "==", normalizedPhone).get();
+          if (usersSnap.empty) {
+            usersSnap = await db.collection("users").where("phoneNumber", "==", cleanPhone).get();
+          }
+          if (usersSnap.empty) {
+            usersSnap = await db.collection("users").where("phoneNumber", "==", phoneNumber).get();
+          }
+          if (!usersSnap.empty) {
+            uid = usersSnap.docs[0].id;
+          }
+        } catch (snapErr) {
+          console.warn("users query warning:", snapErr);
         }
       }
 
       if (!uid) {
-        return res.status(401).json({ error: "Invalid phone number or PIN." });
+        return res.status(401).json({ error: "No account found registered with this phone number." });
       }
 
       const userDoc = await db.collection("users").doc(uid).get();
       if (!userDoc.exists) {
-        return res.status(401).json({ error: "Invalid phone number or PIN." });
+        return res.status(401).json({ error: "No account found registered with this phone number." });
       }
 
       const userData = userDoc.data() || {};
@@ -481,12 +508,12 @@ async function startServer() {
       // Check lockout
       if (userData.pinLockedUntil && userData.pinLockedUntil > Date.now()) {
         const minutesLeft = Math.ceil((userData.pinLockedUntil - Date.now()) / 60000);
-        return res.status(401).json({ error: `Account locked. Try again in ${minutesLeft} minutes.` });
+        return res.status(401).json({ error: `Account locked. Try again in ${minutesLeft} minute(s).` });
       }
 
       const storedHash = userData.pinHash;
       if (!storedHash) {
-        return res.status(401).json({ error: "No PIN set for this number. Please register or log in with SMS." });
+        return res.status(401).json({ error: "No PIN has been set for this account. Please log in with SMS or reset your PIN." });
       }
 
       const incomingHash = hashPinServer(pin);
@@ -496,15 +523,15 @@ async function startServer() {
         if (attempts >= 5) {
           updates.pinLockedUntil = Date.now() + 15 * 60 * 1000; // 15 mins lock
         }
-        await db.collection("users").doc(uid).update(updates);
-        return res.status(401).json({ error: "Invalid phone number or PIN." });
+        await db.collection("users").doc(uid).update(updates).catch(() => {});
+        return res.status(401).json({ error: "Incorrect PIN. Please try again." });
       }
 
       // Success: reset attempts, issue custom token
       await db.collection("users").doc(uid).update({
         failedPinAttempts: 0,
         pinLockedUntil: null
-      });
+      }).catch(() => {});
 
       const adminAuth = getAdminAuth();
       const customToken = await adminAuth.createCustomToken(uid);
