@@ -32,8 +32,9 @@ export function ForcePinModal({ forceShow = false, onClose }: { forceShow?: bool
 
     setLoading(true);
     try {
-      if (!currentUser || !currentUser.phoneNumber) throw new Error("Authentication missing phone number");
-      await setPin(currentUser.uid, currentUser.phoneNumber, pin);
+      const phoneToUse = currentUser?.phoneNumber || userProfile?.phoneNumber;
+      if (!currentUser || !phoneToUse) throw new Error("Authentication missing phone number");
+      await setPin(currentUser.uid, phoneToUse, pin);
       setSuccess(true);
       // Wait a moment so user sees success, then reload or close
       setTimeout(() => {

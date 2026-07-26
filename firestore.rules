@@ -6,9 +6,17 @@ service cloud.firestore {
     function isAuthenticated() {
       return request.auth != null;
     }
+
+    function userExists() {
+      return isAuthenticated() && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
     
     function getUserRole() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+      return userExists() ? getUserData().get('role', 'member') : 'none';
     }
     
     function isSuperAdmin() {
@@ -45,10 +53,7 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() && request.auth.uid == userId;
-      allow update: if isSuperAdmin() || (isAuthenticated() && request.auth.uid == userId && (
-        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']) ||
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pinHash', 'hasPin', 'pinUpdatedAt', 'failedPinAttempts', 'pinLockedUntil', 'updatedAt', 'phoneNumber'])
-      ));
+      allow update: if (isAuthenticated() && request.auth.uid == userId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role'])) || isSuperAdmin();
       allow delete: if isSuperAdmin();
     }
 
@@ -189,7 +194,7 @@ service cloud.firestore {
     // =========================================
     match /pinEmails/{phone} {
       allow read: if true;
-      allow write: if isAuthenticated();
+      allow write: if isAuthenticated() || isSuperAdmin();
     }
 
     match /recoveryRequests/{requestId} {

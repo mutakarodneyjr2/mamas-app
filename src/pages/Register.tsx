@@ -146,8 +146,9 @@ export default function Register() {
         profilePicFile || undefined
       );
       
-      // Set the PIN using synthetic email/password
-      await setPin(currentUser.uid, currentUser.phoneNumber || '', formData.pin);
+      // Set the PIN using phone number
+      const phoneToUse = currentUser.phoneNumber || phoneNumber || '';
+      await setPin(currentUser.uid, phoneToUse, formData.pin);
       
       setStep('success');
     } catch (err: any) {

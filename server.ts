@@ -2,7 +2,7 @@ import express from "express";
 import path from "path";
 import fs from "fs";
 import { createServer as createViteServer } from "vite";
-import { initializeApp as initAdmin, getApps } from "firebase-admin/app";
+import { initializeApp as initAdmin, getApps, cert } from "firebase-admin/app";
 import { getAuth as getAdminAuth } from "firebase-admin/auth";
 import { getFirestore as getAdminFirestore } from "firebase-admin/firestore";
 import { Resend } from "resend";
@@ -16,9 +16,33 @@ import {
 } from "./src/server/relworxService";
 
 if (!getApps().length) {
-  initAdmin({
-    projectId: "mama-alumin"
-  });
+  const serviceAccountEnv = process.env.FIREBASE_SERVICE_ACCOUNT;
+  if (serviceAccountEnv) {
+    try {
+      let serviceAccount = JSON.parse(serviceAccountEnv);
+      if (serviceAccount.private_key) {
+        serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+      }
+      initAdmin({
+        credential: cert(serviceAccount)
+      });
+      console.log("Firebase Admin initialized successfully with FIREBASE_SERVICE_ACCOUNT.");
+    } catch (err) {
+      console.error("Failed to parse FIREBASE_SERVICE_ACCOUNT JSON:", err);
+      try {
+        initAdmin();
+      } catch (defaultErr) {
+        console.error("Failed to initialize Firebase Admin with default credentials:", defaultErr);
+      }
+    }
+  } else {
+    console.warn("FIREBASE_SERVICE_ACCOUNT is not set. Initializing Firebase Admin with default credentials.");
+    try {
+      initAdmin();
+    } catch (defaultErr) {
+      console.error("Failed to initialize Firebase Admin with default credentials:", defaultErr);
+    }
+  }
 }
 
 const db = getAdminFirestore();
@@ -323,120 +347,178 @@ async function startServer() {
     return hasPlus ? '+' + digitsOnly : digitsOnly;
   }
 
-  // PIN Setup & Reset: Migrate data to new Email UID
-  app.post("/api/pin-setup-migrate", async (req, res) => {
+  const PIN_SALT = "MAMAS_SECURE_SALT_2026";
+  function hashPinServer(pin: string): string {
+    return crypto.createHash('sha256').update(pin + PIN_SALT).digest('hex');
+  }
+
+  // Secure Backend PIN Setup / Reset
+  async function handlePinSetup(req: any, res: any) {
     try {
-      const { newIdToken } = req.body;
-      if (!newIdToken) {
+      const { idToken, newIdToken, phoneNumber, pin } = req.body;
+      const tokenToVerify = idToken || newIdToken;
+      if (!tokenToVerify) {
         return res.status(400).json({ error: "Missing authentication token" });
       }
 
-      // Verify token using admin SDK
+      if (!pin || pin.length < 4 || pin.length > 6) {
+        return res.status(400).json({ error: "PIN must be between 4 and 6 digits" });
+      }
+
       const adminAuth = getAdminAuth();
-      let newDecoded;
+      let decodedToken;
       try {
-        newDecoded = await adminAuth.verifyIdToken(newIdToken);
+        decodedToken = await adminAuth.verifyIdToken(tokenToVerify);
       } catch (tokenErr: any) {
-        console.error("Token verification error in pin-setup-migrate:", tokenErr);
+        console.error("Token verification error in PIN setup:", tokenErr);
         return res.status(401).json({ error: "Authentication token verification failed: " + tokenErr.message });
       }
 
-      const newUid = newDecoded.uid;
-      const email = newDecoded.email || "";
+      const uid = decodedToken.uid;
+      const email = decodedToken.email || "";
 
-      if (!email.endsWith("@mama-alumin.local")) {
-         return res.status(400).json({ error: "Invalid synthetic email domain." });
+      let normalizedPhone = "";
+      if (phoneNumber) {
+        normalizedPhone = normalizePhoneServer(phoneNumber);
+      } else if (email.endsWith("@mama-alumin.local")) {
+        const emailLocalPart = email.split('@')[0];
+        const rawPhone = emailLocalPart.split('_')[0];
+        normalizedPhone = normalizePhoneServer(rawPhone);
       }
 
-      // Extract phone number from synthetic email
-      const emailLocalPart = email.split('@')[0];
-      const rawPhone = emailLocalPart.split('_')[0];
-      const normalizedPhone = normalizePhoneServer(rawPhone);
-
-      // Find the current user document by phone number
-      let usersSnap = await db.collection("users").where("phoneNumber", "==", normalizedPhone).get();
-      if (usersSnap.empty) {
-        usersSnap = await db.collection("users").where("phoneNumber", "==", rawPhone).get();
-      }
-      if (usersSnap.empty) {
-        // Fallback: search all users for matching phone digits
-        const allUsers = await db.collection("users").get();
-        const matchedDoc = allUsers.docs.find(d => {
-          const p = normalizePhoneServer(d.data().phoneNumber || '');
-          return p === normalizedPhone || p.includes(rawPhone) || rawPhone.includes(p);
-        });
-        if (matchedDoc) {
-          usersSnap = { empty: false, docs: [matchedDoc] } as any;
+      if (!normalizedPhone) {
+        try {
+          const userDoc = await db.collection("users").doc(uid).get();
+          if (userDoc.exists && userDoc.data()?.phoneNumber) {
+            normalizedPhone = normalizePhoneServer(userDoc.data()?.phoneNumber);
+          }
+        } catch (getErr) {
+          console.warn("Server cannot read user document directly:", getErr);
         }
       }
 
-      if (usersSnap.empty) {
-         return res.status(404).json({ error: `User profile not found for phone number ${normalizedPhone}. Please ensure you are registered.` });
+      if (!normalizedPhone) {
+        return res.status(400).json({ error: "Phone number is required for PIN setup." });
       }
 
-      const oldUserDoc = usersSnap.docs[0];
-      const oldUid = oldUserDoc.id;
+      const pinHash = hashPinServer(pin);
 
-      if (oldUid === newUid) {
-         await db.collection("users").doc(newUid).set({
-           phoneNumber: normalizedPhone,
-           hasPin: true,
-           updatedAt: Date.now()
-         }, { merge: true });
-         await db.collection("pinEmails").doc(normalizedPhone).set({
-           email: email
-         }, { merge: true });
-         return res.json({ success: true });
-      }
-
-      const userData = oldUserDoc.data();
-      const batch = db.batch();
-
-      // Create new user doc
-      batch.set(db.collection("users").doc(newUid), {
-        ...userData,
-        uid: newUid,
-        phoneNumber: normalizedPhone,
-        hasPin: true,
-        updatedAt: Date.now()
-      });
-
-      // Write to pinEmails
-      batch.set(db.collection("pinEmails").doc(normalizedPhone), {
-        email: email
-      }, { merge: true });
-
-      // Update related records
-      const contribSnap = await db.collection("contributions").where("userId", "==", oldUid).get();
-      contribSnap.forEach(d => {
-        batch.update(db.collection("contributions").doc(d.id), { userId: newUid });
-      });
-
-      const welfareSnap = await db.collection("welfareRequests").where("userId", "==", oldUid).get();
-      welfareSnap.forEach(d => {
-        batch.update(db.collection("welfareRequests").doc(d.id), { userId: newUid });
-      });
-
-      const expenseSnap = await db.collection("expenses").where("userId", "==", oldUid).get();
-      expenseSnap.forEach(d => {
-        batch.update(db.collection("expenses").doc(d.id), { userId: newUid });
-      });
-
-      await batch.commit();
-      
-      // Delete old user doc safely
       try {
-        await db.collection("users").doc(oldUid).delete();
-      } catch (delErr) {
-        console.error("Warning: failed to delete old user doc during migration:", delErr);
+        // Update user doc in Firestore using Admin SDK
+        await db.collection("users").doc(uid).set({
+          phoneNumber: normalizedPhone,
+          pinHash,
+          hasPin: true,
+          pinUpdatedAt: Date.now(),
+          failedPinAttempts: 0,
+          pinLockedUntil: null
+        }, { merge: true });
+
+        // Update pinEmails mapping to point to uid
+        await db.collection("pinEmails").doc(normalizedPhone).set({
+          uid,
+          updatedAt: Date.now()
+        }, { merge: true });
+
+        return res.json({ success: true });
+      } catch (dbErr: any) {
+        console.warn("Firebase Admin SDK Firestore write unavailable on server:", dbErr.message);
+        // Indicate to client that server write failed due to permissions, so client fallback should run
+        return res.status(200).json({ 
+          success: false, 
+          fallbackClient: true, 
+          error: dbErr.message 
+        });
+      }
+    } catch (err: any) {
+      console.error("PIN Setup / Reset internal error:", err);
+      res.status(500).json({ error: err.message || "Internal server error during PIN setup." });
+    }
+  }
+
+  // Secure Backend PIN Verify & Login
+  app.post("/api/pin/verify", async (req, res) => {
+    try {
+      const { phoneNumber, pin } = req.body;
+      if (!phoneNumber || !pin) {
+        return res.status(400).json({ error: "Phone number and PIN are required" });
       }
 
-      res.json({ success: true });
+      const normalizedPhone = normalizePhoneServer(phoneNumber);
+      const cleanPhone = normalizedPhone.replace(/[^a-zA-Z0-9+]/g, '');
+
+      // Look up uid from pinEmails or users collection
+      let uid = "";
+      let pinEmailDoc = await db.collection("pinEmails").doc(normalizedPhone).get();
+      if (!pinEmailDoc.exists) {
+        pinEmailDoc = await db.collection("pinEmails").doc(cleanPhone).get();
+      }
+
+      if (pinEmailDoc.exists && pinEmailDoc.data()?.uid) {
+        uid = pinEmailDoc.data()?.uid;
+      } else {
+        // Fallback: search users by phoneNumber
+        let usersSnap = await db.collection("users").where("phoneNumber", "==", normalizedPhone).get();
+        if (usersSnap.empty) {
+          usersSnap = await db.collection("users").where("phoneNumber", "==", phoneNumber).get();
+        }
+        if (!usersSnap.empty) {
+          uid = usersSnap.docs[0].id;
+        }
+      }
+
+      if (!uid) {
+        return res.status(401).json({ error: "Invalid phone number or PIN." });
+      }
+
+      const userDoc = await db.collection("users").doc(uid).get();
+      if (!userDoc.exists) {
+        return res.status(401).json({ error: "Invalid phone number or PIN." });
+      }
+
+      const userData = userDoc.data() || {};
+      
+      // Check lockout
+      if (userData.pinLockedUntil && userData.pinLockedUntil > Date.now()) {
+        const minutesLeft = Math.ceil((userData.pinLockedUntil - Date.now()) / 60000);
+        return res.status(401).json({ error: `Account locked. Try again in ${minutesLeft} minutes.` });
+      }
+
+      const storedHash = userData.pinHash;
+      if (!storedHash) {
+        return res.status(401).json({ error: "No PIN set for this number. Please register or log in with SMS." });
+      }
+
+      const incomingHash = hashPinServer(pin);
+      if (incomingHash !== storedHash) {
+        const attempts = (userData.failedPinAttempts || 0) + 1;
+        const updates: any = { failedPinAttempts: attempts };
+        if (attempts >= 5) {
+          updates.pinLockedUntil = Date.now() + 15 * 60 * 1000; // 15 mins lock
+        }
+        await db.collection("users").doc(uid).update(updates);
+        return res.status(401).json({ error: "Invalid phone number or PIN." });
+      }
+
+      // Success: reset attempts, issue custom token
+      await db.collection("users").doc(uid).update({
+        failedPinAttempts: 0,
+        pinLockedUntil: null
+      });
+
+      const adminAuth = getAdminAuth();
+      const customToken = await adminAuth.createCustomToken(uid);
+
+      res.json({ success: true, customToken });
     } catch (err: any) {
-      console.error("PIN Migration internal error:", err);
-      res.status(500).json({ error: err.message || "Internal server error during PIN migration." });
+      console.error("PIN verification internal error:", err);
+      res.status(500).json({ error: err.message || "Internal server error during PIN verification." });
     }
   });
+
+  app.post("/api/pin/setup", handlePinSetup);
+  app.post("/api/pin/reset", handlePinSetup);
+  app.post("/api/pin-setup-migrate", handlePinSetup);
 
   // Secure Directory Endpoint
   app.get("/api/directory", async (req, res) => {
