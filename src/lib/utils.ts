@@ -8,6 +8,19 @@ export const formatUGX = (amount?: number | null) => {
   }).format(num);
 };
 
+export function normalizePhoneNumber(phone: string): string {
+  if (!phone) return '';
+  let cleaned = String(phone).trim();
+  if (cleaned.startsWith('0')) {
+    cleaned = '+256' + cleaned.substring(1);
+  } else if (!cleaned.startsWith('+')) {
+    cleaned = '+' + cleaned;
+  }
+  const hasPlus = cleaned.startsWith('+');
+  const digitsOnly = cleaned.replace(/[^0-9]/g, '');
+  return hasPlus ? '+' + digitsOnly : digitsOnly;
+}
+
 export function exportToCSV(filename: string, rows: Record<string, any>[]) {
   if (!rows || rows.length === 0) return;
   const keys = Object.keys(rows[0]);

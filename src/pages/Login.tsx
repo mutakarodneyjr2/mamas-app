@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { LogoLarge } from '../components/Logo';
 import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../firebase';
 import { verifyPin, setPin } from '../lib/auth-pin';
 import { 
   Mail, 
@@ -14,12 +15,10 @@ import {
   PhoneCall, 
   MessageSquare, 
   ChevronDown, 
-  ChevronUp, 
-  CheckCircle2, 
-  UserCheck 
+  ChevronUp
 } from 'lucide-react';
 
-type LoginStep = 'phone' | 'otp' | 'create-pin' | 'recovery-email' | 'recovery-code' | 'recovery-choose-action' | 'recovery-reset-pin' | 'recovery-new-phone' | 'recovery-new-otp';
+type LoginStep = 'phone' | 'forgot-pin-phone' | 'forgot-pin-otp' | 'forgot-pin-new' | 'recovery-email' | 'recovery-code' | 'recovery-choose-action' | 'recovery-reset-pin' | 'recovery-new-phone' | 'recovery-new-otp';
 
 export default function Login() {
   const { sendOtp, verifyOtp, setupRecaptcha, currentUser, userProfile } = useAuth();
@@ -34,7 +33,6 @@ export default function Login() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
-  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [showLoginHelp, setShowLoginHelp] = useState(false);
 
   // Support contacts
@@ -53,7 +51,6 @@ export default function Login() {
   const [recoveryConfirmNewPin, setRecoveryConfirmNewPin] = useState('');
 
   useEffect(() => {
-    // Fetch support phone numbers from appSettings/main
     const fetchSettings = async () => {
       try {
         const snap = await getDoc(doc(db, 'appSettings', 'main'));
@@ -70,12 +67,13 @@ export default function Login() {
   }, []);
 
   useEffect(() => {
-    setupRecaptcha('recaptcha-container');
-  }, [setupRecaptcha]);
+    if (step === 'forgot-pin-phone' || step === 'recovery-new-phone') {
+      setupRecaptcha('recaptcha-container-recovery');
+    }
+  }, [step, setupRecaptcha]);
 
   useEffect(() => {
-    // Only auto-redirect if we are not in the middle of a recovery phone update or create pin
-    if (currentUser && step !== 'recovery-new-phone' && step !== 'recovery-new-otp' && step !== 'create-pin') {
+    if (currentUser && step === 'phone') {
       if (userProfile) {
         navigate('/dashboard');
       } else {
@@ -95,20 +93,20 @@ export default function Login() {
       else if (!formattedPhone.startsWith('+')) formattedPhone = '+' + formattedPhone;
       
       await verifyPin(formattedPhone, pin);
-      // If success, Firebase Auth logs them in and useEffect redirects
     } catch (err: any) {
       console.error(err);
-      if (err.message.includes("Account locked")) {
+      if (err.message?.includes("Account locked")) {
          setError(err.message);
       } else {
-         setError('Invalid phone number or PIN. If you haven\'t set a PIN yet, click "Forgot PIN" below to set one using SMS.');
+         setError('Invalid phone number or PIN. If you forgot your PIN, click "Forgot PIN?" below.');
       }
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSendOtp = async () => {
+  const handleForgotPinSendOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
     setError('');
     setLoading(true);
 
@@ -117,8 +115,8 @@ export default function Login() {
       if (formattedPhone.startsWith('0')) formattedPhone = '+256' + formattedPhone.substring(1);
       else if (!formattedPhone.startsWith('+')) formattedPhone = '+' + formattedPhone;
       
-      await sendOtp(formattedPhone);
-      setStep('otp');
+      await sendOtp(formattedPhone, 'recaptcha-container-recovery');
+      setStep('forgot-pin-otp');
     } catch (err: any) {
       console.error(err);
       setError('Failed to send verification code. Please check your number and try again.');
@@ -127,14 +125,13 @@ export default function Login() {
     }
   };
 
-  const handleVerifyOtp = async (e: React.FormEvent) => {
+  const handleForgotPinVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
     try {
       await verifyOtp(otp);
-      // Once OTP is verified, they need to set a new PIN
-      setStep('create-pin');
+      setStep('forgot-pin-new');
     } catch (err: any) {
       console.error(err);
       setError('Failed to verify code. Please try again.');
@@ -143,7 +140,7 @@ export default function Login() {
     }
   };
 
-  const handleCreatePin = async (e: React.FormEvent) => {
+  const handleForgotPinCreateNew = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -166,12 +163,11 @@ export default function Login() {
 
       await setPin(currentUser.uid, formattedPhone, newPin);
       
-      // Navigate based on profile
-      if (userProfile) {
-        navigate('/dashboard');
-      } else {
-        navigate('/register');
-      }
+      setSuccess("PIN reset successfully! You can now log in.");
+      setStep('phone');
+      setPinValue('');
+      setNewPin('');
+      setConfirmNewPin('');
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'Failed to set PIN. Please try again.');
@@ -179,8 +175,6 @@ export default function Login() {
       setLoading(false);
     }
   };
-
-  // --- RECOVERY HANDLERS ---
 
   const handleRequestRecovery = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -225,11 +219,6 @@ export default function Login() {
       setSuccess('Code verified.');
       setStep('recovery-choose-action');
       
-      // Re-setup recaptcha for the new flow just in case
-      setTimeout(() => {
-        setupRecaptcha('recaptcha-container-recovery');
-      }, 500);
-      
     } catch (err: any) {
       setError(err.message || 'Invalid or expired code.');
     } finally {
@@ -247,19 +236,19 @@ export default function Login() {
       if (formattedPhone.startsWith('0')) formattedPhone = '+256' + formattedPhone.substring(1);
       else if (!formattedPhone.startsWith('+')) formattedPhone = '+' + formattedPhone;
       
-      await sendOtp(formattedPhone);
+      await sendOtp(formattedPhone, 'recaptcha-container-recovery');
       setStep('recovery-new-otp');
     } catch (err: any) {
       console.error(err);
       const msg = err.message || '';
       if (err.code === 'auth/invalid-phone-number' || msg.includes('invalid-phone-number')) {
-        setError('Invalid phone number format. Please check the number and try again.');
+        setError('Invalid phone number format.');
       } else if (err.code === 'auth/too-many-requests' || msg.includes('too-many-requests')) {
-        setError('Too many attempts. Please wait a few minutes before trying again.');
+        setError('Too many attempts. Please try again later.');
       } else if (err.code === 'auth/network-request-failed' || msg.includes('network')) {
-        setError('Network error. Please check your internet connection and try again.');
+        setError('Network error. Please check your connection.');
       } else if (err.code === 'auth/captcha-check-failed' || msg.includes('recaptcha')) {
-        setError('Security check failed. Please refresh the page and try again.');
+        setError('Security check failed. Please refresh.');
       } else {
         setError('Failed to send OTP. Please check the phone number.');
       }
@@ -283,7 +272,6 @@ export default function Login() {
     setSuccess('');
     setLoading(true);
     try {
-      // Create new synthetic auth user to get an id token
       const cleanPhone = recoveryOldPhone.replace(/[^a-zA-Z0-9+]/g, '');
       const timestamp = Date.now();
       const syntheticEmail = `${cleanPhone}_${timestamp}@mama-alumin.local`;
@@ -326,11 +314,9 @@ export default function Login() {
     setSuccess('');
     setLoading(true);
     try {
-      // 1. Verify OTP with Firebase Auth -> Creates/signs in the NEW user
       const cred: any = await verifyOtp(recoveryNewOtp);
       const newIdToken = await cred.user.getIdToken();
 
-      // 2. Complete recovery on backend -> Moves data from OLD_UID to newUid
       const res = await fetch('/api/recovery/complete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -343,12 +329,10 @@ export default function Login() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       
-      // Success! The useEffect will navigate them appropriately once userProfile re-fetches.
-      // But we need to trigger a re-render or let it settle.
       setSuccess('Account recovered successfully! Logging you in...');
       setTimeout(() => {
         navigate('/dashboard');
-        window.location.reload(); // Force full reload to get fresh profile data from new UID
+        window.location.reload(); 
       }, 1500);
 
     } catch (err: any) {
@@ -377,72 +361,60 @@ export default function Login() {
 
       <div className="mt-4 sm:mx-auto sm:w-full sm:max-w-md z-10">
         <div className="bg-mamas-card py-10 px-6 shadow-xl shadow-mamas-primary/5 sm:rounded-2xl sm:px-12 border border-slate-100">
+          
           <h2 className="text-2xl font-display font-bold text-mamas-primary text-center mb-6">
-            {step.startsWith('recovery') ? 'Account Recovery' : 'Welcome Back'}
+            {step === 'phone' && 'Welcome Back'}
+            {step.startsWith('forgot-pin') && 'Reset Your PIN'}
+            {step.startsWith('recovery') && 'Account Recovery'}
           </h2>
 
-          {/* Matuumu SS Alumni Notice Banner */}
-          <div className="mb-6 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/80 rounded-2xl p-4 text-left shadow-sm">
-            <div className="flex items-start gap-3">
-              <div className="p-2 bg-amber-100 text-amber-900 rounded-xl shrink-0 mt-0.5">
-                <GraduationCap className="w-5 h-5 text-amber-800" />
-              </div>
-              <div>
-                <h4 className="text-xs font-bold text-amber-950 uppercase tracking-wider">
-                  Matuumu S.S. Alumni Members Only
-                </h4>
-                <p className="text-xs text-amber-900/90 leading-relaxed mt-1">
-                  This platform is strictly for <strong>Old Boys and Old Girls (OBs & OGs)</strong> of <strong>Matuumu Secondary School, Kamuli</strong>. Non-alumni individuals are strictly prohibited from joining.
-                </p>
-              </div>
-            </div>
-          </div>
+          {step === 'phone' && (
+            <div className="mb-6 border border-slate-200 rounded-2xl overflow-hidden bg-slate-50/60 text-left">
+              <button
+                type="button"
+                onClick={() => setShowLoginHelp(!showLoginHelp)}
+                className="w-full p-3.5 flex items-center justify-between text-left text-xs font-bold text-mamas-primary hover:bg-slate-100/80 transition-colors"
+              >
+                <span className="flex items-center gap-2">
+                  <HelpCircle className="w-4 h-4 text-mamas-accent shrink-0" />
+                  How Login, Registration & Approvals Work
+                </span>
+                {showLoginHelp ? <ChevronUp className="w-4 h-4 text-slate-400 shrink-0" /> : <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />}
+              </button>
 
-          {/* Help Guide for New Members */}
-          <div className="mb-6 border border-slate-200 rounded-2xl overflow-hidden bg-slate-50/60 text-left">
-            <button
-              type="button"
-              onClick={() => setShowLoginHelp(!showLoginHelp)}
-              className="w-full p-3.5 flex items-center justify-between text-left text-xs font-bold text-mamas-primary hover:bg-slate-100/80 transition-colors"
-            >
-              <span className="flex items-center gap-2">
-                <HelpCircle className="w-4 h-4 text-mamas-accent shrink-0" />
-                How Login, Registration & Approvals Work
-              </span>
-              {showLoginHelp ? <ChevronUp className="w-4 h-4 text-slate-400 shrink-0" /> : <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />}
-            </button>
+              {showLoginHelp && (
+                <div className="p-4 pt-0 text-xs text-slate-600 space-y-3 border-t border-slate-200/60 bg-white">
+                  <p className="font-semibold text-mamas-text mt-3">Steps to join and access MAMAS:</p>
+                  <ol className="list-decimal pl-4 space-y-2 leading-relaxed">
+                    <li><strong>Registration:</strong> Click "Become a Member" to verify your phone number and create your profile.</li>
+                    <li><strong>PIN Setup:</strong> During registration, you create a secure PIN.</li>
+                    <li><strong>Login:</strong> Once registered, log in simply by entering your Phone Number and PIN.</li>
+                    <li><strong>Executive Approval:</strong> The Executive Committee verifies your alumni records before you can use most features.</li>
+                  </ol>
 
-            {showLoginHelp && (
-              <div className="p-4 pt-0 text-xs text-slate-600 space-y-3 border-t border-slate-200/60 bg-white">
-                <p className="font-semibold text-mamas-text mt-3">Steps to join and access MAMAS:</p>
-                <ol className="list-decimal pl-4 space-y-2 leading-relaxed">
-                  <li><strong>Phone OTP Login:</strong> Enter your active Ugandan phone number (+256...) and enter the 6-digit SMS verification code.</li>
-                  <li><strong>Complete Registration:</strong> If you are a new member, fill in your full name, year left Matuumu S.S., index/class details, and email.</li>
-                  <li><strong>Executive Approval:</strong> The Executive Committee verifies your alumni records. You will receive an instant push notification when approved.</li>
-                </ol>
-
-                <div className="pt-3 border-t border-slate-100">
-                  <p className="font-bold text-slate-700 mb-2">Need Help or Instant Approval?</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <a
-                      href={`tel:${supportPhone}`}
-                      className="flex items-center justify-center gap-1.5 p-2.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-xl hover:bg-emerald-100 font-bold transition-colors text-xs"
-                    >
-                      <PhoneCall className="w-3.5 h-3.5" /> Call Executive
-                    </a>
-                    <a
-                      href={`https://wa.me/${supportWhatsApp.replace(/[^0-9]/g, '')}?text=Hello%20MAMAS%20Executive,%20I%20need%20help%20with%20my%20Matuumu%20Alumni%20registration/login`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-1.5 p-2.5 bg-teal-50 text-teal-800 border border-teal-200 rounded-xl hover:bg-teal-100 font-bold transition-colors text-xs"
-                    >
-                      <MessageSquare className="w-3.5 h-3.5" /> WhatsApp Help
-                    </a>
+                  <div className="pt-3 border-t border-slate-100">
+                    <p className="font-bold text-slate-700 mb-2">Need Help?</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <a
+                        href={`tel:${supportPhone}`}
+                        className="flex items-center justify-center gap-1.5 p-2.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-xl hover:bg-emerald-100 font-bold transition-colors text-xs"
+                      >
+                        <PhoneCall className="w-3.5 h-3.5" /> Call Executive
+                      </a>
+                      <a
+                        href={`https://wa.me/${supportWhatsApp.replace(/[^0-9]/g, '')}?text=Hello%20MAMAS%20Executive,%20I%20need%20help%20with%20my%20Matuumu%20Alumni%20registration/login`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center gap-1.5 p-2.5 bg-teal-50 text-teal-800 border border-teal-200 rounded-xl hover:bg-teal-100 font-bold transition-colors text-xs"
+                      >
+                        <MessageSquare className="w-3.5 h-3.5" /> WhatsApp Help
+                      </a>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
 
           {error && (
             <div className="mb-6 bg-rose-50 border-l-4 border-mamas-danger text-mamas-danger px-4 py-3 rounded-r text-sm font-medium shadow-sm">
@@ -480,7 +452,7 @@ export default function Login() {
 
               <div>
                 <label htmlFor="pin" className="block text-sm font-medium text-slate-700">
-                  PIN (4-6 digits)
+                  PIN
                 </label>
                 <div className="mt-2 relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -501,30 +473,10 @@ export default function Login() {
                 </div>
               </div>
 
-              <div id="recaptcha-container" className="flex justify-center"></div>
-
-              <div className="flex items-start">
-                <div className="flex items-center h-5">
-                  <input
-                    id="terms"
-                    name="terms"
-                    type="checkbox"
-                    checked={agreedToTerms}
-                    onChange={(e) => setAgreedToTerms(e.target.checked)}
-                    className="focus:ring-mamas-primary h-4 w-4 text-mamas-primary border-slate-300 rounded"
-                  />
-                </div>
-                <div className="ml-3 text-sm">
-                  <label htmlFor="terms" className="font-medium text-slate-700">
-                    I agree to the <Link to="/terms" className="text-mamas-primary hover:underline">Terms of Service</Link> and <Link to="/privacy" className="text-mamas-primary hover:underline">Privacy Policy</Link>
-                  </label>
-                </div>
-              </div>
-
               <div>
                 <button
                   type="submit"
-                  disabled={loading || !phoneNumber || !pin || !agreedToTerms}
+                  disabled={loading || !phoneNumber || !pin}
                   className="w-full flex justify-center py-3 px-4 border border-transparent rounded-full shadow-md text-sm font-medium text-white bg-mamas-primary hover:bg-mamas-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-mamas-primary disabled:opacity-50 transition-colors"
                 >
                   {loading ? 'Logging in...' : 'Log In'}
@@ -534,16 +486,15 @@ export default function Login() {
               <div className="text-center mt-4 flex flex-col gap-3">
                 <button
                   type="button"
-                  onClick={handleSendOtp}
-                  disabled={loading || !phoneNumber || !agreedToTerms}
-                  className="text-sm font-semibold text-mamas-primary hover:text-mamas-primary-hover transition-colors"
+                  onClick={() => { setError(''); setSuccess(''); setStep('forgot-pin-phone'); }}
+                  className="text-sm font-medium text-mamas-primary hover:text-mamas-primary-hover transition-colors"
                 >
-                  Forgot PIN or First Time User? Log in with SMS
+                  Forgot PIN?
                 </button>
                 <button
                   type="button"
                   onClick={() => { setError(''); setSuccess(''); setStep('recovery-email'); }}
-                  className="text-sm font-medium text-mamas-text-muted hover:text-mamas-accent transition-colors"
+                  className="text-sm font-medium text-slate-500 hover:text-mamas-accent transition-colors"
                 >
                   Lost your phone? Recover account
                 </button>
@@ -551,109 +502,111 @@ export default function Login() {
             </form>
           )}
 
-          {step === 'otp' && (
-            <form className="space-y-6" onSubmit={handleVerifyOtp}>
+          {step === 'forgot-pin-phone' && (
+            <form className="space-y-6 animate-in fade-in slide-in-from-right-4" onSubmit={handleForgotPinSendOtp}>
+              <p className="text-sm text-slate-600 mb-4 text-center">
+                Enter your registered phone number to receive a verification code.
+              </p>
               <div>
-                <label htmlFor="otp" className="block text-sm font-medium text-slate-700 text-center">
-                  Enter Verification Code sent to {phoneNumber}
-                </label>
-                <div className="mt-4">
+                <label htmlFor="forgotPhone" className="block text-sm font-medium text-slate-700">Phone Number</label>
+                <div className="mt-2 relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Phone className="h-5 w-5 text-slate-400" />
+                  </div>
                   <input
-                    id="otp"
-                    name="otp"
-                    type="text"
+                    id="forgotPhone"
+                    type="tel"
                     required
-                    maxLength={6}
-                    autoFocus
-                    value={otp}
-                    onChange={(e) => setOtp(e.target.value)}
-                    className="appearance-none block w-full px-4 py-3 border border-slate-300 rounded-lg shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-mamas-primary sm:text-lg tracking-[0.5em] font-mono text-center transition-colors"
+                    placeholder="+256 700 000000"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    className="appearance-none block w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-mamas-primary transition-colors"
                   />
                 </div>
               </div>
-
-              <div>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full flex justify-center py-3 px-4 border border-transparent rounded-full shadow-md text-sm font-medium text-white bg-mamas-primary hover:bg-mamas-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-mamas-primary disabled:opacity-50 transition-colors"
-                >
-                  {loading ? 'Verifying...' : 'Verify & Login'}
-                </button>
-              </div>
-              
-              <div className="text-center mt-6">
-                <button
-                  type="button"
-                  onClick={() => setStep('phone')}
-                  className="text-sm font-medium text-mamas-text-muted hover:text-mamas-primary transition-colors"
-                >
-                  Use a different phone number
-                </button>
+              <div id="recaptcha-container-recovery" className="flex justify-center"></div>
+              <button
+                type="submit"
+                disabled={loading || !phoneNumber}
+                className="w-full flex justify-center py-3 px-4 rounded-full shadow-md text-sm font-medium text-white bg-slate-800 hover:bg-slate-900 disabled:opacity-50"
+              >
+                {loading ? 'Sending OTP...' : 'Send Verification Code'}
+              </button>
+              <div className="text-center mt-4">
+                <button type="button" onClick={() => setStep('phone')} className="text-sm text-slate-500 hover:text-mamas-primary">Back to Login</button>
               </div>
             </form>
           )}
 
-          {step === 'create-pin' && (
-            <form className="space-y-6" onSubmit={handleCreatePin}>
+          {step === 'forgot-pin-otp' && (
+            <form className="space-y-6 animate-in fade-in slide-in-from-right-4" onSubmit={handleForgotPinVerifyOtp}>
+              <p className="text-sm text-slate-600 mb-4 text-center">
+                We sent a 6-digit code to <strong>{phoneNumber}</strong>.
+              </p>
               <div>
-                <h3 className="text-lg font-bold text-slate-800 text-center mb-4">Set up a PIN</h3>
-                <p className="text-sm text-slate-500 text-center mb-6">Create a 4-6 digit PIN to easily log in next time.</p>
-                
-                <label htmlFor="newPin" className="block text-sm font-medium text-slate-700">
-                  New PIN (4-6 digits)
-                </label>
-                <div className="mt-2 relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <KeyRound className="h-5 w-5 text-slate-400" />
-                  </div>
+                <label htmlFor="otp" className="block text-sm font-medium text-slate-700 text-center">Enter Verification Code</label>
+                <div className="mt-4 relative">
                   <input
-                    id="newPin"
-                    name="newPin"
-                    type="password"
-                    inputMode="numeric"
-                    pattern="[0-9]{4,6}"
+                    id="otp"
+                    type="text"
                     required
-                    placeholder="Enter new PIN"
-                    value={newPin}
-                    onChange={(e) => setNewPin(e.target.value)}
-                    className="appearance-none block w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-mamas-primary sm:text-base transition-colors"
+                    maxLength={6}
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value)}
+                    className="appearance-none block w-full px-4 py-3 border border-slate-300 rounded-lg tracking-widest font-mono text-center focus:ring-2 focus:ring-mamas-primary transition-colors"
+                    placeholder="000000"
                   />
                 </div>
               </div>
-
-              <div>
-                <label htmlFor="confirmNewPin" className="block text-sm font-medium text-slate-700">
-                  Confirm PIN
-                </label>
-                <div className="mt-2 relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <KeyRound className="h-5 w-5 text-slate-400" />
-                  </div>
-                  <input
-                    id="confirmNewPin"
-                    name="confirmNewPin"
-                    type="password"
-                    inputMode="numeric"
-                    pattern="[0-9]{4,6}"
-                    required
-                    placeholder="Re-enter PIN"
-                    value={confirmNewPin}
-                    onChange={(e) => setConfirmNewPin(e.target.value)}
-                    className="appearance-none block w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-mamas-primary sm:text-base transition-colors"
-                  />
-                </div>
+              <button
+                type="submit"
+                disabled={loading || otp.length < 6}
+                className="w-full flex justify-center py-3 px-4 rounded-full shadow-md text-sm font-medium text-white bg-slate-800 hover:bg-slate-900 disabled:opacity-50"
+              >
+                {loading ? 'Verifying...' : 'Verify Code'}
+              </button>
+              <div className="text-center mt-4">
+                <button type="button" onClick={() => setStep('forgot-pin-phone')} className="text-sm text-slate-500 hover:text-mamas-primary">Go Back</button>
               </div>
+            </form>
+          )}
 
+          {step === 'forgot-pin-new' && (
+            <form className="space-y-6 animate-in fade-in slide-in-from-right-4" onSubmit={handleForgotPinCreateNew}>
+              <p className="text-sm text-slate-600 mb-4 text-center">
+                Create a new 4 to 6 digit PIN.
+              </p>
               <div>
-                <button
-                  type="submit"
-                  disabled={loading || newPin.length < 4}
-                  className="w-full flex justify-center py-3 px-4 border border-transparent rounded-full shadow-md text-sm font-medium text-white bg-mamas-primary hover:bg-mamas-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-mamas-primary disabled:opacity-50 transition-colors"
-                >
-                  {loading ? 'Saving...' : 'Save PIN & Continue'}
-                </button>
+                <label className="block text-sm font-medium text-slate-700">New PIN</label>
+                <input
+                  type="password"
+                  required
+                  maxLength={6}
+                  value={newPin}
+                  onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ''))}
+                  className="mt-2 block w-full px-4 py-3 border border-slate-300 rounded-lg shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-mamas-primary tracking-widest text-center"
+                  placeholder="••••"
+                />
               </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700">Confirm New PIN</label>
+                <input
+                  type="password"
+                  required
+                  maxLength={6}
+                  value={confirmNewPin}
+                  onChange={(e) => setConfirmNewPin(e.target.value.replace(/\D/g, ''))}
+                  className="mt-2 block w-full px-4 py-3 border border-slate-300 rounded-lg shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-mamas-primary tracking-widest text-center"
+                  placeholder="••••"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={loading || newPin.length < 4}
+                className="w-full flex justify-center py-3 px-4 rounded-full shadow-md text-sm font-medium text-white bg-mamas-primary hover:bg-mamas-primary-hover disabled:opacity-50"
+              >
+                {loading ? 'Saving...' : 'Save New PIN'}
+              </button>
             </form>
           )}
 
@@ -724,6 +677,30 @@ export default function Login() {
                 {loading ? 'Verifying...' : 'Verify Code'}
               </button>
             </form>
+          )}
+
+          {step === 'recovery-choose-action' && (
+            <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
+              <p className="text-sm text-slate-600 mb-4 text-center">
+                What would you like to do?
+              </p>
+              <div className="flex flex-col gap-4">
+                <button
+                  type="button"
+                  onClick={() => setStep('recovery-reset-pin')}
+                  className="w-full flex justify-center py-3 px-4 rounded-full shadow-sm text-sm font-medium border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 transition-colors"
+                >
+                  I just forgot my PIN
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStep('recovery-new-phone')}
+                  className="w-full flex justify-center py-3 px-4 rounded-full shadow-sm text-sm font-medium border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 transition-colors"
+                >
+                  I have a new phone number
+                </button>
+              </div>
+            </div>
           )}
 
           {step === 'recovery-reset-pin' && (
@@ -829,11 +806,11 @@ export default function Login() {
           )}
           {/* END RECOVERY FLOW */}
 
-          {!step.startsWith('recovery') && (
-            <div className="mt-8 text-center text-sm text-slate-600">
+          {!step.startsWith('recovery') && !step.startsWith('forgot-pin') && (
+            <div className="mt-8 text-center text-sm text-slate-600 border-t border-slate-200 pt-6">
               Don't have an account?{' '}
               <Link to="/register" className="font-semibold text-mamas-accent hover:text-mamas-accent-hover transition-colors">
-                Become a member
+                Become a Member
               </Link>
             </div>
           )}

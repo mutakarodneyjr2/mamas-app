@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import { User as FirebaseUser, RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult, signOut, onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "../firebase";
 import { User as UserProfile } from "../types";
@@ -9,8 +9,8 @@ interface AuthContextType {
   currentUser: FirebaseUser | null;
   userProfile: UserProfile | null;
   loading: boolean;
-  setupRecaptcha: (containerId: string) => void;
-  sendOtp: (phoneNumber: string) => Promise<void>;
+  setupRecaptcha: (containerId?: string) => void;
+  sendOtp: (phoneNumber: string, containerId?: string) => Promise<void>;
   verifyOtp: (otp: string) => Promise<void>;
   logout: () => Promise<void>;
   recaptchaVerifier: RecaptchaVerifier | null;
@@ -23,6 +23,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [recaptchaVerifier, setRecaptchaVerifier] = useState<RecaptchaVerifier | null>(null);
+  const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
   const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
 
   useEffect(() => {
@@ -73,27 +74,73 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => unsubscribeAuth();
   }, []);
 
-  const setupRecaptcha = (containerId: string) => {
-    if (!recaptchaVerifier) {
+  const setupRecaptcha = useCallback((containerId: string = "recaptcha-container") => {
+    if (recaptchaVerifierRef.current) {
+      try {
+        recaptchaVerifierRef.current.clear();
+      } catch (e) {
+        // ignore clear error
+      }
+      recaptchaVerifierRef.current = null;
+    }
+    const element = document.getElementById(containerId);
+    if (!element) return;
+    try {
       const verifier = new RecaptchaVerifier(auth, containerId, {
         size: "invisible",
+        callback: () => {},
+        "expired-callback": () => {}
       });
+      recaptchaVerifierRef.current = verifier;
       setRecaptchaVerifier(verifier);
+    } catch (e) {
+      console.error("Error setting up RecaptchaVerifier:", e);
     }
-  };
+  }, []);
 
-  const sendOtp = async (phoneNumber: string) => {
-    if (!recaptchaVerifier) throw new Error("Recaptcha not initialized");
+  const sendOtp = useCallback(async (phoneNumber: string, containerId: string = "recaptcha-container") => {
+    if (recaptchaVerifierRef.current) {
+      try {
+        recaptchaVerifierRef.current.clear();
+      } catch (e) {
+        // ignore
+      }
+      recaptchaVerifierRef.current = null;
+    }
+
+    const targetContainer = document.getElementById(containerId) ? containerId : "recaptcha-container";
+    
+    let verifier: RecaptchaVerifier;
     try {
-      const confirmation = await signInWithPhoneNumber(auth, phoneNumber, recaptchaVerifier);
+      verifier = new RecaptchaVerifier(auth, targetContainer, {
+        size: "invisible",
+        callback: () => {},
+        "expired-callback": () => {}
+      });
+      recaptchaVerifierRef.current = verifier;
+      setRecaptchaVerifier(verifier);
+    } catch (e) {
+      console.error("Failed to construct RecaptchaVerifier:", e);
+      throw e;
+    }
+
+    try {
+      const confirmation = await signInWithPhoneNumber(auth, phoneNumber, verifier);
       setConfirmationResult(confirmation);
     } catch (error) {
       console.error("Error sending OTP:", error);
+      if (recaptchaVerifierRef.current) {
+        try {
+          recaptchaVerifierRef.current.clear();
+        } catch (e) {}
+        recaptchaVerifierRef.current = null;
+      }
+      setRecaptchaVerifier(null);
       throw error;
     }
-  };
+  }, []);
 
-  const verifyOtp = async (otp: string) => {
+  const verifyOtp = useCallback(async (otp: string) => {
     if (!confirmationResult) throw new Error("No OTP confirmation result");
     try {
       const cred = await confirmationResult.confirm(otp);
@@ -102,11 +149,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error("Error verifying OTP:", error);
       throw error;
     }
-  };
+  }, [confirmationResult]);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     await signOut(auth);
-  };
+  }, []);
 
   return (
     <AuthContext.Provider value={{ currentUser, userProfile, loading, setupRecaptcha, sendOtp, verifyOtp, logout, recaptchaVerifier }}>

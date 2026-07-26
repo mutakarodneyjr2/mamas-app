@@ -45,7 +45,10 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() && request.auth.uid == userId;
-      allow update: if isSuperAdmin() || (request.auth.uid == userId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']));
+      allow update: if isSuperAdmin() || (isAuthenticated() && request.auth.uid == userId && (
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']) ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pinHash', 'hasPin', 'pinUpdatedAt', 'failedPinAttempts', 'pinLockedUntil', 'updatedAt', 'phoneNumber'])
+      ));
       allow delete: if isSuperAdmin();
     }
 
@@ -186,7 +189,7 @@ service cloud.firestore {
     // =========================================
     match /pinEmails/{phone} {
       allow read: if true;
-      allow write: if false;
+      allow write: if isAuthenticated();
     }
 
     match /recoveryRequests/{requestId} {

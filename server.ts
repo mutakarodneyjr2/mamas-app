@@ -2,9 +2,9 @@ import express from "express";
 import path from "path";
 import fs from "fs";
 import { createServer as createViteServer } from "vite";
-import { initializeApp } from "firebase/app";
-import { getFirestore, collection, getDocs, getDoc, query, where, doc, updateDoc, setDoc, deleteDoc, writeBatch } from "firebase/firestore";
-import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
+import { initializeApp as initAdmin, getApps } from "firebase-admin/app";
+import { getAuth as getAdminAuth } from "firebase-admin/auth";
+import { getFirestore as getAdminFirestore } from "firebase-admin/firestore";
 import { Resend } from "resend";
 import crypto from "crypto";
 import {
@@ -15,19 +15,13 @@ import {
   handleDisbursementWebhook
 } from "./src/server/relworxService";
 
+if (!getApps().length) {
+  initAdmin({
+    projectId: "mama-alumin"
+  });
+}
 
-const firebaseConfig = {
-  apiKey: "AIzaSyDkZQ-sp3W8qwCXfadZRsGbEnUezQlInFs",
-  authDomain: "mama-alumin.firebaseapp.com",
-  projectId: "mama-alumin",
-  storageBucket: "mama-alumin.firebasestorage.app",
-  messagingSenderId: "396635962310",
-  appId: "1:396635962310:web:ae5ba06ec3c60f6ade90c7"
-};
-
-const firebaseApp = initializeApp(firebaseConfig);
-const db = getFirestore(firebaseApp);
-const auth = getAuth(firebaseApp);
+const db = getAdminFirestore();
 
 let resendClient: Resend | null = null;
 function getResend() {
@@ -48,14 +42,6 @@ async function startServer() {
 
   app.use(express.json());
 
-  // Authenticate the backend as System Admin
-  try {
-    await signInWithEmailAndPassword(auth, 'system@mamas.local', 'SuperSecretSystem123!');
-    console.log("Backend authenticated as System Admin");
-  } catch (error) {
-    console.error("Failed to authenticate backend:", error);
-  }
-
   // API Health Check
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok" });
@@ -71,23 +57,19 @@ async function startServer() {
 
       // Rate limiting: max 3 requests per hour
       const oneHourAgo = Date.now() - 60 * 60 * 1000;
-      const rateQ = query(
-        collection(db, "recoveryRequests"), 
-        where("email", "==", emailLower)
-      );
-      const rateSnap = await getDocs(rateQ);
+      const rateSnap = await db.collection("recoveryRequests")
+        .where("email", "==", emailLower)
+        .get();
+      
       const recentRequests = rateSnap.docs.filter(d => d.data().createdAt >= oneHourAgo);
       if (recentRequests.length >= 3) {
         return res.status(429).json({ error: "Too many recovery requests. Please try again later." });
       }
 
-      const q = query(collection(db, "users"), where("email", "==", emailLower));
-      const snap = await getDocs(q);
+      const snap = await db.collection("users").where("email", "==", emailLower).get();
+      const snap2 = await db.collection("users").where("recoveryEmail", "==", emailLower).get();
       
-      const q2 = query(collection(db, "users"), where("recoveryEmail", "==", emailLower));
-      const snap2 = await getDocs(q2);
-      
-      let userDoc = null;
+      let userDoc: any = null;
       if (!snap.empty) userDoc = snap.docs[0];
       else if (!snap2.empty) userDoc = snap2.docs[0];
 
@@ -100,10 +82,9 @@ async function startServer() {
       
       // Generate 6 digit code
       const code = Math.floor(100000 + Math.random() * 900000).toString();
-      
       const requestId = crypto.randomUUID();
       
-      await setDoc(doc(db, "recoveryRequests", requestId), {
+      await db.collection("recoveryRequests").doc(requestId).set({
         id: requestId,
         email: email.toLowerCase(),
         userId: userDoc.id,
@@ -119,7 +100,7 @@ async function startServer() {
       }
 
       const { data, error } = await resend.emails.send({
-        from: 'MAMAS <noreply@resend.dev>', // Default resend testing email
+        from: 'MAMAS <noreply@resend.dev>',
         to: email,
         subject: "MAMAS Account Recovery Code",
         text: `Hello ${userData.fullName},\n\nYou requested to recover your Matuumu Alumni Mutual Aid Association (MAMAS) account.\n\nYour recovery code is:\n\n${code}\n\nThis code will expire in 15 minutes.\n\nIf you did not request this, please ignore this email.\n\n— The MAMAS Team`,
@@ -131,7 +112,6 @@ async function startServer() {
       }
 
       console.log(`Recovery code sent to ${email}. ID: ${data?.id}`);
-      
       res.json({ success: true, message: "Recovery code sent!" });
     } catch (err: any) {
       console.error("Recovery request error:", err);
@@ -148,7 +128,7 @@ async function startServer() {
       const code = Math.floor(100000 + Math.random() * 900000).toString();
       const requestId = crypto.randomUUID();
       
-      await setDoc(doc(db, "emailVerifications", requestId), {
+      await db.collection("emailVerifications").doc(requestId).set({
         id: requestId,
         email: email.toLowerCase(),
         uid: uid,
@@ -181,18 +161,18 @@ async function startServer() {
   app.post("/api/profile/email/verify", async (req, res) => {
     try {
       const { requestId, code, uid } = req.body;
-      const reqDoc = await getDoc(doc(db, "emailVerifications", requestId));
+      const reqDoc = await db.collection("emailVerifications").doc(requestId).get();
       
-      if (!reqDoc.exists()) return res.status(400).json({ error: "Invalid request" });
-      const reqData = reqDoc.data();
+      if (!reqDoc.exists) return res.status(400).json({ error: "Invalid request" });
+      const reqData = reqDoc.data()!;
       
       if (reqData.used || reqData.expiresAt < Date.now() || reqData.code !== code || reqData.uid !== uid) {
          return res.status(400).json({ error: "Invalid or expired code" });
       }
 
-      await updateDoc(doc(db, "emailVerifications", requestId), { used: true });
+      await db.collection("emailVerifications").doc(requestId).update({ used: true });
       
-      await updateDoc(doc(db, "users", uid), { 
+      await db.collection("users").doc(uid).update({ 
         recoveryEmail: reqData.email,
         recoveryEmailVerified: true 
       });
@@ -209,27 +189,25 @@ async function startServer() {
       const { email, code } = req.body;
       if (!email || !code) return res.status(400).json({ error: "Email and code required" });
 
-      const q = query(collection(db, "recoveryRequests"), 
-        where("email", "==", email.toLowerCase()),
-        where("code", "==", code),
-        where("used", "==", false)
-      );
-      
-      const snap = await getDocs(q);
+      const snap = await db.collection("recoveryRequests")
+        .where("email", "==", email.toLowerCase())
+        .where("code", "==", code)
+        .where("used", "==", false)
+        .get();
+            
       const validReq = snap.docs.find(d => d.data().expiresAt > Date.now());
-
       if (!validReq) {
         return res.status(400).json({ error: "Invalid or expired recovery code" });
       }
 
       // Generate a temporary recovery token
       const recoveryToken = crypto.randomUUID();
-      await updateDoc(doc(db, "recoveryRequests", validReq.id), {
+      await db.collection("recoveryRequests").doc(validReq.id).update({
         recoveryToken: recoveryToken
       });
 
-      const userDoc = await getDoc(doc(db, "users", validReq.data().userId));
-      const phoneNumber = userDoc.exists() ? userDoc.data().phoneNumber : '';
+      const userDoc = await db.collection("users").doc(validReq.data().userId).get();
+      const phoneNumber = userDoc.exists ? userDoc.data()?.phoneNumber : '';
 
       res.json({ success: true, recoveryToken, requestId: validReq.id, phoneNumber });
     } catch (err: any) {
@@ -241,13 +219,12 @@ async function startServer() {
   app.post("/api/recovery/complete", async (req, res) => {
     try {
       const { requestId, recoveryToken, newIdToken } = req.body;
-      
       if (!newIdToken) return res.status(400).json({ error: "Missing token" });
 
-      const reqDoc = await getDoc(doc(db, "recoveryRequests", requestId));
-      if (!reqDoc.exists()) return res.status(400).json({ error: "Invalid request" });
+      const reqDoc = await db.collection("recoveryRequests").doc(requestId).get();
+      if (!reqDoc.exists) return res.status(400).json({ error: "Invalid request" });
       
-      const reqData = reqDoc.data();
+      const reqData = reqDoc.data()!;
       if (reqData.used || reqData.recoveryToken !== recoveryToken) {
         return res.status(400).json({ error: "Invalid or used recovery token" });
       }
@@ -261,31 +238,26 @@ async function startServer() {
       let hasPin = false;
 
       if (email.endsWith("@mama-alumin.local")) {
-         // It's a synthetic PIN account
          const emailLocalPart = email.split('@')[0];
          newPhoneNumber = "+" + emailLocalPart.split('_')[0].replace(/[^0-9]/g, ''); 
-         // Assuming original phone was E.164, cleanPhone removes + but wait, it might be +256...
-         // Let's just use the old user's phone number!
          hasPin = true;
       }
 
       const oldUid = reqData.userId;
-      
       if (oldUid === newUid) {
          return res.json({ success: true });
       }
 
-      const oldUserDoc = await getDoc(doc(db, "users", oldUid));
-      if (!oldUserDoc.exists()) return res.status(404).json({ error: "User not found" });
+      const oldUserDoc = await db.collection("users").doc(oldUid).get();
+      if (!oldUserDoc.exists) return res.status(404).json({ error: "User not found" });
       
-      const oldUserData = oldUserDoc.data();
-      // If setting a new PIN, keep the old phone number. If linking new phone, use newPhoneNumber.
+      const oldUserData = oldUserDoc.data()!;
       const finalPhoneNumber = hasPin ? oldUserData.phoneNumber : (newPhoneNumber || oldUserData.phoneNumber);
       
-      const batch = writeBatch(db);
+      const batch = db.batch();
 
       // Create new user doc
-      batch.set(doc(db, "users", newUid), {
+      batch.set(db.collection("users").doc(newUid), {
         ...oldUserData,
         uid: newUid,
         phoneNumber: finalPhoneNumber,
@@ -294,46 +266,40 @@ async function startServer() {
       });
 
       if (hasPin) {
-        batch.set(doc(db, "pinEmails", finalPhoneNumber.replace(/[^a-zA-Z0-9+]/g, '')), {
+        batch.set(db.collection("pinEmails").doc(finalPhoneNumber.replace(/[^a-zA-Z0-9+]/g, '')), {
           email: email
         });
       }
 
-      // We cannot easily update all contributions/welfare in a batch without reading all first,
-      // but we are super_admin so we can query and update.
-      
-      const contribQ = query(collection(db, "contributions"), where("userId", "==", oldUid));
-      const contribSnap = await getDocs(contribQ);
+      const contribSnap = await db.collection("contributions").where("userId", "==", oldUid).get();
       contribSnap.forEach(d => {
-        batch.update(doc(db, "contributions", d.id), { userId: newUid });
+        batch.update(db.collection("contributions").doc(d.id), { userId: newUid });
       });
 
-      const welfareQ = query(collection(db, "welfareRequests"), where("userId", "==", oldUid));
-      const welfareSnap = await getDocs(welfareQ);
+      const welfareSnap = await db.collection("welfareRequests").where("userId", "==", oldUid).get();
       welfareSnap.forEach(d => {
-        batch.update(doc(db, "welfareRequests", d.id), { userId: newUid });
+        batch.update(db.collection("welfareRequests").doc(d.id), { userId: newUid });
       });
 
-      const expenseQ = query(collection(db, "expenses"), where("userId", "==", oldUid));
-      const expenseSnap = await getDocs(expenseQ);
+      const expenseSnap = await db.collection("expenses").where("userId", "==", oldUid).get();
       expenseSnap.forEach(d => {
-        batch.update(doc(db, "expenses", d.id), { userId: newUid });
+        batch.update(db.collection("expenses").doc(d.id), { userId: newUid });
       });
 
       await batch.commit();
 
       // Delete old user doc
-      await deleteDoc(doc(db, "users", oldUid));
+      await db.collection("users").doc(oldUid).delete();
 
       // Mark request as used
-      await updateDoc(doc(db, "recoveryRequests", requestId), { used: true });
+      await db.collection("recoveryRequests").doc(requestId).update({ used: true });
 
       // Create activity log
-      await setDoc(doc(collection(db, "activityLogs")), {
+      await db.collection("activityLogs").doc().set({
         action: "ACCOUNT_RECOVERED",
         adminId: "SYSTEM",
         targetId: newUid,
-        details: `Account recovered. Phone number updated to ${newPhoneNumber}`,
+        details: `Account recovered. Phone number updated to ${finalPhoneNumber}`,
         createdAt: Date.now()
       });
 
@@ -344,95 +310,138 @@ async function startServer() {
     }
   });
 
+  function normalizePhoneServer(phone: string): string {
+    if (!phone) return '';
+    let cleaned = String(phone).trim();
+    if (cleaned.startsWith('0')) {
+      cleaned = '+256' + cleaned.substring(1);
+    } else if (!cleaned.startsWith('+')) {
+      cleaned = '+' + cleaned;
+    }
+    const hasPlus = cleaned.startsWith('+');
+    const digitsOnly = cleaned.replace(/[^0-9]/g, '');
+    return hasPlus ? '+' + digitsOnly : digitsOnly;
+  }
+
   // PIN Setup & Reset: Migrate data to new Email UID
   app.post("/api/pin-setup-migrate", async (req, res) => {
     try {
       const { newIdToken } = req.body;
       if (!newIdToken) {
-        return res.status(400).json({ error: "Missing token" });
+        return res.status(400).json({ error: "Missing authentication token" });
       }
 
       // Verify token using admin SDK
       const adminAuth = getAdminAuth();
-      const newDecoded = await adminAuth.verifyIdToken(newIdToken);
+      let newDecoded;
+      try {
+        newDecoded = await adminAuth.verifyIdToken(newIdToken);
+      } catch (tokenErr: any) {
+        console.error("Token verification error in pin-setup-migrate:", tokenErr);
+        return res.status(401).json({ error: "Authentication token verification failed: " + tokenErr.message });
+      }
+
       const newUid = newDecoded.uid;
       const email = newDecoded.email || "";
 
       if (!email.endsWith("@mama-alumin.local")) {
-         return res.status(400).json({ error: "Invalid synthetic email." });
+         return res.status(400).json({ error: "Invalid synthetic email domain." });
       }
 
       // Extract phone number from synthetic email
       const emailLocalPart = email.split('@')[0];
-      const phoneNumber = emailLocalPart.split('_')[0]; // handles the _timestamp part
+      const rawPhone = emailLocalPart.split('_')[0];
+      const normalizedPhone = normalizePhoneServer(rawPhone);
 
       // Find the current user document by phone number
-      const usersQ = query(collection(db, "users"), where("phoneNumber", "==", phoneNumber));
-      const usersSnap = await getDocs(usersQ);
-      
+      let usersSnap = await db.collection("users").where("phoneNumber", "==", normalizedPhone).get();
       if (usersSnap.empty) {
-         return res.status(404).json({ error: "User not found for this phone number." });
+        usersSnap = await db.collection("users").where("phoneNumber", "==", rawPhone).get();
+      }
+      if (usersSnap.empty) {
+        // Fallback: search all users for matching phone digits
+        const allUsers = await db.collection("users").get();
+        const matchedDoc = allUsers.docs.find(d => {
+          const p = normalizePhoneServer(d.data().phoneNumber || '');
+          return p === normalizedPhone || p.includes(rawPhone) || rawPhone.includes(p);
+        });
+        if (matchedDoc) {
+          usersSnap = { empty: false, docs: [matchedDoc] } as any;
+        }
+      }
+
+      if (usersSnap.empty) {
+         return res.status(404).json({ error: `User profile not found for phone number ${normalizedPhone}. Please ensure you are registered.` });
       }
 
       const oldUserDoc = usersSnap.docs[0];
       const oldUid = oldUserDoc.id;
 
       if (oldUid === newUid) {
+         await db.collection("users").doc(newUid).set({
+           phoneNumber: normalizedPhone,
+           hasPin: true,
+           updatedAt: Date.now()
+         }, { merge: true });
+         await db.collection("pinEmails").doc(normalizedPhone).set({
+           email: email
+         }, { merge: true });
          return res.json({ success: true });
       }
 
       const userData = oldUserDoc.data();
-      const batch = writeBatch(db);
+      const batch = db.batch();
 
       // Create new user doc
-      batch.set(doc(db, "users", newUid), {
+      batch.set(db.collection("users").doc(newUid), {
         ...userData,
         uid: newUid,
+        phoneNumber: normalizedPhone,
         hasPin: true,
         updatedAt: Date.now()
       });
 
       // Write to pinEmails
-      batch.set(doc(db, "pinEmails", phoneNumber), {
+      batch.set(db.collection("pinEmails").doc(normalizedPhone), {
         email: email
-      });
+      }, { merge: true });
 
       // Update related records
-      const contribQ = query(collection(db, "contributions"), where("userId", "==", oldUid));
-      const contribSnap = await getDocs(contribQ);
+      const contribSnap = await db.collection("contributions").where("userId", "==", oldUid).get();
       contribSnap.forEach(d => {
-        batch.update(doc(db, "contributions", d.id), { userId: newUid });
+        batch.update(db.collection("contributions").doc(d.id), { userId: newUid });
       });
 
-      const welfareQ = query(collection(db, "welfareRequests"), where("userId", "==", oldUid));
-      const welfareSnap = await getDocs(welfareQ);
+      const welfareSnap = await db.collection("welfareRequests").where("userId", "==", oldUid).get();
       welfareSnap.forEach(d => {
-        batch.update(doc(db, "welfareRequests", d.id), { userId: newUid });
+        batch.update(db.collection("welfareRequests").doc(d.id), { userId: newUid });
       });
 
-      const expenseQ = query(collection(db, "expenses"), where("userId", "==", oldUid));
-      const expenseSnap = await getDocs(expenseQ);
+      const expenseSnap = await db.collection("expenses").where("userId", "==", oldUid).get();
       expenseSnap.forEach(d => {
-        batch.update(doc(db, "expenses", d.id), { userId: newUid });
+        batch.update(db.collection("expenses").doc(d.id), { userId: newUid });
       });
 
       await batch.commit();
       
-      // Delete old user doc
-      await deleteDoc(doc(db, "users", oldUid));
+      // Delete old user doc safely
+      try {
+        await db.collection("users").doc(oldUid).delete();
+      } catch (delErr) {
+        console.error("Warning: failed to delete old user doc during migration:", delErr);
+      }
 
       res.json({ success: true });
     } catch (err: any) {
-      console.error("PIN Migration error:", err);
-      res.status(500).json({ error: "Internal server error" });
+      console.error("PIN Migration internal error:", err);
+      res.status(500).json({ error: err.message || "Internal server error during PIN migration." });
     }
   });
 
   // Secure Directory Endpoint
   app.get("/api/directory", async (req, res) => {
     try {
-      const q = query(collection(db, 'users'), where('status', '==', 'approved'));
-      const snap = await getDocs(q);
+      const snap = await db.collection('users').where('status', '==', 'approved').get();
       
       const publicMembers = snap.docs.map(doc => {
         const data = doc.data();
@@ -456,10 +465,8 @@ async function startServer() {
         if (data.privacySettings?.showEmail && data.email) {
           publicData.email = data.email;
         }
-
         return publicData;
       });
-
       res.json(publicMembers);
     } catch (error) {
       console.error("Error fetching directory:", error);
@@ -470,16 +477,14 @@ async function startServer() {
   // =========================================
   // RELWORX WEBHOOKS & API
   // =========================================
-  
+
   app.post("/api/relworx/initiate-collection", async (req, res) => {
     try {
-      // In a real app, you would also verify the user's authentication token here
       const { amount, phoneNumber, network, userId, metadata } = req.body;
       
       if (!amount || !phoneNumber || !userId) {
         return res.status(400).json({ error: "Missing required fields" });
       }
-
       const result = await initiateCollection(amount, phoneNumber, network, userId, metadata);
       res.json(result);
     } catch (error: any) {
@@ -490,13 +495,11 @@ async function startServer() {
 
   app.post("/api/relworx/initiate-disbursement", async (req, res) => {
     try {
-      // In a real app, verify authentication token and admin roles here
       const { amount, phoneNumber, network, reference, metadata } = req.body;
       
       if (!amount || !phoneNumber || !reference) {
         return res.status(400).json({ error: "Missing required fields" });
       }
-
       const result = await initiateDisbursement(amount, phoneNumber, network, reference, metadata);
       res.json(result);
     } catch (error: any) {
@@ -510,12 +513,10 @@ async function startServer() {
       const signature = req.headers['x-signature'] as string;
       const payloadString = JSON.stringify(req.body);
       const secret = process.env.RELWORX_WEBHOOK_SECRET || '';
-
       if (secret && !verifyWebhookSignature(signature, payloadString, secret)) {
         console.warn("Invalid webhook signature for collection");
         return res.status(401).json({ error: "Invalid signature" });
       }
-
       await handleCollectionWebhook(req.body);
       res.status(200).send("OK");
     } catch (error: any) {
@@ -529,12 +530,10 @@ async function startServer() {
       const signature = req.headers['x-signature'] as string;
       const payloadString = JSON.stringify(req.body);
       const secret = process.env.RELWORX_WEBHOOK_SECRET || '';
-
       if (secret && !verifyWebhookSignature(signature, payloadString, secret)) {
         console.warn("Invalid webhook signature for disbursement");
         return res.status(401).json({ error: "Invalid signature" });
       }
-
       await handleDisbursementWebhook(req.body);
       res.status(200).send("OK");
     } catch (error: any) {
@@ -555,7 +554,6 @@ async function startServer() {
       appType: "spa",
     });
     app.use(vite.middlewares);
-
     // Fallback for SPA routing in development
     app.get('*', async (req, res, next) => {
       const url = req.originalUrl;
