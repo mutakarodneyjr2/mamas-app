@@ -179,6 +179,23 @@ service cloud.firestore {
       allow create: if true;
       allow read, update, delete: if hasRole(['super_admin', 'chairperson', 'vice_chairperson', 'secretary']);
     }
+    // =========================================
+    // 12. Pin Emails Collection (for mapping phone to synthetic email)
+    // Read: Anyone (needed before login)
+    // Write: Backend only (using Admin SDK)
+    // =========================================
+    match /pinEmails/{phone} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /recoveryRequests/{requestId} {
+      allow read, write: if isSuperAdmin();
+    }
+
+    match /emailVerifications/{requestId} {
+      allow read, write: if isSuperAdmin();
+    }
   }
 }
 

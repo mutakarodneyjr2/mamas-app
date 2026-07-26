@@ -84,12 +84,18 @@ async function startServer() {
       const q = query(collection(db, "users"), where("email", "==", emailLower));
       const snap = await getDocs(q);
       
-      if (snap.empty) {
+      const q2 = query(collection(db, "users"), where("recoveryEmail", "==", emailLower));
+      const snap2 = await getDocs(q2);
+      
+      let userDoc = null;
+      if (!snap.empty) userDoc = snap.docs[0];
+      else if (!snap2.empty) userDoc = snap2.docs[0];
+
+      if (!userDoc) {
         // Return success even if not found to prevent email enumeration
         return res.json({ success: true, message: "If this email is registered, a recovery code was sent." });
       }
 
-      const userDoc = snap.docs[0];
       const userData = userDoc.data();
       
       // Generate 6 digit code
@@ -133,6 +139,70 @@ async function startServer() {
     }
   });
 
+  // Profile: Request Email Verification
+  app.post("/api/profile/email/request", async (req, res) => {
+    try {
+      const { email, uid } = req.body;
+      if (!email || !uid) return res.status(400).json({ error: "Email and uid required" });
+
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      const requestId = crypto.randomUUID();
+      
+      await setDoc(doc(db, "emailVerifications", requestId), {
+        id: requestId,
+        email: email.toLowerCase(),
+        uid: uid,
+        code: code,
+        expiresAt: Date.now() + 15 * 60 * 1000,
+        used: false
+      });
+
+      const resend = getResend();
+      if (!resend) throw new Error("Email service not configured.");
+
+      const { error } = await resend.emails.send({
+        from: 'MAMAS <noreply@resend.dev>',
+        to: email,
+        subject: "Verify your email",
+        text: `Your MAMAS email verification code is: ${code}\n\nIt expires in 15 minutes.`
+      });
+
+      if (error) {
+         return res.status(500).json({ error: "Failed to send email" });
+      }
+
+      res.json({ success: true, requestId });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || "Internal server error" });
+    }
+  });
+
+  // Profile: Verify Email Code
+  app.post("/api/profile/email/verify", async (req, res) => {
+    try {
+      const { requestId, code, uid } = req.body;
+      const reqDoc = await getDoc(doc(db, "emailVerifications", requestId));
+      
+      if (!reqDoc.exists()) return res.status(400).json({ error: "Invalid request" });
+      const reqData = reqDoc.data();
+      
+      if (reqData.used || reqData.expiresAt < Date.now() || reqData.code !== code || reqData.uid !== uid) {
+         return res.status(400).json({ error: "Invalid or expired code" });
+      }
+
+      await updateDoc(doc(db, "emailVerifications", requestId), { used: true });
+      
+      await updateDoc(doc(db, "users", uid), { 
+        recoveryEmail: reqData.email,
+        recoveryEmailVerified: true 
+      });
+
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // Account Recovery: Verify Code
   app.post("/api/recovery/verify", async (req, res) => {
     try {
@@ -158,17 +228,22 @@ async function startServer() {
         recoveryToken: recoveryToken
       });
 
-      res.json({ success: true, recoveryToken, requestId: validReq.id });
+      const userDoc = await getDoc(doc(db, "users", validReq.data().userId));
+      const phoneNumber = userDoc.exists() ? userDoc.data().phoneNumber : '';
+
+      res.json({ success: true, recoveryToken, requestId: validReq.id, phoneNumber });
     } catch (err: any) {
       res.status(500).json({ error: "Internal server error" });
     }
   });
 
-  // Account Recovery: Complete Phone Update
+  // Account Recovery: Complete Data Migration
   app.post("/api/recovery/complete", async (req, res) => {
     try {
-      const { requestId, recoveryToken, newUid, newPhoneNumber } = req.body;
+      const { requestId, recoveryToken, newIdToken } = req.body;
       
+      if (!newIdToken) return res.status(400).json({ error: "Missing token" });
+
       const reqDoc = await getDoc(doc(db, "recoveryRequests", requestId));
       if (!reqDoc.exists()) return res.status(400).json({ error: "Invalid request" });
       
@@ -177,25 +252,55 @@ async function startServer() {
         return res.status(400).json({ error: "Invalid or used recovery token" });
       }
 
+      const adminAuth = getAdminAuth();
+      const newDecoded = await adminAuth.verifyIdToken(newIdToken);
+      const newUid = newDecoded.uid;
+      
+      let newPhoneNumber = newDecoded.phone_number;
+      let email = newDecoded.email || "";
+      let hasPin = false;
+
+      if (email.endsWith("@mama-alumin.local")) {
+         // It's a synthetic PIN account
+         const emailLocalPart = email.split('@')[0];
+         newPhoneNumber = "+" + emailLocalPart.split('_')[0].replace(/[^0-9]/g, ''); 
+         // Assuming original phone was E.164, cleanPhone removes + but wait, it might be +256...
+         // Let's just use the old user's phone number!
+         hasPin = true;
+      }
+
       const oldUid = reqData.userId;
       
-      // Update the user document to the new UID
+      if (oldUid === newUid) {
+         return res.json({ success: true });
+      }
+
       const oldUserDoc = await getDoc(doc(db, "users", oldUid));
       if (!oldUserDoc.exists()) return res.status(404).json({ error: "User not found" });
       
       const oldUserData = oldUserDoc.data();
+      // If setting a new PIN, keep the old phone number. If linking new phone, use newPhoneNumber.
+      const finalPhoneNumber = hasPin ? oldUserData.phoneNumber : (newPhoneNumber || oldUserData.phoneNumber);
       
+      const batch = writeBatch(db);
+
       // Create new user doc
-      await setDoc(doc(db, "users", newUid), {
+      batch.set(doc(db, "users", newUid), {
         ...oldUserData,
         uid: newUid,
-        phoneNumber: newPhoneNumber,
+        phoneNumber: finalPhoneNumber,
+        hasPin: hasPin ? true : oldUserData.hasPin,
         updatedAt: Date.now()
       });
 
+      if (hasPin) {
+        batch.set(doc(db, "pinEmails", finalPhoneNumber.replace(/[^a-zA-Z0-9+]/g, '')), {
+          email: email
+        });
+      }
+
       // We cannot easily update all contributions/welfare in a batch without reading all first,
       // but we are super_admin so we can query and update.
-      const batch = writeBatch(db);
       
       const contribQ = query(collection(db, "contributions"), where("userId", "==", oldUid));
       const contribSnap = await getDocs(contribQ);
@@ -207,6 +312,12 @@ async function startServer() {
       const welfareSnap = await getDocs(welfareQ);
       welfareSnap.forEach(d => {
         batch.update(doc(db, "welfareRequests", d.id), { userId: newUid });
+      });
+
+      const expenseQ = query(collection(db, "expenses"), where("userId", "==", oldUid));
+      const expenseSnap = await getDocs(expenseQ);
+      expenseSnap.forEach(d => {
+        batch.update(doc(db, "expenses", d.id), { userId: newUid });
       });
 
       await batch.commit();
@@ -229,6 +340,90 @@ async function startServer() {
       res.json({ success: true });
     } catch (err: any) {
       console.error(err);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // PIN Setup & Reset: Migrate data to new Email UID
+  app.post("/api/pin-setup-migrate", async (req, res) => {
+    try {
+      const { newIdToken } = req.body;
+      if (!newIdToken) {
+        return res.status(400).json({ error: "Missing token" });
+      }
+
+      // Verify token using admin SDK
+      const adminAuth = getAdminAuth();
+      const newDecoded = await adminAuth.verifyIdToken(newIdToken);
+      const newUid = newDecoded.uid;
+      const email = newDecoded.email || "";
+
+      if (!email.endsWith("@mama-alumin.local")) {
+         return res.status(400).json({ error: "Invalid synthetic email." });
+      }
+
+      // Extract phone number from synthetic email
+      const emailLocalPart = email.split('@')[0];
+      const phoneNumber = emailLocalPart.split('_')[0]; // handles the _timestamp part
+
+      // Find the current user document by phone number
+      const usersQ = query(collection(db, "users"), where("phoneNumber", "==", phoneNumber));
+      const usersSnap = await getDocs(usersQ);
+      
+      if (usersSnap.empty) {
+         return res.status(404).json({ error: "User not found for this phone number." });
+      }
+
+      const oldUserDoc = usersSnap.docs[0];
+      const oldUid = oldUserDoc.id;
+
+      if (oldUid === newUid) {
+         return res.json({ success: true });
+      }
+
+      const userData = oldUserDoc.data();
+      const batch = writeBatch(db);
+
+      // Create new user doc
+      batch.set(doc(db, "users", newUid), {
+        ...userData,
+        uid: newUid,
+        hasPin: true,
+        updatedAt: Date.now()
+      });
+
+      // Write to pinEmails
+      batch.set(doc(db, "pinEmails", phoneNumber), {
+        email: email
+      });
+
+      // Update related records
+      const contribQ = query(collection(db, "contributions"), where("userId", "==", oldUid));
+      const contribSnap = await getDocs(contribQ);
+      contribSnap.forEach(d => {
+        batch.update(doc(db, "contributions", d.id), { userId: newUid });
+      });
+
+      const welfareQ = query(collection(db, "welfareRequests"), where("userId", "==", oldUid));
+      const welfareSnap = await getDocs(welfareQ);
+      welfareSnap.forEach(d => {
+        batch.update(doc(db, "welfareRequests", d.id), { userId: newUid });
+      });
+
+      const expenseQ = query(collection(db, "expenses"), where("userId", "==", oldUid));
+      const expenseSnap = await getDocs(expenseQ);
+      expenseSnap.forEach(d => {
+        batch.update(doc(db, "expenses", d.id), { userId: newUid });
+      });
+
+      await batch.commit();
+      
+      // Delete old user doc
+      await deleteDoc(doc(db, "users", oldUid));
+
+      res.json({ success: true });
+    } catch (err: any) {
+      console.error("PIN Migration error:", err);
       res.status(500).json({ error: "Internal server error" });
     }
   });

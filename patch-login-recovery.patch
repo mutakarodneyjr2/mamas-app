@@ -1,0 +1,11 @@
+--- src/pages/Login.tsx
++++ src/pages/Login.tsx
+@@ -218,7 +218,7 @@
+       
+       setRecoveryToken(data.recoveryToken);
+       setRecoveryRequestId(data.requestId);
+-      setStep('recovery-new-phone');
++      setStep('recovery-choose-action');
+       setSuccess('Email verified successfully.');
+     } catch (err: any) {
+       setError(err.message || 'Failed to verify code.');

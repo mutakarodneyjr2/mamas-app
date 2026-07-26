@@ -31,34 +31,52 @@ export async function setPin(uid: string, phoneNumber: string, pin: string) {
   }
 
   const hashed = await hashPin(pin);
-
-  if (!auth.currentUser) throw new Error("Must be logged in to set PIN");
+  const currentUser = auth.currentUser;
   
-  const syntheticEmail = getSyntheticEmail(phoneNumber);
+  if (!currentUser) throw new Error("Must be logged in to set PIN");
+  
+  // Create a unique synthetic email by appending a timestamp to the phone number
+  // This allows resetting the PIN multiple times without hitting email-already-in-use
+  const cleanPhone = phoneNumber.replace(/[^a-zA-Z0-9+]/g, '');
+  const timestamp = Date.now();
+  const syntheticEmail = `${cleanPhone}_${timestamp}@mama-alumin.local`;
   const syntheticPassword = getSyntheticPassword(pin);
 
+  // Import createUserWithEmailAndPassword here to avoid circular dependencies
+  const { createUserWithEmailAndPassword } = await import('firebase/auth');
+
+  let newCred;
   try {
-    await updateEmail(auth.currentUser, syntheticEmail);
+    newCred = await createUserWithEmailAndPassword(auth, syntheticEmail, syntheticPassword);
   } catch (e: any) {
-    if (e.code !== 'auth/email-already-in-use') {
-       // If email already in use by same user, it's fine. 
-       // If by another user, it shouldn't happen unless numbers clash.
-       throw e;
-    }
+    throw new Error("Failed to configure PIN authentication: " + e.message);
   }
 
-  await updatePassword(auth.currentUser, syntheticPassword);
+  const newIdToken = await newCred.user.getIdToken();
 
-  // Update Firestore to indicate PIN is set
-  await updateDoc(doc(db, 'users', uid), {
-    pinHash: hashed,
-    hasPin: true,
-    pinUpdatedAt: Date.now()
+  // Call migration API
+  const res = await fetch('/api/pin-setup-migrate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ newIdToken })
   });
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || "Failed to finalize PIN setup on server.");
+  }
 }
 
 export async function verifyPin(phoneNumber: string, pin: string) {
-  const syntheticEmail = getSyntheticEmail(phoneNumber);
+  // Read synthetic email from Firestore
+  const cleanPhone = phoneNumber.replace(/[^a-zA-Z0-9+]/g, '');
+  const pinEmailDoc = await getDoc(doc(db, 'pinEmails', cleanPhone));
+  
+  if (!pinEmailDoc.exists()) {
+    throw new Error("No PIN set for this number. Please log in with SMS.");
+  }
+
+  const syntheticEmail = pinEmailDoc.data().email;
   const syntheticPassword = getSyntheticPassword(pin);
 
   try {

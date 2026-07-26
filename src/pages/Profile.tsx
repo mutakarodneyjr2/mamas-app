@@ -7,6 +7,8 @@ import { Link } from 'react-router-dom';
 import { User, Camera, Shield, FileText, CheckCircle2, AlertCircle, Upload, HelpCircle, SunMedium, Sparkles } from 'lucide-react';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { OnboardingTour } from '../components/OnboardingTour';
+import { ForcePinModal } from '../components/ForcePinModal';
+import { KeyRound } from 'lucide-react';
 
 const compressImageToBlob = async (file: File, maxWidth = 500, maxHeight = 500, quality = 0.8): Promise<Blob> => {
   return new Promise((resolve, reject) => {
@@ -56,6 +58,7 @@ const compressImageToBlob = async (file: File, maxWidth = 500, maxHeight = 500, 
 
 export default function Profile() {
   const { userProfile, currentUser } = useAuth();
+  const [showPinModal, setShowPinModal] = useState(false);
   
   const [formData, setFormData] = useState({
     email: '',
@@ -72,6 +75,53 @@ export default function Profile() {
   const [toastMessage, setToastMessage] = useState('');
   const [error, setError] = useState('');
   const [showTour, setShowTour] = useState(false);
+
+  const [emailVerifyState, setEmailVerifyState] = useState<'idle' | 'sending' | 'sent' | 'verifying'>('idle');
+  const [emailCode, setEmailCode] = useState('');
+  const [emailRequestId, setEmailRequestId] = useState('');
+
+  const handleVerifyEmail = async () => {
+    if (!formData.email) return;
+    setEmailVerifyState('sending');
+    setError('');
+    try {
+      const res = await fetch('/api/profile/email/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email, uid: currentUser?.uid })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setEmailRequestId(data.requestId);
+      setEmailVerifyState('sent');
+      setToastMessage('Verification code sent to your email.');
+    } catch (err: any) {
+      setError(err.message || 'Failed to send verification code');
+      setEmailVerifyState('idle');
+    }
+  };
+
+  const handleConfirmEmailCode = async () => {
+    if (!emailCode) return;
+    setEmailVerifyState('verifying');
+    setError('');
+    try {
+      const res = await fetch('/api/profile/email/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requestId: emailRequestId, code: emailCode, uid: currentUser?.uid })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setToastMessage('Email verified successfully!');
+      setEmailVerifyState('idle');
+      setEmailCode('');
+      // It will update `userProfile` via the snapshot listener automatically
+    } catch (err: any) {
+      setError(err.message || 'Invalid code');
+      setEmailVerifyState('sent');
+    }
+  };
 
   useEffect(() => {
     if (userProfile) {
@@ -225,15 +275,56 @@ export default function Profile() {
             <div>
               <h3 className="text-base font-bold text-mamas-text mb-4">Personal Details</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Email Address</label>
-                  <input 
-                    type="email" 
-                    name="email" 
-                    value={formData.email} 
-                    onChange={handleChange} 
-                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-mamas-accent outline-none text-mamas-text font-semibold" 
-                  />
+                <div className="flex flex-col">
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                    Email Address
+                    {userProfile.recoveryEmailVerified && formData.email === userProfile.recoveryEmail && (
+                      <span className="ml-2 text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full text-[10px]">Verified</span>
+                    )}
+                  </label>
+                  <div className="relative">
+                    <input 
+                      type="email" 
+                      name="email" 
+                      value={formData.email} 
+                      onChange={handleChange} 
+                      className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-mamas-accent outline-none text-mamas-text font-semibold" 
+                    />
+                    {formData.email && (!userProfile.recoveryEmailVerified || formData.email !== userProfile.recoveryEmail) && emailVerifyState === 'idle' && (
+                       <button
+                         type="button"
+                         onClick={handleVerifyEmail}
+                         className="absolute right-2 top-1/2 -translate-y-1/2 text-xs font-bold bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 px-3 py-1.5 rounded-lg transition-colors"
+                       >
+                         Verify
+                       </button>
+                    )}
+                  </div>
+                  
+                  {emailVerifyState === 'sending' && (
+                    <p className="text-xs text-mamas-primary mt-2">Sending code...</p>
+                  )}
+                  
+                  {emailVerifyState === 'sent' && (
+                    <div className="mt-2 flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="6-digit code"
+                        value={emailCode}
+                        onChange={(e) => setEmailCode(e.target.value)}
+                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-mamas-primary outline-none"
+                        maxLength={6}
+                      />
+                      <button
+                        type="button"
+                        onClick={handleConfirmEmailCode}
+                        disabled={emailCode.length !== 6}
+                        className="bg-mamas-primary hover:bg-mamas-primary-hover text-white px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap disabled:opacity-50"
+                      >
+                        Confirm
+                      </button>
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Occupation</label>
@@ -365,6 +456,21 @@ export default function Profile() {
                   <HelpCircle className="w-4 h-4 text-mamas-primary" /> Restart Tour
                 </button>
               </div>
+
+              {/* Change PIN */}
+              <div className="mt-4 bg-slate-50 dark:bg-slate-800/50 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                  <p className="font-bold text-sm text-mamas-text">Security PIN</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Update your 4-6 digit login PIN.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowPinModal(true)}
+                  className="bg-white dark:bg-slate-700 hover:bg-slate-100 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600 font-bold py-2.5 px-4 rounded-xl text-xs transition-all shadow-sm flex items-center gap-1.5 whitespace-nowrap"
+                >
+                  <KeyRound className="w-4 h-4 text-mamas-primary" /> Change PIN
+                </button>
+              </div>
             </div>
           </div>
           
@@ -379,6 +485,8 @@ export default function Profile() {
           </div>
         </form>
       </div>
+
+      {showPinModal && <ForcePinModal forceShow={true} onClose={() => setShowPinModal(false)} />}
 
       {showTour && (
         <OnboardingTour userProfile={userProfile} onComplete={() => setShowTour(false)} />

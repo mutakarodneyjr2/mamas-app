@@ -35,14 +35,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         );
 
         // Listen to profile changes
-        const unsubscribeProfile = onSnapshot(doc(db, "users", user.uid), (doc) => {
-          if (doc.exists()) {
-            setUserProfile(doc.data() as UserProfile);
-          } else {
-            setUserProfile(null);
-          }
-          setLoading(false);
-        });
+        let unsubscribeProfile = () => {};
+        
+        const setupProfileListener = (targetUid: string) => {
+          unsubscribeProfile = onSnapshot(doc(db, "users", targetUid), async (document) => {
+            if (document.exists()) {
+              setUserProfile(document.data() as UserProfile);
+              setLoading(false);
+            } else {
+              // If not found by UID, check if they are a migrated user (logged in via SMS)
+              if (user.phoneNumber && targetUid === user.uid) {
+                const { collection, query, where, getDocs } = await import("firebase/firestore");
+                const q = query(collection(db, "users"), where("phoneNumber", "==", user.phoneNumber));
+                const snap = await getDocs(q);
+                if (!snap.empty && snap.docs[0].id !== user.uid) {
+                  // Found a migrated profile! Listen to it instead.
+                  unsubscribeProfile();
+                  setupProfileListener(snap.docs[0].id);
+                  return;
+                }
+              }
+              setUserProfile(null);
+              setLoading(false);
+            }
+          });
+        };
+
+        setupProfileListener(user.uid);
+        
         return () => unsubscribeProfile();
       } else {
         setUserProfile(null);

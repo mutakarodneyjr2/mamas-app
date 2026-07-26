@@ -19,7 +19,7 @@ import {
   UserCheck 
 } from 'lucide-react';
 
-type LoginStep = 'phone' | 'otp' | 'create-pin' | 'recovery-email' | 'recovery-code' | 'recovery-new-phone' | 'recovery-new-otp';
+type LoginStep = 'phone' | 'otp' | 'create-pin' | 'recovery-email' | 'recovery-code' | 'recovery-choose-action' | 'recovery-reset-pin' | 'recovery-new-phone' | 'recovery-new-otp';
 
 export default function Login() {
   const { sendOtp, verifyOtp, setupRecaptcha, currentUser, userProfile } = useAuth();
@@ -46,8 +46,11 @@ export default function Login() {
   const [recoveryCode, setRecoveryCode] = useState('');
   const [recoveryToken, setRecoveryToken] = useState('');
   const [recoveryRequestId, setRecoveryRequestId] = useState('');
+  const [recoveryOldPhone, setRecoveryOldPhone] = useState('');
   const [recoveryNewPhone, setRecoveryNewPhone] = useState('');
   const [recoveryNewOtp, setRecoveryNewOtp] = useState('');
+  const [recoveryNewPin, setRecoveryNewPin] = useState('');
+  const [recoveryConfirmNewPin, setRecoveryConfirmNewPin] = useState('');
 
   useEffect(() => {
     // Fetch support phone numbers from appSettings/main
@@ -218,8 +221,9 @@ export default function Login() {
       
       setRecoveryToken(data.recoveryToken);
       setRecoveryRequestId(data.requestId);
-      setSuccess('Code verified. Please set your new phone number.');
-      setStep('recovery-new-phone');
+      setRecoveryOldPhone(data.phoneNumber);
+      setSuccess('Code verified.');
+      setStep('recovery-choose-action');
       
       // Re-setup recaptcha for the new flow just in case
       setTimeout(() => {
@@ -264,6 +268,58 @@ export default function Login() {
     }
   };
 
+  const handleRecoveryResetPin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (recoveryNewPin.length < 4 || recoveryNewPin.length > 6) {
+      setError('PIN must be 4 to 6 digits.');
+      return;
+    }
+    if (recoveryNewPin !== recoveryConfirmNewPin) {
+      setError('PINs do not match.');
+      return;
+    }
+
+    setError('');
+    setSuccess('');
+    setLoading(true);
+    try {
+      // Create new synthetic auth user to get an id token
+      const cleanPhone = recoveryOldPhone.replace(/[^a-zA-Z0-9+]/g, '');
+      const timestamp = Date.now();
+      const syntheticEmail = `${cleanPhone}_${timestamp}@mama-alumin.local`;
+      const syntheticPassword = `MAMAS-PIN-${recoveryNewPin}`;
+      
+      const { auth } = await import('../firebase');
+      const { createUserWithEmailAndPassword } = await import('firebase/auth');
+      
+      const newCred = await createUserWithEmailAndPassword(auth, syntheticEmail, syntheticPassword);
+      const newIdToken = await newCred.user.getIdToken();
+
+      const res = await fetch('/api/recovery/complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          requestId: recoveryRequestId,
+          recoveryToken,
+          newIdToken
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      setSuccess('PIN reset successfully! Logging you in...');
+      setTimeout(() => {
+        navigate('/dashboard');
+        window.location.reload(); 
+      }, 1500);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || 'Failed to reset PIN.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleCompleteRecovery = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -272,11 +328,7 @@ export default function Login() {
     try {
       // 1. Verify OTP with Firebase Auth -> Creates/signs in the NEW user
       const cred: any = await verifyOtp(recoveryNewOtp);
-      const newUid = cred.user.uid;
-
-      let formattedPhone = recoveryNewPhone;
-      if (formattedPhone.startsWith('0')) formattedPhone = '+256' + formattedPhone.substring(1);
-      else if (!formattedPhone.startsWith('+')) formattedPhone = '+' + formattedPhone;
+      const newIdToken = await cred.user.getIdToken();
 
       // 2. Complete recovery on backend -> Moves data from OLD_UID to newUid
       const res = await fetch('/api/recovery/complete', {
@@ -285,8 +337,7 @@ export default function Login() {
         body: JSON.stringify({
           requestId: recoveryRequestId,
           recoveryToken,
-          newUid,
-          newPhoneNumber: formattedPhone
+          newIdToken
         })
       });
       const data = await res.json();
@@ -671,6 +722,45 @@ export default function Login() {
                 className="w-full flex justify-center py-3 px-4 rounded-full shadow-md text-sm font-medium text-white bg-slate-800 hover:bg-slate-900 disabled:opacity-50"
               >
                 {loading ? 'Verifying...' : 'Verify Code'}
+              </button>
+            </form>
+          )}
+
+          {step === 'recovery-reset-pin' && (
+            <form className="space-y-6 animate-in fade-in slide-in-from-right-4" onSubmit={handleRecoveryResetPin}>
+              <p className="text-sm text-slate-600 mb-4 text-center">
+                Set a new PIN for your account. You will keep your existing phone number ({recoveryOldPhone}).
+              </p>
+              <div>
+                <label className="block text-sm font-medium text-slate-700">New PIN</label>
+                <input
+                  type="password"
+                  required
+                  maxLength={6}
+                  value={recoveryNewPin}
+                  onChange={(e) => setRecoveryNewPin(e.target.value.replace(/\D/g, ''))}
+                  className="mt-2 block w-full px-4 py-3 border border-slate-300 rounded-lg shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-mamas-primary tracking-widest text-center"
+                  placeholder="••••"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700">Confirm New PIN</label>
+                <input
+                  type="password"
+                  required
+                  maxLength={6}
+                  value={recoveryConfirmNewPin}
+                  onChange={(e) => setRecoveryConfirmNewPin(e.target.value.replace(/\D/g, ''))}
+                  className="mt-2 block w-full px-4 py-3 border border-slate-300 rounded-lg shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-mamas-primary tracking-widest text-center"
+                  placeholder="••••"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={loading || recoveryNewPin.length < 4}
+                className="w-full flex justify-center py-3 px-4 rounded-full shadow-md text-sm font-medium text-white bg-mamas-primary hover:bg-mamas-primary-hover disabled:opacity-50"
+              >
+                {loading ? 'Resetting PIN...' : 'Reset PIN'}
               </button>
             </form>
           )}

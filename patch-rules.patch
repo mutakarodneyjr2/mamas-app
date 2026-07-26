@@ -1,0 +1,17 @@
+--- firestore.rules
++++ firestore.rules
+@@ -192,5 +192,15 @@
+     match /pinEmails/{phone} {
+       allow read: if true;
+       allow write: if false;
+     }
++
++    match /recoveryRequests/{requestId} {
++      allow read, write: if isSuperAdmin();
++    }
++
++    match /emailVerifications/{requestId} {
++      allow read, write: if isSuperAdmin();
++    }
+   }
+ }

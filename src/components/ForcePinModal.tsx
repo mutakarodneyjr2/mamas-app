@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { setPin } from '../lib/auth-pin';
 import { KeyRound, ArrowRight } from 'lucide-react';
 
-export function ForcePinModal() {
+export function ForcePinModal({ forceShow = false, onClose }: { forceShow?: boolean; onClose?: () => void }) {
   const { currentUser, userProfile } = useAuth();
   const [pin, setPinValue] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
@@ -11,8 +11,8 @@ export function ForcePinModal() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
-  // If already has pin, do not render
-  if (!userProfile || userProfile.hasPin) {
+  // If already has pin and not force showing, do not render
+  if (!forceShow && (!userProfile || userProfile.hasPin)) {
     return null;
   }
 
@@ -35,9 +35,14 @@ export function ForcePinModal() {
       if (!currentUser || !currentUser.phoneNumber) throw new Error("Authentication missing phone number");
       await setPin(currentUser.uid, currentUser.phoneNumber, pin);
       setSuccess(true);
-      // Wait a moment so user sees success, then reload to ensure profile is refreshed.
+      // Wait a moment so user sees success, then reload or close
       setTimeout(() => {
-        window.location.reload();
+        if (forceShow && onClose) {
+           onClose();
+           window.location.reload();
+        } else {
+           window.location.reload();
+        }
       }, 1500);
     } catch (err: any) {
       console.error(err);
@@ -64,7 +69,12 @@ export function ForcePinModal() {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-mamas-bg/95 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-100">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-100 relative">
+        {forceShow && onClose && (
+           <button onClick={onClose} className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600">
+             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+           </button>
+        )}
         <div className="p-6 sm:p-8">
           <div className="w-12 h-12 bg-mamas-primary/10 rounded-2xl flex items-center justify-center mb-6 text-mamas-primary">
             <KeyRound className="w-6 h-6" />

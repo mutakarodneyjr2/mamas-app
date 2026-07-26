@@ -1,0 +1,48 @@
+--- server.ts
++++ server.ts
+@@ -131,6 +131,52 @@
+     }
+   });
+ 
++  // Profile: Request Email Verification
++  app.post("/api/profile/email/request", async (req, res) => {
++    try {
++      const { email, uid } = req.body;
++      if (!email || !uid) return res.status(400).json({ error: "Email and uid required" });
++
++      const code = Math.floor(100000 + Math.random() * 900000).toString();
++      const requestId = crypto.randomUUID();
++      
++      await setDoc(doc(db, "emailVerifications", requestId), {
++        id: requestId,
++        email: email.toLowerCase(),
++        uid: uid,
++        code: code,
++        expiresAt: Date.now() + 15 * 60 * 1000,
++        used: false
++      });
++
++      const resend = getResend();
++      if (!resend) throw new Error("Email service not configured.");
++
++      const { error } = await resend.emails.send({
++        from: 'MAMAS <noreply@resend.dev>',
++        to: email,
++        subject: "Verify your email",
++        text: `Your MAMAS email verification code is: ${code}\n\nIt expires in 15 minutes.`
++      });
++
++      if (error) {
++         return res.status(500).json({ error: "Failed to send email" });
++      }
++
++      res.json({ success: true, requestId });
++    } catch (err: any) {
++      res.status(500).json({ error: err.message || "Internal server error" });
++    }
++  });
++
++  // Profile: Verify Email Code
++  app.post("/api/profile/email/verify", async (req, res) => {
++    // Implementation goes here
++  });
