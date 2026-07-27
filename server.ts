@@ -354,9 +354,76 @@ async function startServer() {
     return '+' + digits;
   }
 
+  const FIREBASE_REST_API_KEY = "AIzaSyDkZQ-sp3W8qwCXfadZRsGbEnUezQlInFs";
+  const FIREBASE_PROJECT_ID = "mama-alumin";
+
+  function parseRestFields(fields: Record<string, any>): Record<string, any> {
+    const result: Record<string, any> = {};
+    for (const [key, val] of Object.entries(fields)) {
+      if ('stringValue' in val) result[key] = val.stringValue;
+      else if ('integerValue' in val) result[key] = Number(val.integerValue);
+      else if ('doubleValue' in val) result[key] = Number(val.doubleValue);
+      else if ('booleanValue' in val) result[key] = val.booleanValue;
+      else if ('nullValue' in val) result[key] = null;
+      else if ('mapValue' in val) result[key] = parseRestFields(val.mapValue.fields || {});
+    }
+    return result;
+  }
+
+  async function getFirestoreDocRest(collectionName: string, docId: string) {
+    try {
+      const url = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/${collectionName}/${encodeURIComponent(docId)}?key=${FIREBASE_REST_API_KEY}`;
+      const res = await fetch(url);
+      if (!res.ok) return null;
+      const data = await res.json();
+      if (!data.fields) return null;
+      return parseRestFields(data.fields);
+    } catch (err) {
+      console.warn(`REST fetch error for ${collectionName}/${docId}:`, err);
+      return null;
+    }
+  }
+
+  async function signInWithPasswordRest(email: string, password: string) {
+    try {
+      const url = `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${FIREBASE_REST_API_KEY}`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, returnSecureToken: true })
+      });
+      const data = await res.json();
+      if (res.ok && data.idToken) {
+        return data;
+      }
+      return null;
+    } catch (err) {
+      return null;
+    }
+  }
+
+  async function signUpRest(email: string, password: string) {
+    try {
+      const url = `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${FIREBASE_REST_API_KEY}`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, returnSecureToken: true })
+      });
+      const data = await res.json();
+      if (res.ok && data.idToken) {
+        return data;
+      }
+      return null;
+    } catch (err) {
+      return null;
+    }
+  }
+
   const PIN_SALT = "MAMAS_SECURE_SALT_2026";
   function hashPinServer(pin: string): string {
-    return crypto.createHash('sha256').update(pin + PIN_SALT).digest('hex');
+    const cleanPin = String(pin).trim();
+    return crypto.createHash('sha256').update(cleanPin + PIN_SALT).digest('hex');
   }
 
   // Secure Backend PIN Setup / Reset
@@ -368,7 +435,8 @@ async function startServer() {
         return res.status(400).json({ error: "Missing authentication token" });
       }
 
-      if (!pin || pin.length < 4 || pin.length > 6) {
+      const cleanPin = String(pin || '').trim();
+      if (!cleanPin || cleanPin.length < 4 || cleanPin.length > 6) {
         return res.status(400).json({ error: "PIN must be between 4 and 6 digits" });
       }
 
@@ -409,7 +477,23 @@ async function startServer() {
       }
 
       const cleanPhone = normalizedPhone.replace(/[^0-9]/g, '');
-      const pinHash = hashPinServer(pin);
+      let localWithZero = "";
+      let localNoZero = "";
+      if (cleanPhone.startsWith('256') && cleanPhone.length === 12) {
+        localWithZero = '0' + cleanPhone.slice(3);
+        localNoZero = cleanPhone.slice(3);
+      }
+      const rawDigits = String(phoneNumber || '').replace(/[^0-9]/g, '');
+
+      const pinHash = hashPinServer(cleanPin);
+      const syntheticEmail = `${cleanPhone}@mama-alumin.local`;
+      const syntheticPassword = `MAMAS_PIN_${cleanPin}`;
+
+      // Create or update Firebase Auth account via REST
+      let authRes = await signInWithPasswordRest(syntheticEmail, syntheticPassword);
+      if (!authRes) {
+        await signUpRest(syntheticEmail, syntheticPassword);
+      }
 
       try {
         // Update user doc in Firestore using Admin SDK
@@ -422,16 +506,26 @@ async function startServer() {
           pinLockedUntil: null
         }, { merge: true });
 
-        // Update pinEmails mapping for both normalized (+256...) and digits-only (256...)
-        await db.collection("pinEmails").doc(normalizedPhone).set({
-          uid,
-          updatedAt: Date.now()
-        }, { merge: true });
+        // Update pinEmails mapping for all phone variations
+        const keysToSave = Array.from(new Set([
+          normalizedPhone,
+          cleanPhone,
+          localWithZero,
+          localNoZero,
+          rawDigits
+        ])).filter(Boolean);
 
-        await db.collection("pinEmails").doc(cleanPhone).set({
-          uid,
-          updatedAt: Date.now()
-        }, { merge: true });
+        for (const key of keysToSave) {
+          await db.collection("pinEmails").doc(key).set({
+            uid,
+            pinHash,
+            hasPin: true,
+            email: syntheticEmail,
+            failedPinAttempts: 0,
+            pinLockedUntil: null,
+            updatedAt: Date.now()
+          }, { merge: true });
+        }
 
         return res.json({ success: true });
       } catch (dbErr: any) {
@@ -457,40 +551,82 @@ async function startServer() {
         return res.status(400).json({ error: "Phone number and PIN are required" });
       }
 
+      const cleanPin = String(pin).trim();
       const normalizedPhone = normalizePhoneServer(phoneNumber);
       const cleanPhone = normalizedPhone.replace(/[^0-9]/g, '');
+      const rawDigits = String(phoneNumber).replace(/[^0-9]/g, '');
 
-      // Look up uid from pinEmails or users collection
+      let localWithZero = "";
+      let localNoZero = "";
+      if (cleanPhone.startsWith('256') && cleanPhone.length === 12) {
+        localWithZero = '0' + cleanPhone.slice(3);
+        localNoZero = cleanPhone.slice(3);
+      }
+
+      const phoneCandidates = Array.from(new Set([
+        normalizedPhone,
+        cleanPhone,
+        localWithZero,
+        localNoZero,
+        rawDigits,
+        String(phoneNumber).trim()
+      ])).filter(Boolean);
+
       let uid = "";
-      
-      try {
-        let pinEmailDoc = await db.collection("pinEmails").doc(normalizedPhone).get();
-        if (!pinEmailDoc.exists) {
-          pinEmailDoc = await db.collection("pinEmails").doc(cleanPhone).get();
-        }
+      let storedHash = "";
+      let failedPinAttempts = 0;
+      let pinLockedUntil: number | null = null;
+      let emailForAuth = `${cleanPhone}@mama-alumin.local`;
 
-        if (pinEmailDoc.exists && pinEmailDoc.data()?.uid) {
-          uid = pinEmailDoc.data()?.uid;
-        }
-      } catch (docErr) {
-        console.warn("pinEmails doc read warning:", docErr);
-      }
-
-      if (!uid) {
+      // 1. Try Admin SDK
+      for (const phoneKey of phoneCandidates) {
         try {
-          // Fallback: search users by phoneNumber
-          let usersSnap = await db.collection("users").where("phoneNumber", "==", normalizedPhone).get();
-          if (usersSnap.empty) {
-            usersSnap = await db.collection("users").where("phoneNumber", "==", cleanPhone).get();
+          const pinEmailDoc = await db.collection("pinEmails").doc(phoneKey).get();
+          if (pinEmailDoc.exists) {
+            const data = pinEmailDoc.data() || {};
+            if (data.uid) {
+              uid = data.uid;
+              storedHash = data.pinHash || "";
+              failedPinAttempts = data.failedPinAttempts || 0;
+              pinLockedUntil = data.pinLockedUntil || null;
+              if (data.email) emailForAuth = data.email;
+              break;
+            }
           }
-          if (usersSnap.empty) {
-            usersSnap = await db.collection("users").where("phoneNumber", "==", phoneNumber).get();
+        } catch (docErr) {
+          // Admin SDK failed
+        }
+      }
+
+      // 2. Fallback to REST API for pinEmails
+      if (!uid || !storedHash) {
+        for (const phoneKey of phoneCandidates) {
+          const restDoc = await getFirestoreDocRest("pinEmails", phoneKey);
+          if (restDoc && restDoc.uid) {
+            uid = restDoc.uid;
+            storedHash = restDoc.pinHash || storedHash;
+            failedPinAttempts = restDoc.failedPinAttempts || failedPinAttempts;
+            pinLockedUntil = restDoc.pinLockedUntil || pinLockedUntil;
+            if (restDoc.email) emailForAuth = restDoc.email;
+            break;
           }
-          if (!usersSnap.empty) {
-            uid = usersSnap.docs[0].id;
-          }
-        } catch (snapErr) {
-          console.warn("users query warning:", snapErr);
+        }
+      }
+
+      // 3. Fallback: check users collection
+      if (!uid) {
+        for (const phoneKey of phoneCandidates) {
+          try {
+            const usersSnap = await db.collection("users").where("phoneNumber", "==", phoneKey).get();
+            if (!usersSnap.empty) {
+              uid = usersSnap.docs[0].id;
+              const userData = usersSnap.docs[0].data() || {};
+              storedHash = userData.pinHash || "";
+              failedPinAttempts = userData.failedPinAttempts || 0;
+              pinLockedUntil = userData.pinLockedUntil || null;
+              break;
+            }
+          } catch (snapErr) {}
         }
       }
 
@@ -498,45 +634,69 @@ async function startServer() {
         return res.status(401).json({ error: "No account found registered with this phone number." });
       }
 
-      const userDoc = await db.collection("users").doc(uid).get();
-      if (!userDoc.exists) {
-        return res.status(401).json({ error: "No account found registered with this phone number." });
+      if (!storedHash) {
+        try {
+          const userDoc = await db.collection("users").doc(uid).get();
+          if (userDoc.exists) {
+            const userData = userDoc.data() || {};
+            storedHash = userData.pinHash || "";
+            failedPinAttempts = userData.failedPinAttempts || 0;
+            pinLockedUntil = userData.pinLockedUntil || null;
+          }
+        } catch (err) {}
       }
 
-      const userData = userDoc.data() || {};
-      
-      // Check lockout
-      if (userData.pinLockedUntil && userData.pinLockedUntil > Date.now()) {
-        const minutesLeft = Math.ceil((userData.pinLockedUntil - Date.now()) / 60000);
-        return res.status(401).json({ error: `Account locked. Try again in ${minutesLeft} minute(s).` });
-      }
-
-      const storedHash = userData.pinHash;
       if (!storedHash) {
         return res.status(401).json({ error: "No PIN has been set for this account. Please log in with SMS or reset your PIN." });
       }
 
-      const incomingHash = hashPinServer(pin);
+      // Check lockout
+      if (pinLockedUntil && pinLockedUntil > Date.now()) {
+        const minutesLeft = Math.ceil((pinLockedUntil - Date.now()) / 60000);
+        return res.status(401).json({ error: `Account locked. Try again in ${minutesLeft} minute(s).` });
+      }
+
+      const incomingHash = hashPinServer(cleanPin);
       if (incomingHash !== storedHash) {
-        const attempts = (userData.failedPinAttempts || 0) + 1;
+        const attempts = failedPinAttempts + 1;
         const updates: any = { failedPinAttempts: attempts };
         if (attempts >= 5) {
-          updates.pinLockedUntil = Date.now() + 15 * 60 * 1000; // 15 mins lock
+          updates.pinLockedUntil = Date.now() + 15 * 60 * 1000;
         }
         await db.collection("users").doc(uid).update(updates).catch(() => {});
         return res.status(401).json({ error: "Incorrect PIN. Please try again." });
       }
 
-      // Success: reset attempts, issue custom token
+      // Success: reset attempts
       await db.collection("users").doc(uid).update({
         failedPinAttempts: 0,
         pinLockedUntil: null
       }).catch(() => {});
 
-      const adminAuth = getAdminAuth();
-      const customToken = await adminAuth.createCustomToken(uid);
+      // Attempt createCustomToken via Admin Auth
+      let customToken = "";
+      try {
+        const adminAuth = getAdminAuth();
+        customToken = await adminAuth.createCustomToken(uid);
+      } catch (customErr) {
+        // Admin Auth unavailable / missing service account credentials
+      }
 
-      res.json({ success: true, customToken });
+      const syntheticPassword = `MAMAS_PIN_${cleanPin}`;
+
+      // Sign in / Sign up via REST API
+      let authData = await signInWithPasswordRest(emailForAuth, syntheticPassword);
+      if (!authData) {
+        authData = await signUpRest(emailForAuth, syntheticPassword);
+      }
+
+      res.json({
+        success: true,
+        customToken: customToken || authData?.idToken || "",
+        idToken: authData?.idToken || "",
+        email: emailForAuth,
+        password: syntheticPassword
+      });
     } catch (err: any) {
       console.error("PIN verification internal error:", err);
       res.status(500).json({ error: err.message || "Internal server error during PIN verification." });

@@ -1,20 +1,22 @@
 import { auth, db } from '../firebase';
 import { doc, setDoc } from 'firebase/firestore';
-import { signInWithCustomToken } from 'firebase/auth';
+import { signInWithCustomToken, signInWithEmailAndPassword } from 'firebase/auth';
 import { normalizePhoneNumber } from './utils';
 
 const PIN_SALT = "MAMAS_SECURE_SALT_2026";
 
 async function hashPinClient(pin: string): Promise<string> {
+  const cleanPin = String(pin).trim();
   const encoder = new TextEncoder();
-  const data = encoder.encode(pin + PIN_SALT);
+  const data = encoder.encode(cleanPin + PIN_SALT);
   const hashBuffer = await crypto.subtle.digest('SHA-256', data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
 export async function setPin(uid: string, phoneNumber: string, pin: string) {
-  if (pin.length < 4 || pin.length > 6) {
+  const cleanPin = String(pin || '').trim();
+  if (cleanPin.length < 4 || cleanPin.length > 6) {
     throw new Error("PIN must be 4 to 6 digits");
   }
 
@@ -31,7 +33,7 @@ export async function setPin(uid: string, phoneNumber: string, pin: string) {
     const res = await fetch('/api/pin/setup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ idToken, phoneNumber: normPhone, pin })
+      body: JSON.stringify({ idToken, phoneNumber: normPhone, pin: cleanPin })
     });
 
     const data = await res.json().catch(() => ({}));
@@ -43,8 +45,16 @@ export async function setPin(uid: string, phoneNumber: string, pin: string) {
   }
 
   // Fallback: update directly via client SDK using updated firestore rules
-  const pinHash = await hashPinClient(pin);
+  const pinHash = await hashPinClient(cleanPin);
   const cleanPhone = normPhone.replace(/[^0-9]/g, '');
+  let localWithZero = "";
+  let localNoZero = "";
+  if (cleanPhone.startsWith('256') && cleanPhone.length === 12) {
+    localWithZero = '0' + cleanPhone.slice(3);
+    localNoZero = cleanPhone.slice(3);
+  }
+  const rawDigits = String(phoneNumber || '').replace(/[^0-9]/g, '');
+  const syntheticEmail = `${cleanPhone}@mama-alumin.local`;
 
   await setDoc(doc(db, "users", uid), {
     phoneNumber: normPhone,
@@ -55,15 +65,25 @@ export async function setPin(uid: string, phoneNumber: string, pin: string) {
     pinLockedUntil: null
   }, { merge: true });
 
-  await setDoc(doc(db, "pinEmails", normPhone), {
-    uid,
-    updatedAt: Date.now()
-  }, { merge: true });
+  const keysToSave = Array.from(new Set([
+    normPhone,
+    cleanPhone,
+    localWithZero,
+    localNoZero,
+    rawDigits
+  ])).filter(Boolean);
 
-  await setDoc(doc(db, "pinEmails", cleanPhone), {
-    uid,
-    updatedAt: Date.now()
-  }, { merge: true });
+  for (const key of keysToSave) {
+    await setDoc(doc(db, "pinEmails", key), {
+      uid,
+      pinHash,
+      hasPin: true,
+      email: syntheticEmail,
+      failedPinAttempts: 0,
+      pinLockedUntil: null,
+      updatedAt: Date.now()
+    }, { merge: true });
+  }
 }
 
 export async function verifyPin(phoneNumber: string, pin: string) {
@@ -72,11 +92,13 @@ export async function verifyPin(phoneNumber: string, pin: string) {
     throw new Error("Valid phone number is required");
   }
 
+  const cleanPin = String(pin).trim();
+
   try {
     const res = await fetch('/api/pin/verify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phoneNumber: normPhone, pin })
+      body: JSON.stringify({ phoneNumber: normPhone, pin: cleanPin })
     });
 
     const data = await res.json().catch(() => ({}));
@@ -84,12 +106,21 @@ export async function verifyPin(phoneNumber: string, pin: string) {
       throw new Error(data.error || "Invalid phone number or PIN.");
     }
 
-    if (!data.customToken) {
-      throw new Error("Authentication token not received from server.");
+    if (data.customToken) {
+      try {
+        const credential = await signInWithCustomToken(auth, data.customToken);
+        return credential.user;
+      } catch (customErr) {
+        console.warn("signInWithCustomToken failed, falling back to email/password:", customErr);
+      }
     }
 
-    const credential = await signInWithCustomToken(auth, data.customToken);
-    return credential.user;
+    if (data.email && data.password) {
+      const credential = await signInWithEmailAndPassword(auth, data.email, data.password);
+      return credential.user;
+    }
+
+    throw new Error("Authentication token not received from server.");
   } catch (err: any) {
     throw err;
   }

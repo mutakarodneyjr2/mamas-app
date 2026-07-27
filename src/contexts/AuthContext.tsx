@@ -59,6 +59,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               setUserProfile(null);
               setLoading(false);
             }
+          }, (snapErr) => {
+            console.warn("User profile onSnapshot error:", snapErr);
+            setLoading(false);
           });
         };
 
