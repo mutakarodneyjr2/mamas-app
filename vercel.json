@@ -1,5 +1,6 @@
 {
   "rewrites": [
+    { "source": "/api/relworx/(.*)", "destination": "/api/server" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

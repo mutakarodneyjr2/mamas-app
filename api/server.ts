@@ -1,0 +1,120 @@
+import express from 'express';
+import { getApps, initializeApp, cert } from 'firebase-admin/app';
+
+// Firebase Admin SDK init
+if (!getApps().length) {
+  const base64ServiceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_BASE64;
+  if (!base64ServiceAccount) {
+    throw new Error('FIREBASE_SERVICE_ACCOUNT_BASE64 environment variable is required');
+  }
+
+  const serviceAccountJson = Buffer.from(base64ServiceAccount, 'base64').toString('utf8');
+  const serviceAccount = JSON.parse(serviceAccountJson);
+
+  initializeApp({
+    credential: cert(serviceAccount),
+  });
+
+  console.log(`Firebase Admin initialized successfully for: ${serviceAccount.client_email}`);
+}
+
+// Import handlers from relworxService
+import {
+  initiateCollection,
+  initiateDisbursement,
+  handleCollectionWebhook,
+  handleDisbursementWebhook,
+  verifyWebhookSignature,
+} from '../src/server/relworxService';
+
+const app = express();
+
+// Middleware for JSON parsing on standard endpoint routes
+app.use('/api/relworx/initiate-collection', express.json());
+app.use('/api/relworx/initiate-disbursement', express.json());
+
+// Webhook route MUST use express.raw({type: 'application/json'}) middleware to preserve raw body for HMAC verification
+app.use('/api/relworx/webhook', express.raw({ type: 'application/json' }));
+
+// 1. POST /api/relworx/initiate-collection
+app.post('/api/relworx/initiate-collection', async (req, res) => {
+  try {
+    const { amount, phoneNumber, network, userId, purpose, metadata } = req.body || {};
+
+    if (!amount || !phoneNumber || !network || !userId) {
+      return res.status(400).json({ success: false, message: 'Missing required parameters' });
+    }
+
+    const result = await initiateCollection(amount, phoneNumber, network, userId, metadata || { purpose });
+    return res.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error('Initiate collection error:', error);
+    return res.status(500).json({ success: false, message: error?.message || 'Internal server error' });
+  }
+});
+
+// 2. POST /api/relworx/webhook
+app.post('/api/relworx/webhook', async (req, res) => {
+  try {
+    const signature = req.headers['x-signature'] as string;
+    const rawBody = Buffer.isBuffer(req.body)
+      ? req.body.toString('utf8')
+      : typeof req.body === 'string'
+      ? req.body
+      : JSON.stringify(req.body);
+
+    if (!signature) {
+      return res.status(401).json({ success: false, message: 'Missing signature header' });
+    }
+
+    const secret = process.env.RELWORX_WEBHOOK_SECRET || '';
+    if (!secret) {
+      console.warn('RELWORX_WEBHOOK_SECRET is not configured');
+    }
+
+    const isValid = verifyWebhookSignature(signature, rawBody, secret);
+    if (!isValid && secret) {
+      return res.status(401).json({ success: false, message: 'Invalid webhook signature' });
+    }
+
+    const payload = typeof req.body === 'string' || Buffer.isBuffer(req.body)
+      ? JSON.parse(rawBody)
+      : req.body;
+
+    if (payload.transaction_type === 'collection' || payload.type === 'collection') {
+      await handleCollectionWebhook(payload);
+    } else if (payload.transaction_type === 'disbursement' || payload.type === 'disbursement') {
+      await handleDisbursementWebhook(payload);
+    } else {
+      if (payload.reference && payload.reference.startsWith('DISB')) {
+        await handleDisbursementWebhook(payload);
+      } else {
+        await handleCollectionWebhook(payload);
+      }
+    }
+
+    return res.json({ success: true, message: 'Webhook processed successfully' });
+  } catch (error: any) {
+    console.error('Webhook processing error:', error);
+    return res.status(500).json({ success: false, message: error?.message || 'Internal server error' });
+  }
+});
+
+// 3. POST /api/relworx/initiate-disbursement
+app.post('/api/relworx/initiate-disbursement', async (req, res) => {
+  try {
+    const { amount, phoneNumber, network, reference, metadata } = req.body || {};
+
+    if (!amount || !phoneNumber || !network || !reference) {
+      return res.status(400).json({ success: false, message: 'Missing required parameters' });
+    }
+
+    const result = await initiateDisbursement(amount, phoneNumber, network, reference, metadata || {});
+    return res.json({ success: true, data: result });
+  } catch (error: any) {
+    console.error('Initiate disbursement error:', error);
+    return res.status(500).json({ success: false, message: error?.message || 'Internal server error' });
+  }
+});
+
+export default app;

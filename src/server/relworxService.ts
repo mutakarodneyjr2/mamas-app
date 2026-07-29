@@ -42,27 +42,50 @@ export async function initiateCollection(
   phoneNumber: string,
   network: string,
   userId: string,
-  metadata: any
+  metadata: any = {}
 ) {
-  console.log(`[Relworx Placeholder] Initiating collection for ${amount} from ${phoneNumber} (${network}) for user ${userId}`);
-  
   const apiKey = process.env.RELWORX_API_KEY;
   const merchantId = process.env.RELWORX_MERCHANT_ID;
-  
+  const url = process.env.RELWORX_COLLECTION_URL || 'https://api.relworx.com/v1/collections';
+
   if (!apiKey || !merchantId) {
-    console.warn("Relworx credentials not configured. Running in placeholder mode.");
+    console.warn('RELWORX_API_KEY or RELWORX_MERCHANT_ID missing. API call may fail if required.');
   }
-  
-  // In a real implementation, this would make an HTTP POST to Relworx API
-  // using RELWORX_API_KEY, RELWORX_API_SECRET, etc.
-  
-  return {
-    success: true,
-    transactionId: 'placeholder_tx_' + Date.now(),
-    reference: metadata.reference || 'REF_' + Date.now(),
-    status: 'pending_payment',
-    message: 'Collection initiated successfully (Placeholder)'
+
+  const reference = metadata?.reference || `REF_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+
+  const payload = {
+    amount,
+    phone_number: phoneNumber,
+    network,
+    reference,
+    merchant_id: merchantId,
+    user_id: userId,
+    ...metadata,
   };
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey || ''}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      console.error('Relworx initiateCollection API error:', response.status, data);
+      throw new Error(data?.message || data?.error || `Relworx API error: HTTP ${response.status}`);
+    }
+
+    return data;
+  } catch (error: any) {
+    console.error('Failed to initiate collection with Relworx:', error);
+    throw error;
+  }
 }
 
 /**
@@ -73,24 +96,47 @@ export async function initiateDisbursement(
   phoneNumber: string,
   network: string,
   reference: string,
-  metadata: any
+  metadata: any = {}
 ) {
-  console.log(`[Relworx Placeholder] Initiating disbursement of ${amount} to ${phoneNumber} (${network}) ref: ${reference}`);
-  
   const apiKey = process.env.RELWORX_API_KEY;
   const merchantId = process.env.RELWORX_MERCHANT_ID;
-  
+  const url = process.env.RELWORX_DISBURSEMENT_URL || 'https://api.relworx.com/v1/disbursements';
+
   if (!apiKey || !merchantId) {
-    console.warn("Relworx credentials not configured. Running in placeholder mode.");
+    console.warn('RELWORX_API_KEY or RELWORX_MERCHANT_ID missing. API call may fail if required.');
   }
 
-  // In a real implementation, this would make an HTTP POST to Relworx API
-  return {
-    success: true,
-    disbursementId: 'placeholder_disb_' + Date.now(),
-    status: 'processing',
-    message: 'Disbursement initiated successfully (Placeholder)'
+  const payload = {
+    amount,
+    phone_number: phoneNumber,
+    network,
+    reference,
+    merchant_id: merchantId,
+    ...metadata,
   };
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey || ''}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      console.error('Relworx initiateDisbursement API error:', response.status, data);
+      throw new Error(data?.message || data?.error || `Relworx API error: HTTP ${response.status}`);
+    }
+
+    return data;
+  } catch (error: any) {
+    console.error('Failed to initiate disbursement with Relworx:', error);
+    throw error;
+  }
 }
 
 /**
