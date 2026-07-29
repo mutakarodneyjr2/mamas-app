@@ -1,3 +1,10 @@
+/**
+ * Firebase Admin SDK Initialization
+ * Uses FIREBASE_SERVICE_ACCOUNT_BASE64 environment variable (Base64-encoded JSON service account key)
+ * to prevent newline/quote corruption issues in cloud serverless environments like Vercel.
+ * Falls back to FIREBASE_SERVICE_ACCOUNT (plain JSON) for local development if available.
+ */
+
 import express from "express";
 import path from "path";
 import fs from "fs";
@@ -15,35 +22,46 @@ import {
   handleDisbursementWebhook
 } from "./src/server/relworxService";
 
+let serviceAccountEmail = "";
+
 if (!getApps().length) {
-  const serviceAccountEnv = process.env.FIREBASE_SERVICE_ACCOUNT;
-  if (serviceAccountEnv) {
+  const base64Env = process.env.FIREBASE_SERVICE_ACCOUNT_BASE64;
+  const jsonEnv = process.env.FIREBASE_SERVICE_ACCOUNT;
+
+  let serviceAccount: any = null;
+
+  if (base64Env && base64Env.trim().length > 0) {
     try {
-      let serviceAccount = JSON.parse(serviceAccountEnv);
+      const decoded = Buffer.from(base64Env, 'base64').toString('utf8');
+      serviceAccount = JSON.parse(decoded);
       if (serviceAccount.private_key) {
         serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
       }
-      initAdmin({
-        credential: cert(serviceAccount),
-        projectId: serviceAccount.project_id || "mama-alumin"
-      });
-      console.log("Firebase Admin initialized successfully with FIREBASE_SERVICE_ACCOUNT.");
-    } catch (err) {
-      console.error("Failed to parse FIREBASE_SERVICE_ACCOUNT JSON:", err);
-      try {
-        initAdmin({ projectId: "mama-alumin" });
-      } catch (defaultErr) {
-        console.error("Failed to initialize Firebase Admin with default credentials:", defaultErr);
+    } catch (err: any) {
+      throw new Error("Failed to decode FIREBASE_SERVICE_ACCOUNT_BASE64. Ensure it is valid Base64.");
+    }
+  } else if (jsonEnv && jsonEnv.trim().length > 0) {
+    console.warn("Warning: Using plain JSON env var. Base64 is recommended for production.");
+    try {
+      serviceAccount = JSON.parse(jsonEnv);
+      if (serviceAccount.private_key) {
+        serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
       }
+    } catch (err: any) {
+      throw new Error("Failed to parse FIREBASE_SERVICE_ACCOUNT JSON env var.");
     }
   } else {
-    console.warn("FIREBASE_SERVICE_ACCOUNT is not set. Initializing Firebase Admin with default credentials.");
-    try {
-      initAdmin({ projectId: "mama-alumin" });
-    } catch (defaultErr) {
-      console.error("Failed to initialize Firebase Admin with default credentials:", defaultErr);
-    }
+    throw new Error("Firebase Admin SDK cannot initialize. Please set FIREBASE_SERVICE_ACCOUNT_BASE64 in Vercel environment variables.");
   }
+
+  serviceAccountEmail = serviceAccount.client_email || "";
+
+  initAdmin({
+    credential: cert(serviceAccount),
+    projectId: serviceAccount.project_id || "mama-alumin"
+  });
+
+  console.log("Firebase Admin initialized with: " + (serviceAccountEmail || serviceAccount.project_id || "service account"));
 }
 
 const db = getAdminFirestore();
@@ -70,6 +88,24 @@ async function startServer() {
   // API Health Check
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok" });
+  });
+
+  // Diagnostic Endpoint for Firebase Admin SDK
+  app.get("/api/admin/health", (req, res) => {
+    const diagnosticKey = process.env.DIAGNOSTIC_KEY;
+    if (diagnosticKey && diagnosticKey.trim().length > 0) {
+      if (req.query.key !== diagnosticKey) {
+        return res.status(403).json({ error: "Forbidden: Invalid diagnostic key" });
+      }
+    } else {
+      console.warn("DIAGNOSTIC_KEY is not set. Accessing /api/admin/health without authentication.");
+    }
+
+    res.json({
+      adminInitialized: getApps().length > 0,
+      serviceAccountEmail: serviceAccountEmail,
+      timestamp: new Date().toISOString()
+    });
   });
 
   // Account Recovery: Request Code
