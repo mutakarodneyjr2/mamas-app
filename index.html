@@ -5,10 +5,55 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>MAMAS - Matuumu Alumni Mutual Aid Association</title>
     <link rel="icon" type="image/png" href="/logo.png" />
+    <script>
+      (function() {
+        function showError(msg, stack) {
+          var div = document.getElementById('script-error-display');
+          if (!div) {
+            div = document.createElement('div');
+            div.id = 'script-error-display';
+            div.style.cssText = 'position:fixed; top:0; left:0; width:100%; background:#dc2626; color:white; padding:20px; z-index:99999; font-size:16px; white-space:pre-wrap; box-sizing:border-box; max-height:100vh; overflow:auto;';
+            if (document.body) {
+              document.body.appendChild(div);
+            } else {
+              window.addEventListener('DOMContentLoaded', function() {
+                document.body.appendChild(div);
+              });
+            }
+          }
+          div.innerHTML += '<strong>Error:</strong> ' + msg + '\\n' + (stack ? stack + '\\n\\n' : '\\n');
+        }
+
+        window.onerror = function(message, source, lineno, colno, error) {
+          var msg = message + ' at ' + source + ':' + lineno + ':' + colno;
+          showError(msg, error && error.stack ? error.stack : '');
+          return false;
+        };
+
+        window.addEventListener('unhandledrejection', function(event) {
+          showError('Unhandled Promise Rejection: ' + (event.reason ? (event.reason.message || event.reason) : 'Unknown'), event.reason && event.reason.stack ? event.reason.stack : '');
+        });
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      setTimeout(function() {
+        var root = document.getElementById('root');
+        if (root && root.innerHTML.trim() === '') {
+          var div = document.getElementById('script-error-display');
+          if (!div) {
+            div = document.createElement('div');
+            div.id = 'script-error-display';
+            div.style.cssText = 'position:fixed; top:0; left:0; width:100%; background:#dc2626; color:white; padding:20px; z-index:99999; font-size:16px; white-space:pre-wrap; box-sizing:border-box; max-height:100vh; overflow:auto;';
+            document.body.appendChild(div);
+          }
+          div.innerHTML += '<strong>Error:</strong> React failed to mount. Check console for errors.\\n\\n';
+        }
+      }, 5000);
+    </script>
   </body>
 </html>
 
