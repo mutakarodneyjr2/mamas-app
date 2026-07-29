@@ -692,6 +692,7 @@ async function startServer() {
 
       res.json({
         success: true,
+        targetUid: uid,
         customToken: customToken || authData?.idToken || "",
         idToken: authData?.idToken || "",
         email: emailForAuth,

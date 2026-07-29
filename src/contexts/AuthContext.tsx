@@ -45,15 +45,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               setLoading(false);
             } else {
               // If not found by UID, check if they are a migrated user (logged in via SMS)
-              if (user.phoneNumber && targetUid === user.uid) {
+              let queryPhone = user.phoneNumber;
+              if (!queryPhone && user.email && user.email.endsWith("@mama-alumin.local")) {
+                queryPhone = user.email.split("@")[0];
+              }
+              
+              if (queryPhone && targetUid === user.uid) {
                 const { collection, query, where, getDocs } = await import("firebase/firestore");
-                const q = query(collection(db, "users"), where("phoneNumber", "==", user.phoneNumber));
+                
+                let normPhone = queryPhone;
+                if (!normPhone.startsWith("+") && !user.phoneNumber) {
+                    if (normPhone.startsWith("0")) normPhone = "+256" + normPhone.slice(1);
+                    else if (normPhone.startsWith("256")) normPhone = "+" + normPhone;
+                    else normPhone = "+256" + normPhone;
+                }
+
+                const q = query(collection(db, "users"), where("phoneNumber", "==", normPhone));
                 const snap = await getDocs(q);
                 if (!snap.empty && snap.docs[0].id !== user.uid) {
-                  // Found a migrated profile! Listen to it instead.
                   unsubscribeProfile();
                   setupProfileListener(snap.docs[0].id);
                   return;
+                }
+                
+                // Fallback check exact
+                if (normPhone !== queryPhone) {
+                  const q2 = query(collection(db, "users"), where("phoneNumber", "==", queryPhone));
+                  const snap2 = await getDocs(q2);
+                  if (!snap2.empty && snap2.docs[0].id !== user.uid) {
+                    unsubscribeProfile();
+                    setupProfileListener(snap2.docs[0].id);
+                    return;
+                  }
                 }
               }
               setUserProfile(null);
@@ -65,10 +88,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           });
         };
 
-        setupProfileListener(user.uid);
+        const storedTargetUid = localStorage.getItem('mamas_target_uid');
+        setupProfileListener(storedTargetUid || user.uid);
         
         return () => unsubscribeProfile();
       } else {
+        localStorage.removeItem('mamas_target_uid');
         setUserProfile(null);
         setLoading(false);
       }
@@ -155,6 +180,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [confirmationResult]);
 
   const logout = useCallback(async () => {
+    localStorage.removeItem('mamas_target_uid');
     await signOut(auth);
   }, []);
 

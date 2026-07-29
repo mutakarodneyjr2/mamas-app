@@ -189,12 +189,12 @@ service cloud.firestore {
     }
     // =========================================
     // 12. Pin Emails Collection (for mapping phone to synthetic email)
-    // Read: Anyone (needed before login)
-    // Write: Backend only (using Admin SDK)
+    // Read: Backend only (Admin SDK)
+    // Write: Backend (Admin SDK) or strictly limited to the authenticated user's own UID
     // =========================================
     match /pinEmails/{phone} {
-      allow read: if true;
-      allow write: if isAuthenticated() || isSuperAdmin();
+      allow read: if false;
+      allow write: if isAuthenticated() && request.resource.data.uid == request.auth.uid;
     }
 
     match /recoveryRequests/{requestId} {

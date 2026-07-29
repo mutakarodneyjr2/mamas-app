@@ -263,7 +263,7 @@ export default function Login() {
       const cleanPhone = recoveryOldPhone.replace(/[^a-zA-Z0-9+]/g, '');
       const timestamp = Date.now();
       const syntheticEmail = `${cleanPhone}_${timestamp}@mama-alumin.local`;
-      const syntheticPassword = `MAMAS-PIN-${recoveryNewPin}`;
+      const syntheticPassword = `MAMAS_PIN_${recoveryNewPin}`;
       
       const { auth } = await import('../firebase');
       const { createUserWithEmailAndPassword } = await import('firebase/auth');

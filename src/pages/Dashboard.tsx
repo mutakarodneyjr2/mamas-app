@@ -84,19 +84,19 @@ export default function Dashboard() {
       const activeList = snap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as SchoolCampaign));
       activeList.sort((a, b) => b.createdAt - a.createdAt);
       setCampaigns(activeList);
-    });
+    }, (err) => console.error("Dashboard error on unsubCampaigns =", err));
 
     // 3. Real-time Latest Notices (limit 3 for dashboard)
     const qNotices = query(collection(db, 'notices'), orderBy('createdAt', 'desc'), limit(3));
     const unsubNotices = onSnapshot(qNotices, (snap) => {
       setNotices(snap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as Notice)));
-    });
+    }, (err) => console.error("Dashboard error on unsubNotices =", err));
 
     // 4. Real-time Approved Users Count
     const qUsers = query(collection(db, 'users'), where('status', '==', 'approved'));
     const unsubUsers = onSnapshot(qUsers, (snap) => {
       setTotalMembers(snap.size);
-    });
+    }, (err) => console.error("Dashboard error on unsubUsers =", err));
 
     return () => {
       unsubSettings();
@@ -121,7 +121,7 @@ export default function Dashboard() {
       } else {
         setPendingWelfare(null);
       }
-    });
+    }, (err) => console.error("Dashboard error on unsubWelfare =", err));
 
     // 6. Real-time User Contributions to calculate weekly status & total verified
     const qContribs = query(
@@ -138,7 +138,7 @@ export default function Dashboard() {
         if (data.status === 'verified' && data.type === 'welfare' && data.createdAt >= sevenDaysAgo) {
           sumLast7Days += data.amount || 0;
         }
-      });
+      }, (err) => console.error("Dashboard error on unsubContribs =", err));
 
       setRecentWeeklyPaid(sumLast7Days);
       setNeedsWeeklyContribution(sumLast7Days < minContrib);
@@ -161,7 +161,7 @@ export default function Dashboard() {
       );
       const unsubTotal = onSnapshot(qAllVerified, (snap) => {
         let sum = 0;
-        snap.forEach(d => { sum += d.data().amount || 0; });
+        snap.forEach(d => { sum += d.data().amount || 0; }, (err) => console.error("Dashboard error on unsubTotal =", err));
         setTotalBalance(sum);
       });
       return () => unsubTotal();

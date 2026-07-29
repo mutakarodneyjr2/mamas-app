@@ -106,6 +106,10 @@ export async function verifyPin(phoneNumber: string, pin: string) {
       throw new Error(data.error || "Invalid phone number or PIN.");
     }
 
+    if (data.targetUid) {
+      localStorage.setItem('mamas_target_uid', data.targetUid);
+    }
+
     if (data.customToken) {
       try {
         const credential = await signInWithCustomToken(auth, data.customToken);
