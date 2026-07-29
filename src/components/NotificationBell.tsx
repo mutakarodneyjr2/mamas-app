@@ -52,12 +52,12 @@ export const NotificationBell: React.FC = () => {
     const unsubPersonal = onSnapshot(qPersonal, (snapshot) => {
       personalItems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as NotificationItem));
       updateCombined();
-    }, (err) => console.error("Error listening to personal notifications:", err));
+    }, (err) => { if (err.code !== 'permission-denied') console.error("Error listening to personal notifications:", err); });
 
     const unsubBroadcast = onSnapshot(qBroadcast, (snapshot) => {
       broadcastItems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as NotificationItem));
       updateCombined();
-    }, (err) => console.error("Error listening to broadcast notifications:", err));
+    }, (err) => { if (err.code !== 'permission-denied') console.error("Error listening to broadcast notifications:", err); });
 
     return () => {
       unsubPersonal();

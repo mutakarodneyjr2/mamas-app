@@ -243,7 +243,7 @@ async function startServer() {
   // Account Recovery: Complete Data Migration
   app.post("/api/recovery/complete", async (req, res) => {
     try {
-      const { requestId, recoveryToken, newIdToken } = req.body;
+      const { requestId, recoveryToken, newIdToken, newPin } = req.body;
       if (!newIdToken) return res.status(400).json({ error: "Missing token" });
 
       const reqDoc = await db.collection("recoveryRequests").doc(requestId).get();
@@ -280,20 +280,50 @@ async function startServer() {
       const finalPhoneNumber = hasPin ? oldUserData.phoneNumber : (newPhoneNumber || oldUserData.phoneNumber);
       
       const batch = db.batch();
-
       // Create new user doc
+      let newPinHash = oldUserData.pinHash;
+      if (hasPin && newPin) {
+        newPinHash = hashPinServer(newPin);
+      }
+
       batch.set(db.collection("users").doc(newUid), {
         ...oldUserData,
         uid: newUid,
         phoneNumber: finalPhoneNumber,
         hasPin: hasPin ? true : oldUserData.hasPin,
+        pinHash: newPinHash,
         updatedAt: Date.now()
       });
 
       if (hasPin) {
-        batch.set(db.collection("pinEmails").doc(finalPhoneNumber.replace(/[^a-zA-Z0-9+]/g, '')), {
-          email: email
-        });
+        const cleanPhone = finalPhoneNumber.replace(/[^0-9]/g, '');
+        let localWithZero = "";
+        let localNoZero = "";
+        if (cleanPhone.startsWith('256') && cleanPhone.length === 12) {
+          localWithZero = '0' + cleanPhone.slice(3);
+          localNoZero = cleanPhone.slice(3);
+        }
+        const rawDigits = finalPhoneNumber.replace(/[^0-9]/g, '');
+
+        const keysToSave = Array.from(new Set([
+          finalPhoneNumber,
+          cleanPhone,
+          localWithZero,
+          localNoZero,
+          rawDigits
+        ])).filter(Boolean);
+
+        for (const key of keysToSave) {
+          batch.set(db.collection("pinEmails").doc(key), {
+            uid: newUid,
+            email: email,
+            hasPin: true,
+            pinHash: newPinHash,
+            updatedAt: Date.now(),
+            failedPinAttempts: 0,
+            pinLockedUntil: null
+          }, { merge: true });
+        }
       }
 
       const contribSnap = await db.collection("contributions").where("userId", "==", oldUid).get();
@@ -682,12 +712,25 @@ async function startServer() {
         // Admin Auth unavailable / missing service account credentials
       }
 
-      const syntheticPassword = `MAMAS_PIN_${cleanPin}`;
-
+      let syntheticPassword = `MAMAS_PIN_${cleanPin}`;
       // Sign in / Sign up via REST API
       let authData = await signInWithPasswordRest(emailForAuth, syntheticPassword);
+      
+      if (!authData) {
+        // Fallback for older accounts that used the hyphen prefix
+        const oldSyntheticPassword = `MAMAS-PIN-${cleanPin}`;
+        authData = await signInWithPasswordRest(emailForAuth, oldSyntheticPassword);
+        if (authData) {
+          syntheticPassword = oldSyntheticPassword; // Use the working old password
+        }
+      }
+
       if (!authData) {
         authData = await signUpRest(emailForAuth, syntheticPassword);
+      }
+
+      if (!authData) {
+        return res.status(401).json({ error: "Invalid PIN." });
       }
 
       res.json({

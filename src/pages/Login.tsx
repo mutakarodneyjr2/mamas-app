@@ -277,7 +277,8 @@ export default function Login() {
         body: JSON.stringify({
           requestId: recoveryRequestId,
           recoveryToken,
-          newIdToken
+          newIdToken,
+          newPin: recoveryNewPin
         })
       });
       const data = await res.json();
