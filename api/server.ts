@@ -19,7 +19,7 @@ import {
   verifyWebhookSignature,
   handleCollectionWebhook,
   handleDisbursementWebhook
-} from "./src/server/relworxService";
+} from "../src/server/relworxService";
 
 let serviceAccountEmail = "";
 
@@ -67,7 +67,6 @@ function getResend() {
   return resendClient;
 }
 
-async function startServer() {
   const app = express();
   const PORT = 3000;
 
@@ -884,37 +883,42 @@ async function startServer() {
     res.status(404).json({ error: "API endpoint not found" });
   });
 
-  // Vite middleware for development or static serving for production
-  if (process.env.NODE_ENV !== "production") {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: "spa",
-    });
-    app.use(vite.middlewares);
-    // Fallback for SPA routing in development
-    app.get('*', async (req, res, next) => {
-      const url = req.originalUrl;
-      try {
-        const templatePath = path.resolve(process.cwd(), 'index.html');
-        let template = fs.readFileSync(templatePath, 'utf-8');
-        template = await vite.transformIndexHtml(url, template);
-        res.status(200).set({ 'Content-Type': 'text/html' }).end(template);
-      } catch (e) {
-        vite.ssrFixStacktrace(e as Error);
-        next(e);
+  // Only mount Vite and listen if NOT running on Vercel
+  if (!process.env.VERCEL) {
+    async function startDevOrProd() {
+      // Vite middleware for development or static serving for production
+      if (process.env.NODE_ENV !== "production") {
+        const vite = await createViteServer({
+          server: { middlewareMode: true },
+          appType: "spa",
+        });
+        app.use(vite.middlewares);
+        // Fallback for SPA routing in development
+        app.get('*', async (req, res, next) => {
+          const url = req.originalUrl;
+          try {
+            const templatePath = path.resolve(process.cwd(), 'index.html');
+            let template = fs.readFileSync(templatePath, 'utf-8');
+            template = await vite.transformIndexHtml(url, template);
+            res.status(200).set({ 'Content-Type': 'text/html' }).end(template);
+          } catch (e) {
+            vite.ssrFixStacktrace(e as Error);
+            next(e);
+          }
+        });
+      } else {
+        const distPath = path.join(process.cwd(), 'dist');
+        app.use(express.static(distPath));
+        app.get('*', (req, res) => {
+          res.sendFile(path.join(distPath, 'index.html'));
+        });
       }
-    });
-  } else {
-    const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
-    });
+
+      app.listen(PORT, "0.0.0.0", () => {
+        console.log(`Server running on http://0.0.0.0:${PORT}`);
+      });
+    }
+    startDevOrProd();
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://0.0.0.0:${PORT}`);
-  });
-}
-
-startServer();
+export default app;
