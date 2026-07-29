@@ -2,7 +2,6 @@
  * Firebase Admin SDK Initialization
  * Uses FIREBASE_SERVICE_ACCOUNT_BASE64 environment variable (Base64-encoded JSON service account key)
  * to prevent newline/quote corruption issues in cloud serverless environments like Vercel.
- * Falls back to FIREBASE_SERVICE_ACCOUNT (plain JSON) for local development if available.
  */
 
 import express from "express";
@@ -26,32 +25,21 @@ let serviceAccountEmail = "";
 
 if (!getApps().length) {
   const base64Env = process.env.FIREBASE_SERVICE_ACCOUNT_BASE64;
-  const jsonEnv = process.env.FIREBASE_SERVICE_ACCOUNT;
+
+  if (!base64Env || base64Env.trim().length === 0) {
+    throw new Error("Firebase Admin SDK cannot initialize. Please set FIREBASE_SERVICE_ACCOUNT_BASE64 in your environment variables.");
+  }
 
   let serviceAccount: any = null;
 
-  if (base64Env && base64Env.trim().length > 0) {
-    try {
-      const decoded = Buffer.from(base64Env, 'base64').toString('utf8');
-      serviceAccount = JSON.parse(decoded);
-      if (serviceAccount.private_key) {
-        serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
-      }
-    } catch (err: any) {
-      throw new Error("Failed to decode FIREBASE_SERVICE_ACCOUNT_BASE64. Ensure it is valid Base64.");
+  try {
+    const decoded = Buffer.from(base64Env, 'base64').toString('utf8');
+    serviceAccount = JSON.parse(decoded);
+    if (serviceAccount.private_key) {
+      serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
     }
-  } else if (jsonEnv && jsonEnv.trim().length > 0) {
-    console.warn("Warning: Using plain JSON env var. Base64 is recommended for production.");
-    try {
-      serviceAccount = JSON.parse(jsonEnv);
-      if (serviceAccount.private_key) {
-        serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
-      }
-    } catch (err: any) {
-      throw new Error("Failed to parse FIREBASE_SERVICE_ACCOUNT JSON env var.");
-    }
-  } else {
-    throw new Error("Firebase Admin SDK cannot initialize. Please set FIREBASE_SERVICE_ACCOUNT_BASE64 in Vercel environment variables.");
+  } catch (err: any) {
+    throw new Error("Failed to decode FIREBASE_SERVICE_ACCOUNT_BASE64. Ensure it is valid Base64.");
   }
 
   serviceAccountEmail = serviceAccount.client_email || "";
