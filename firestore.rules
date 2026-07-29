@@ -179,30 +179,13 @@ service cloud.firestore {
     }
 
     // =========================================
-    // 11. Support Tickets Collection
+    // 12. Support Tickets Collection
     // Create: Anyone (members or applicants needing help)
     // Read/Update: Super Admin, Chairperson, Secretary, Vice Chairperson
     // =========================================
     match /supportTickets/{ticketId} {
       allow create: if true;
       allow read, update, delete: if hasRole(['super_admin', 'chairperson', 'vice_chairperson', 'secretary']);
-    }
-    // =========================================
-    // 12. Pin Emails Collection (for mapping phone to synthetic email)
-    // Read: Backend only (Admin SDK)
-    // Write: Backend (Admin SDK) or strictly limited to the authenticated user's own UID
-    // =========================================
-    match /pinEmails/{phone} {
-      allow read: if false;
-      allow write: if isAuthenticated() && request.resource.data.uid == request.auth.uid;
-    }
-
-    match /recoveryRequests/{requestId} {
-      allow read, write: if isSuperAdmin();
-    }
-
-    match /emailVerifications/{requestId} {
-      allow read, write: if isSuperAdmin();
     }
   }
 }

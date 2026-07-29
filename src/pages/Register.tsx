@@ -1,29 +1,35 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigate, Navigate, Link } from 'react-router-dom';
-import { completeProfile } from '../lib/auth';
-import { setPin } from '../lib/auth-pin';
-import { normalizePhoneNumber } from '../lib/utils';
+import { useNavigate, Link } from 'react-router-dom';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { auth, db } from '../firebase';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { LogoLarge } from '../components/Logo';
-import { Phone, ArrowRight, KeyRound } from 'lucide-react';
+import { Phone, ArrowRight, Mail, KeyRound } from 'lucide-react';
+import { UserProfile } from '../types';
+import { GoogleSignInButton } from '../components/GoogleSignInButton';
 
-type RegisterStep = 'phone' | 'otp' | 'profile' | 'success';
+type RegisterStep = 'form' | 'success';
 
 export default function Register() {
-  const { currentUser, userProfile, logout, sendOtp, verifyOtp, setupRecaptcha } = useAuth();
+  const { currentUser, userProfile, googleSignIn, checkUserExists, logout } = useAuth();
   const navigate = useNavigate();
   
-  const [step, setStep] = useState<RegisterStep>('phone');
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [otp, setOtp] = useState('');
+  const [step, setStep] = useState<RegisterStep>('form');
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   
+  const [authProvider, setAuthProvider] = useState<'email' | 'google'>('email');
+  const [googleUid, setGoogleUid] = useState('');
+
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
+    password: '',
+    confirmPassword: '',
+    phoneNumber: '',
     yearLeftSchool: '',
     district: '',
     placeOfResidence: '',
@@ -31,66 +37,17 @@ export default function Register() {
     nextOfKinName: '',
     nextOfKinPhone: '',
     showPhone: true,
-    showEmail: true,
-    pin: '',
-    confirmPin: ''
+    showEmail: true
   });
 
   const [profilePicFile, setProfilePicFile] = useState<File | null>(null);
+  const [profilePicUrl, setProfilePicUrl] = useState<string>('');
 
   useEffect(() => {
-    // Setup recaptcha when on phone step
-    if (step === 'phone') {
-      setupRecaptcha('recaptcha-register');
-    }
-  }, [step, setupRecaptcha]);
-
-  useEffect(() => {
-    // If the user already has a profile and they load this page, send them to dashboard
-    if (userProfile && step === 'phone') {
+    if (userProfile && step === 'form') {
       navigate('/dashboard');
     }
   }, [userProfile, navigate, step]);
-
-  useEffect(() => {
-    // If they magically got currentUser (e.g. from previous session) but no profile, skip to profile step
-    if (currentUser && !userProfile && step === 'phone') {
-      setStep('profile');
-    }
-  }, [currentUser, userProfile, step]);
-
-  const handleSendOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-
-    try {
-      const formattedPhone = normalizePhoneNumber(phoneNumber);
-      
-      await sendOtp(formattedPhone, 'recaptcha-register');
-      setStep('otp');
-    } catch (err: any) {
-      console.error(err);
-      setError('Failed to send verification code. Please check your number and try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-    try {
-      await verifyOtp(otp);
-      setStep('profile');
-    } catch (err: any) {
-      console.error(err);
-      setError('Failed to verify code. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
@@ -106,53 +63,129 @@ export default function Register() {
     }
   };
 
+  const uploadProfilePic = async (uid: string, file: File): Promise<string> => {
+    try {
+      const { ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
+      const { storage } = await import('../firebase');
+      const ext = file.name.split('.').pop() || 'jpg';
+      const storageRef = ref(storage, `users/${uid}/profile.${ext}`);
+      const snapshot = await uploadBytes(storageRef, file);
+      return await getDownloadURL(snapshot.ref);
+    } catch (err) {
+      console.error("Failed to upload profile picture:", err);
+      return '';
+    }
+  };
+
+  const handleGoogleSignUp = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      const cred = await googleSignIn();
+      const exists = await checkUserExists(cred.user.uid);
+      if (exists) {
+        // User already exists, they will be redirected to dashboard by AuthContext/useEffect
+        return;
+      }
+      
+      // New user, pre-fill form
+      setAuthProvider('google');
+      setGoogleUid(cred.user.uid);
+      setFormData(prev => ({
+        ...prev,
+        fullName: cred.user.displayName || '',
+        email: cred.user.email || ''
+      }));
+      if (cred.user.photoURL) {
+        setProfilePicUrl(cred.user.photoURL);
+      }
+    } catch (err: any) {
+      console.error(err);
+      if (err.code === 'auth/popup-blocked') {
+        setError('Please allow popups for this site to sign in with Google.');
+      } else if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
+        setError('Failed to sign in with Google.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmitProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     
-    if (formData.pin.length < 4 || formData.pin.length > 6) {
-      setError("PIN must be between 4 and 6 digits");
-      return;
+    if (authProvider === 'email') {
+      if (formData.password.length < 6) {
+        setError("Password must be at least 6 characters");
+        return;
+      }
+      
+      if (formData.password !== formData.confirmPassword) {
+        setError("Passwords do not match");
+        return;
+      }
     }
-    
-    if (formData.pin !== formData.confirmPin) {
-      setError("PINs do not match");
+
+    if (!agreedToTerms) {
+      setError("You must agree to the Terms of Service");
       return;
     }
     
     setLoading(true);
     
     try {
-      if (!currentUser) throw new Error("Not authenticated");
-      
-      await completeProfile(
-        currentUser.uid,
-        currentUser.phoneNumber || '',
-        {
-          fullName: formData.fullName,
-          email: formData.email,
-          yearLeftSchool: formData.yearLeftSchool,
-          district: formData.district,
-          placeOfResidence: formData.placeOfResidence,
-          occupation: formData.occupation,
-          nextOfKinName: formData.nextOfKinName,
-          nextOfKinPhone: formData.nextOfKinPhone,
-          privacySettings: {
-            showPhone: formData.showPhone,
-            showEmail: formData.showEmail
-          }
+      let uid = googleUid;
+      let finalProfilePicUrl = profilePicUrl;
+
+      if (authProvider === 'email') {
+        // 1. Create user in Firebase Auth
+        const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+        uid = userCredential.user.uid;
+      }
+
+      if (!uid) {
+        throw new Error("No valid user ID found.");
+      }
+
+      // 2. Upload profile pic if provided
+      if (profilePicFile) {
+        finalProfilePicUrl = await uploadProfilePic(uid, profilePicFile);
+      }
+
+      // 3. Create profile in Firestore
+      const newProfile: Partial<UserProfile> = {
+        uid,
+        email: formData.email,
+        phoneNumber: formData.phoneNumber,
+        fullName: formData.fullName,
+        yearLeftSchool: parseInt(formData.yearLeftSchool, 10) || 0,
+        district: formData.district,
+        placeOfResidence: formData.placeOfResidence,
+        occupation: formData.occupation,
+        nextOfKinName: formData.nextOfKinName,
+        nextOfKinPhone: formData.nextOfKinPhone,
+        profilePictureUrl: finalProfilePicUrl,
+        privacySettings: {
+          showPhone: formData.showPhone,
+          showEmail: formData.showEmail
         },
-        profilePicFile || undefined
-      );
-      
-      // Set the PIN using phone number
-      const phoneToUse = currentUser.phoneNumber || phoneNumber || '';
-      await setPin(currentUser.uid, phoneToUse, formData.pin);
+        status: 'pending', // Requires admin approval
+        role: 'member',
+        createdAt: new Date().toISOString(),
+        authProvider: authProvider
+      };
+
+      await setDoc(doc(db, 'users', uid), newProfile);
       
       setStep('success');
     } catch (err: any) {
       console.error(err);
-      setError(err.message || 'Failed to complete registration.');
+      if (err.code === 'auth/email-already-in-use') {
+        setError('This email is already registered. Please log in.');
+      } else {
+        setError(err.message || 'Failed to complete registration.');
+      }
     } finally {
       setLoading(false);
     }
@@ -174,122 +207,32 @@ export default function Register() {
         
         <div className="bg-mamas-card rounded-2xl shadow-xl shadow-mamas-primary/5 border border-slate-100 overflow-hidden">
           
-          {step === 'phone' && (
-            <div className="px-6 py-8 sm:p-10 max-w-md mx-auto">
-              <h2 className="text-2xl font-display font-bold text-mamas-primary text-center mb-6">Create Your Account</h2>
-              {error && (
-                <div className="mb-6 bg-rose-50 border-l-4 border-mamas-danger text-mamas-danger px-4 py-3 rounded-r text-sm font-medium shadow-sm">
-                  {error}
-                </div>
-              )}
-              <form className="space-y-6" onSubmit={handleSendOtp}>
-                <div>
-                  <label htmlFor="phone" className="block text-sm font-medium text-slate-700">Phone Number</label>
-                  <div className="mt-2 relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <Phone className="h-5 w-5 text-slate-400" />
-                    </div>
-                    <input
-                      id="phone"
-                      type="tel"
-                      required
-                      placeholder="+256 700 000000"
-                      value={phoneNumber}
-                      onChange={(e) => setPhoneNumber(e.target.value)}
-                      className="appearance-none block w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-mamas-primary sm:text-base transition-colors"
-                    />
-                  </div>
-                </div>
-
-                <div id="recaptcha-register" className="flex justify-center"></div>
-
-                <div className="flex items-start">
-                  <div className="flex items-center h-5">
-                    <input
-                      id="terms"
-                      type="checkbox"
-                      checked={agreedToTerms}
-                      onChange={(e) => setAgreedToTerms(e.target.checked)}
-                      className="focus:ring-mamas-primary h-4 w-4 text-mamas-primary border-slate-300 rounded"
-                    />
-                  </div>
-                  <div className="ml-3 text-sm">
-                    <label htmlFor="terms" className="font-medium text-slate-700">
-                      I agree to the <Link to="/terms" className="text-mamas-primary hover:underline">Terms of Service</Link> and <Link to="/privacy" className="text-mamas-primary hover:underline">Privacy Policy</Link>
-                    </label>
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={loading || !phoneNumber || !agreedToTerms}
-                  className="w-full flex justify-center py-3 px-4 border border-transparent rounded-full shadow-md text-sm font-medium text-white bg-mamas-primary hover:bg-mamas-primary-hover disabled:opacity-50 transition-colors"
-                >
-                  {loading ? 'Sending OTP...' : 'Continue'}
-                </button>
-                
-                <div className="text-center mt-6 text-sm text-slate-600">
-                  Already a member? <Link to="/login" className="font-semibold text-mamas-accent hover:text-mamas-accent-hover transition-colors">Log In</Link>
-                </div>
-              </form>
-            </div>
-          )}
-
-          {step === 'otp' && (
-            <div className="px-6 py-8 sm:p-10 max-w-md mx-auto">
-              <h2 className="text-2xl font-display font-bold text-mamas-primary text-center mb-6">Verify Your Number</h2>
-              {error && (
-                <div className="mb-6 bg-rose-50 border-l-4 border-mamas-danger text-mamas-danger px-4 py-3 rounded-r text-sm font-medium shadow-sm">
-                  {error}
-                </div>
-              )}
-              <form className="space-y-6" onSubmit={handleVerifyOtp}>
-                <div>
-                  <label htmlFor="otp" className="block text-sm font-medium text-slate-700 text-center">
-                    Enter Verification Code sent to {phoneNumber}
-                  </label>
-                  <div className="mt-4">
-                    <input
-                      id="otp"
-                      type="text"
-                      required
-                      maxLength={6}
-                      autoFocus
-                      value={otp}
-                      onChange={(e) => setOtp(e.target.value)}
-                      className="appearance-none block w-full px-4 py-3 border border-slate-300 rounded-lg shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-mamas-primary sm:text-lg tracking-[0.5em] font-mono text-center transition-colors"
-                    />
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={loading || otp.length < 6}
-                  className="w-full flex justify-center py-3 px-4 border border-transparent rounded-full shadow-md text-sm font-medium text-white bg-mamas-primary hover:bg-mamas-primary-hover disabled:opacity-50 transition-colors"
-                >
-                  {loading ? 'Verifying...' : 'Verify'}
-                </button>
-                
-                <div className="text-center mt-6">
-                  <button type="button" onClick={() => setStep('phone')} className="text-sm font-medium text-slate-500 hover:text-mamas-primary">
-                    Use a different phone number
-                  </button>
-                </div>
-              </form>
-            </div>
-          )}
-
-          {step === 'profile' && (
+          {step === 'form' && (
             <>
-              <div className="px-6 py-6 border-b border-slate-100 sm:px-10 flex justify-between items-center bg-white/50 backdrop-blur-sm">
-                <div>
-                  <h3 className="text-2xl font-display font-bold text-mamas-primary tracking-tight">Complete Your Profile</h3>
-                  <p className="text-sm text-mamas-text-muted mt-1">Tell us more about yourself to join the community.</p>
-                </div>
-                <button onClick={async () => { await logout(); setStep('phone'); }} className="text-sm font-medium text-mamas-accent hover:text-mamas-accent-hover transition-colors">Cancel</button>
+              <div className="px-6 py-6 border-b border-slate-100 sm:px-10 flex flex-col items-center bg-white/50 backdrop-blur-sm text-center">
+                <h3 className="text-2xl font-display font-bold text-mamas-primary tracking-tight">Create Your Account</h3>
+                <p className="text-sm text-mamas-text-muted mt-1">Tell us more about yourself to join the community.</p>
               </div>
               
               <div className="px-6 py-8 sm:p-10">
+                {authProvider === 'email' && (
+                  <div className="mb-8">
+                    <GoogleSignInButton
+                      mode="register"
+                      onClick={handleGoogleSignUp}
+                      loading={loading}
+                    />
+                    <div className="relative mt-8">
+                      <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-slate-200"></div>
+                      </div>
+                      <div className="relative flex justify-center text-sm">
+                        <span className="px-2 bg-mamas-card text-slate-500 font-medium">— OR —</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <form onSubmit={handleSubmitProfile} className="space-y-8">
                   {error && (
                     <div className="bg-rose-50 border-l-4 border-mamas-danger text-mamas-danger px-4 py-3 rounded-r text-sm font-medium shadow-sm">
@@ -299,25 +242,55 @@ export default function Register() {
                   
                   <div className="grid grid-cols-1 gap-y-6 gap-x-6 sm:grid-cols-2">
                     <div className="sm:col-span-2">
-                      <label className="block text-sm font-medium text-slate-700">Phone Number (Verified)</label>
-                      <div className="mt-2">
-                        <input type="text" disabled value={currentUser?.phoneNumber || phoneNumber} className="appearance-none block w-full px-4 py-3 border border-slate-200 rounded-lg bg-slate-50 text-slate-500 sm:text-sm font-medium cursor-not-allowed" />
-                      </div>
-                    </div>
-
-                    <div className="sm:col-span-2">
                       <label htmlFor="fullName" className="block text-sm font-medium text-slate-700">Full Name</label>
                       <div className="mt-2">
                         <input type="text" name="fullName" id="fullName" required value={formData.fullName} onChange={handleChange} className="appearance-none block w-full px-4 py-3 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-mamas-primary focus:border-transparent sm:text-sm transition-colors" />
                       </div>
                     </div>
 
-                    <div>
-                      <label htmlFor="email" className="block text-sm font-medium text-slate-700">Email Address <span className="text-slate-400 font-normal">(Optional)</span></label>
-                      <div className="mt-2">
-                        <input type="email" name="email" id="email" value={formData.email} onChange={handleChange} className="appearance-none block w-full px-4 py-3 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-mamas-primary focus:border-transparent sm:text-sm transition-colors" />
+                    <div className="sm:col-span-2 md:col-span-1">
+                      <label htmlFor="email" className="block text-sm font-medium text-slate-700">Email Address</label>
+                      <div className="mt-2 relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <Mail className="h-5 w-5 text-slate-400" />
+                        </div>
+                        <input type="email" name="email" id="email" required value={formData.email} onChange={handleChange} disabled={authProvider === 'google'} className="appearance-none block w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-mamas-primary focus:border-transparent sm:text-sm transition-colors disabled:bg-slate-50 disabled:text-slate-500" />
                       </div>
                     </div>
+                    
+                    <div className="sm:col-span-2 md:col-span-1">
+                      <label htmlFor="phoneNumber" className="block text-sm font-medium text-slate-700">Phone Number</label>
+                      <div className="mt-2 relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <Phone className="h-5 w-5 text-slate-400" />
+                        </div>
+                        <input type="tel" name="phoneNumber" id="phoneNumber" required value={formData.phoneNumber} onChange={handleChange} placeholder="+256 700 000000" className="appearance-none block w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-mamas-primary focus:border-transparent sm:text-sm transition-colors" />
+                      </div>
+                    </div>
+
+                    {authProvider === 'email' && (
+                      <>
+                        <div>
+                          <label htmlFor="password" className="block text-sm font-medium text-slate-700">Password</label>
+                          <div className="mt-2 relative">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                              <KeyRound className="h-5 w-5 text-slate-400" />
+                            </div>
+                            <input type="password" name="password" id="password" required value={formData.password} onChange={handleChange} placeholder="Min 6 characters" className="appearance-none block w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-mamas-primary focus:border-transparent sm:text-sm transition-colors" />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label htmlFor="confirmPassword" className="block text-sm font-medium text-slate-700">Confirm Password</label>
+                          <div className="mt-2 relative">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                              <KeyRound className="h-5 w-5 text-slate-400" />
+                            </div>
+                            <input type="password" name="confirmPassword" id="confirmPassword" required value={formData.confirmPassword} onChange={handleChange} placeholder="Re-enter password" className="appearance-none block w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-mamas-primary focus:border-transparent sm:text-sm transition-colors" />
+                          </div>
+                        </div>
+                      </>
+                    )}
 
                     <div>
                       <label htmlFor="yearLeftSchool" className="block text-sm font-medium text-slate-700">Year Left School</label>
@@ -379,30 +352,13 @@ export default function Register() {
                   </div>
                   
                   <div className="border-t border-slate-100 pt-8 mt-8">
-                    <h4 className="text-lg font-display font-semibold text-mamas-primary mb-6">Security (PIN)</h4>
-                    <p className="text-sm text-slate-500 mb-6">Create a 4 to 6 digit PIN to log in securely next time without waiting for SMS codes.</p>
-                    <div className="grid grid-cols-1 gap-y-6 gap-x-6 sm:grid-cols-2">
-                      <div>
-                        <label htmlFor="pin" className="block text-sm font-medium text-slate-700">Create PIN</label>
-                        <div className="mt-2">
-                          <input type="password" inputMode="numeric" pattern="[0-9]{4,6}" name="pin" id="pin" required value={formData.pin} onChange={handleChange} placeholder="4-6 digits" className="appearance-none block w-full px-4 py-3 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-mamas-primary focus:border-transparent sm:text-sm transition-colors" />
-                        </div>
-                      </div>
-                      <div>
-                        <label htmlFor="confirmPin" className="block text-sm font-medium text-slate-700">Confirm PIN</label>
-                        <div className="mt-2">
-                          <input type="password" inputMode="numeric" pattern="[0-9]{4,6}" name="confirmPin" id="confirmPin" required value={formData.confirmPin} onChange={handleChange} placeholder="Re-enter PIN" className="appearance-none block w-full px-4 py-3 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-mamas-primary focus:border-transparent sm:text-sm transition-colors" />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="border-t border-slate-100 pt-8 mt-8">
                     <h4 className="text-lg font-display font-semibold text-mamas-primary mb-6">Profile Picture</h4>
                     <div className="mt-2 flex items-center gap-4">
                       <div className="h-16 w-16 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden border border-slate-200">
                         {profilePicFile ? (
                           <img src={URL.createObjectURL(profilePicFile)} alt="Preview" className="h-full w-full object-cover" />
+                        ) : profilePicUrl ? (
+                          <img src={profilePicUrl} alt="Google Profile" className="h-full w-full object-cover" />
                         ) : (
                           <span className="text-slate-400 text-2xl font-bold uppercase">{formData.fullName ? formData.fullName[0] : 'U'}</span>
                         )}
@@ -410,15 +366,36 @@ export default function Register() {
                       <input type="file" accept="image/*" onChange={handleFileChange} className="appearance-none block text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-mamas-primary file:text-white hover:file:bg-mamas-primary-hover transition-colors cursor-pointer" />
                     </div>
                   </div>
+
+                  <div className="flex items-start mt-6">
+                    <div className="flex items-center h-5">
+                      <input
+                        id="terms"
+                        type="checkbox"
+                        checked={agreedToTerms}
+                        onChange={(e) => setAgreedToTerms(e.target.checked)}
+                        className="focus:ring-mamas-primary h-4 w-4 text-mamas-primary border-slate-300 rounded"
+                      />
+                    </div>
+                    <div className="ml-3 text-sm">
+                      <label htmlFor="terms" className="font-medium text-slate-700">
+                        I agree to the <Link to="/terms" className="text-mamas-primary hover:underline">Terms of Service</Link> and <Link to="/privacy" className="text-mamas-primary hover:underline">Privacy Policy</Link>
+                      </label>
+                    </div>
+                  </div>
                   
                   <div className="pt-6">
                     <button
                       type="submit"
                       disabled={loading}
-                      className="w-full sm:w-auto sm:min-w-[200px] flex justify-center items-center py-3.5 px-6 border border-transparent rounded-full shadow-md text-base font-medium text-white bg-mamas-primary hover:bg-mamas-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-mamas-primary disabled:opacity-50 transition-all mx-auto"
+                      className="w-full flex justify-center items-center py-3.5 px-6 border border-transparent rounded-full shadow-md text-base font-medium text-white bg-mamas-primary hover:bg-mamas-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-mamas-primary disabled:opacity-50 transition-all"
                     >
-                      {loading ? 'Submitting...' : 'Complete Registration'}
+                      {loading ? 'Creating Account...' : 'Complete Registration'}
                     </button>
+                  </div>
+                  
+                  <div className="text-center mt-6 text-sm text-slate-600">
+                    Already a member? <Link to="/login" className="font-semibold text-mamas-accent hover:text-mamas-accent-hover transition-colors">Log In</Link>
                   </div>
                 </form>
               </div>

@@ -7,7 +7,6 @@ import { Link } from 'react-router-dom';
 import { User, Camera, Shield, FileText, CheckCircle2, AlertCircle, Upload, HelpCircle, SunMedium, Sparkles } from 'lucide-react';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { OnboardingTour } from '../components/OnboardingTour';
-import { ForcePinModal } from '../components/ForcePinModal';
 import { KeyRound } from 'lucide-react';
 
 const compressImageToBlob = async (file: File, maxWidth = 500, maxHeight = 500, quality = 0.8): Promise<Blob> => {
@@ -456,21 +455,6 @@ export default function Profile() {
                   <HelpCircle className="w-4 h-4 text-mamas-primary" /> Restart Tour
                 </button>
               </div>
-
-              {/* Change PIN */}
-              <div className="mt-4 bg-slate-50 dark:bg-slate-800/50 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div>
-                  <p className="font-bold text-sm text-mamas-text">Security PIN</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Update your 4-6 digit login PIN.</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowPinModal(true)}
-                  className="bg-white dark:bg-slate-700 hover:bg-slate-100 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600 font-bold py-2.5 px-4 rounded-xl text-xs transition-all shadow-sm flex items-center gap-1.5 whitespace-nowrap"
-                >
-                  <KeyRound className="w-4 h-4 text-mamas-primary" /> Change PIN
-                </button>
-              </div>
             </div>
           </div>
           
@@ -485,8 +469,6 @@ export default function Profile() {
           </div>
         </form>
       </div>
-
-      {showPinModal && <ForcePinModal forceShow={true} onClose={() => setShowPinModal(false)} />}
 
       {showTour && (
         <OnboardingTour userProfile={userProfile} onComplete={() => setShowTour(false)} />

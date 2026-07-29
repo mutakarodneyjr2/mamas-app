@@ -22,13 +22,11 @@ export interface User {
   };
   contributionStatus: ContributionStatus;
   hasCompletedOnboarding?: boolean;
-  hasPin?: boolean;
-  pinHash?: string;
-  pinUpdatedAt?: number;
-  pinLockedUntil?: number | null;
-  failedPinAttempts?: number;
-  createdAt: number;
-  updatedAt: number;
+  recoveryEmail?: string;
+  recoveryEmailVerified?: boolean;
+  authProvider?: string;
+  createdAt: number | string;
+  updatedAt: number | string;
   lastContributionDate?: number;
   totalContributed: number;
   totalCampaignContributed?: number;
