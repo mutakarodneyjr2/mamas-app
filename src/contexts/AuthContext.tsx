@@ -60,6 +60,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const googleSignIn = useCallback(async () => {
     const provider = new GoogleAuthProvider();
+    provider.addScope('email');
+    provider.addScope('profile');
     return await signInWithPopup(auth, provider);
   }, []);
 

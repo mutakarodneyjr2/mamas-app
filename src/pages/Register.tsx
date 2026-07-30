@@ -215,8 +215,8 @@ export default function Register() {
       setCurrentStep(2);
     } catch (err: any) {
       console.error(err);
-      if (err.code === 'auth/popup-blocked') {
-        setError('Please allow popups for this site to sign in with Google.');
+      if (err.code === 'auth/popup-blocked' || err.message?.includes('popup')) {
+        setError('Please allow popups for this site or use email/password login instead.');
       } else if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
         setError('Failed to sign in with Google.');
       }
