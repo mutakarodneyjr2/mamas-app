@@ -7,7 +7,9 @@ import { db, storage } from '../firebase';
 import { submitWelfareRequest } from '../lib/services';
 import { AppSettings } from '../types';
 import { formatUGX } from '../lib/utils';
-import { Heart, ArrowLeft, AlertCircle, FileText, CheckCircle2 } from 'lucide-react';
+import { Heart, ArrowLeft, AlertCircle, FileText, CheckCircle2, MapPin, User, Shield, Phone, DollarSign } from 'lucide-react';
+import { SelectDropdown } from '../components/SelectDropdown';
+import { UGANDAN_DISTRICTS } from '../lib/constants';
 
 export default function ApplyWelfare() {
   const { currentUser } = useAuth();
@@ -54,8 +56,8 @@ export default function ApplyWelfare() {
     fetchSettings();
   }, []);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  const handleFieldChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -81,6 +83,11 @@ export default function ApplyWelfare() {
       return;
     }
 
+    if (!formData.district) {
+      setError("Please select a valid district.");
+      return;
+    }
+
     if (!formData.recipientPhoneNumber || formData.recipientPhoneNumber.trim() === "") {
       setError("Please provide the Mobile Money number that will receive the funds.");
       return;
@@ -93,7 +100,6 @@ export default function ApplyWelfare() {
       return;
     }
 
-    // Maximum amount validation
     if (maxAllowedForCategory && amount > maxAllowedForCategory) {
       setError(`The maximum allowed welfare payout for ${formData.category} is ${formatUGX(maxAllowedForCategory)}.`);
       return;
@@ -132,34 +138,38 @@ export default function ApplyWelfare() {
 
   if (isSuccess) {
     return (
-      <div className="max-w-md mx-auto pt-8 pb-16 animate-in fade-in zoom-in-95 duration-300">
-        <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 p-8 text-center flex flex-col items-center">
-          <div className="w-16 h-16 bg-teal-50 dark:bg-teal-900/20 text-teal-600 dark:text-teal-400 rounded-full flex items-center justify-center mb-5 border border-teal-200 dark:border-teal-900/50">
+      <div className="max-w-md mx-auto pt-4 pb-28 animate-in fade-in zoom-in-95 duration-300">
+        <div className="bg-white rounded-3xl shadow-xl border border-slate-200 p-6 text-center flex flex-col items-center">
+          <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mb-4 border border-emerald-200">
             <CheckCircle2 className="w-8 h-8" />
           </div>
-          <h2 className="text-2xl font-display font-bold text-mamas-text dark:text-white mb-2">Application Submitted!</h2>
-          <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed mb-6">
-            Your welfare request has been successfully submitted and is now pending review by the Welfare Committee. You will be notified once a decision is made.
+          <h2 className="text-2xl font-bold text-slate-900 mb-2">Application Submitted!</h2>
+          <p className="text-slate-500 text-xs leading-relaxed mb-6">
+            Your welfare request has been successfully submitted and is now under review by the Executive Welfare Committee.
           </p>
 
-          <div className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 rounded-2xl p-4 mb-6 text-left space-y-3">
-            <div className="flex justify-between items-center text-sm">
+          <div className="w-full bg-slate-50 border border-slate-200/80 rounded-2xl p-4 mb-6 text-left space-y-2.5">
+            <div className="flex justify-between items-center text-xs">
               <span className="text-slate-500 font-medium">Category</span>
-              <span className="font-bold text-mamas-text dark:text-white capitalize">{formData.category}</span>
+              <span className="font-bold text-slate-900 capitalize">{formData.category}</span>
             </div>
-            <div className="flex justify-between items-center text-sm">
+            <div className="flex justify-between items-center text-xs">
               <span className="text-slate-500 font-medium">Amount Requested</span>
-              <span className="font-bold text-mamas-text dark:text-white">UGX {new Intl.NumberFormat('en-UG').format(parseInt(formData.amountRequested, 10))}</span>
+              <span className="font-bold text-slate-900">{formatUGX(parseInt(formData.amountRequested, 10))}</span>
             </div>
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-slate-500 font-medium">Recipient Name</span>
-              <span className="font-bold text-mamas-text dark:text-white capitalize">{formData.recipientName || 'Not provided'}</span>
+            <div className="flex justify-between items-center text-xs">
+              <span className="text-slate-500 font-medium">Location</span>
+              <span className="font-bold text-slate-900 capitalize">{formData.district}, {formData.villageTown}</span>
+            </div>
+            <div className="flex justify-between items-center text-xs">
+              <span className="text-slate-500 font-medium">Recipient MoMo</span>
+              <span className="font-bold text-slate-900">{formData.recipientPhoneNumber} ({formData.recipientNetwork})</span>
             </div>
           </div>
 
           <button
             onClick={() => navigate('/welfare')}
-            className="w-full bg-mamas-primary hover:bg-mamas-primary-hover text-white font-bold py-3.5 px-6 rounded-2xl transition-colors shadow-md flex items-center justify-center"
+            className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3.5 px-6 rounded-2xl transition-colors shadow-lg text-sm"
           >
             Go to Welfare Directory
           </button>
@@ -168,240 +178,260 @@ export default function ApplyWelfare() {
     );
   }
 
+  const categoryOptions = (settings?.welfareCategories || ['Bereavement', 'Medical Emergency', 'Wedding']).map(c => ({
+    label: c,
+    value: c
+  }));
+
+  const relationshipOptions = (settings?.allowedRelationships || ['Self', 'Spouse', 'Child', 'Parent']).map(r => ({
+    label: r,
+    value: r
+  }));
+
+  const districtDropdownOptions = UGANDAN_DISTRICTS.map(d => ({
+    label: d,
+    value: d
+  }));
+
+  const networkOptions = [
+    { label: 'MTN Mobile Money', value: 'MTN' },
+    { label: 'Airtel Money', value: 'Airtel' }
+  ];
+
   return (
-    <div className="max-w-3xl mx-auto space-y-6 pb-12">
-      <div className="flex items-center justify-between">
-        <div>
-          <button 
-            onClick={() => navigate('/welfare')} 
-            className="text-xs font-semibold text-mamas-primary hover:text-mamas-primary-hover flex items-center gap-1 mb-2"
-          >
-            <ArrowLeft className="w-4 h-4" /> Back to Welfare
-          </button>
-          <h2 className="text-2xl font-display font-bold text-mamas-text flex items-center gap-2">
-            <Heart className="w-6 h-6 text-rose-500" /> Apply for Welfare Aid
-          </h2>
-          <p className="text-mamas-text-muted text-sm mt-1">Submit a financial aid request for review by the Welfare Committee.</p>
+    <div className="max-w-2xl mx-auto space-y-6 pb-28 animate-in fade-in duration-300">
+      
+      {/* HEADER BANNER */}
+      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 rounded-3xl p-6 text-white shadow-xl border border-slate-800 relative overflow-hidden">
+        <button 
+          onClick={() => navigate('/welfare')} 
+          className="text-xs font-bold text-amber-400 hover:text-amber-300 flex items-center gap-1 mb-3"
+        >
+          <ArrowLeft className="w-4 h-4" /> Back to Welfare
+        </button>
+        
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-rose-500/20 border border-rose-400/30 flex items-center justify-center shrink-0">
+            <Heart className="w-5 h-5 text-rose-400" fill="currentColor" />
+          </div>
+          <div>
+            <h1 className="text-xl font-extrabold tracking-tight text-white">Apply for Emergency Welfare Aid</h1>
+            <p className="text-slate-300 text-xs mt-0.5">Official relief request for review by the Association Welfare Committee.</p>
+          </div>
         </div>
       </div>
 
-      <div className="bg-mamas-card rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="p-6 sm:p-8">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {error && (
-              <div className="bg-rose-50 border border-rose-200 text-rose-800 p-4 rounded-2xl text-sm font-medium flex items-center gap-3">
-                <AlertCircle className="w-5 h-5 text-rose-600 flex-shrink-0" />
-                <span>{error}</span>
-              </div>
-            )}
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {error && (
+          <div className="bg-rose-50 border border-rose-200 text-rose-800 p-4 rounded-2xl text-xs font-bold flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              <div>
-                <label htmlFor="category" className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                  Welfare Category <span className="text-rose-500">*</span>
-                </label>
-                <select
-                  id="category"
-                  name="category"
-                  required
-                  value={formData.category}
-                  onChange={handleChange}
-                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm font-semibold text-mamas-text focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-mamas-accent outline-none"
-                >
-                  <option value="">-- Select Category --</option>
-                  {settings?.welfareCategories?.map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
-              </div>
+        {/* SECTION 1: BENEFICIARY & CATEGORY */}
+        <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 space-y-4">
+          <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-3 flex items-center gap-2">
+            <Shield className="w-4 h-4 text-amber-500" /> Request Details & Beneficiary
+          </h2>
 
-              <div>
-                <label htmlFor="relationship" className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                  Beneficiary Relationship <span className="text-rose-500">*</span>
-                </label>
-                <select
-                  id="relationship"
-                  name="relationship"
-                  required
-                  value={formData.relationship}
-                  onChange={handleChange}
-                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm font-semibold text-mamas-text focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-mamas-accent outline-none"
-                >
-                  <option value="">-- Select Relationship --</option>
-                  {settings?.allowedRelationships?.map(rel => (
-                    <option key={rel} value={rel}>{rel}</option>
-                  ))}
-                </select>
-              </div>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
+                Welfare Category <span className="text-rose-500">*</span>
+              </label>
+              <SelectDropdown
+                options={categoryOptions}
+                value={formData.category}
+                onChange={(val) => handleFieldChange('category', val)}
+                placeholder="Select Welfare Category"
+              />
+            </div>
 
-              <div>
-                <label htmlFor="personName" className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                  Beneficiary Name <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="personName"
-                  id="personName"
-                  required
-                  placeholder="Full name of beneficiary"
-                  value={formData.personName}
-                  onChange={handleChange}
-                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm font-semibold text-mamas-text focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-mamas-accent outline-none"
-                />
-              </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
+                Beneficiary Relationship <span className="text-rose-500">*</span>
+              </label>
+              <SelectDropdown
+                options={relationshipOptions}
+                value={formData.relationship}
+                onChange={(val) => handleFieldChange('relationship', val)}
+                placeholder="Select Relationship"
+              />
+            </div>
 
-              <div>
-                <label htmlFor="amountRequested" className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                  Amount Requested (UGX) <span className="text-rose-500">*</span>
-                </label>
+            <div>
+              <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
+                Beneficiary Full Name <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="Full name of beneficiary"
+                value={formData.personName}
+                onChange={(e) => handleFieldChange('personName', e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-900 focus:outline-none focus:border-amber-500 focus:bg-white transition-all"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
+                Amount Requested (UGX) <span className="text-rose-500">*</span>
+              </label>
+              <div className="relative">
+                <span className="absolute inset-y-0 left-4 flex items-center text-slate-400 font-extrabold text-sm">UGX</span>
                 <input
                   type="number"
-                  name="amountRequested"
-                  id="amountRequested"
                   required
                   min="1000"
                   placeholder="e.g. 500000"
                   value={formData.amountRequested}
-                  onChange={handleChange}
-                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm font-bold text-mamas-text focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-mamas-accent outline-none"
+                  onChange={(e) => handleFieldChange('amountRequested', e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-16 pr-4 py-3 text-sm font-bold text-slate-900 focus:outline-none focus:border-amber-500 focus:bg-white transition-all"
                 />
-                {maxAllowedForCategory !== undefined && (
-                  <p className="mt-1.5 text-xs font-semibold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200 inline-block">
-                    Maximum limit for {formData.category}: <span className="font-bold">{formatUGX(maxAllowedForCategory)}</span>
-                  </p>
-                )}
               </div>
+              {maxAllowedForCategory !== undefined && (
+                <p className="mt-2 text-[11px] font-bold text-amber-800 bg-amber-50 px-3 py-1.5 rounded-xl border border-amber-200 inline-block">
+                  Maximum cap for {formData.category}: <strong>{formatUGX(maxAllowedForCategory)}</strong>
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
 
-              <div>
-                <label htmlFor="district" className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                  District (Event Location) <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="district"
-                  id="district"
-                  required
-                  placeholder="e.g. Kampala, Mukono..."
-                  value={formData.district}
-                  onChange={handleChange}
-                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm font-semibold text-mamas-text focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-mamas-accent outline-none"
-                />
-              </div>
+        {/* SECTION 2: LOCATION DETAILS WITH SEARCHABLE DISTRICT DROPDOWN */}
+        <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 space-y-4">
+          <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-3 flex items-center gap-2">
+            <MapPin className="w-4 h-4 text-amber-500" /> Event Location
+          </h2>
 
-              <div>
-                <label htmlFor="villageTown" className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                  Village / Town <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="villageTown"
-                  id="villageTown"
-                  required
-                  placeholder="e.g. Matuumu Village"
-                  value={formData.villageTown}
-                  onChange={handleChange}
-                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm font-semibold text-mamas-text focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-mamas-accent outline-none"
-                />
-              </div>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
+                District <span className="text-rose-500">*</span>
+              </label>
+              <SelectDropdown
+                options={districtDropdownOptions}
+                value={formData.district}
+                onChange={(val) => handleFieldChange('district', val)}
+                placeholder="Select District"
+                searchable
+              />
             </div>
 
-            <div className="bg-amber-50/60 p-6 rounded-2xl border border-amber-200/80 space-y-4">
-              <h3 className="text-sm font-bold text-amber-900 uppercase tracking-wider flex items-center gap-2">
-                Mobile Money Payout Details
-              </h3>
-              <p className="text-xs text-amber-700">Provide the Mobile Money account where funds should be sent upon committee approval.</p>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="sm:col-span-1">
-                  <label htmlFor="recipientNetwork" className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
-                    Network <span className="text-rose-500">*</span>
-                  </label>
-                  <select
-                    id="recipientNetwork"
-                    name="recipientNetwork"
-                    value={formData.recipientNetwork}
-                    onChange={handleChange}
-                    className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-sm font-semibold text-mamas-text focus:ring-2 focus:ring-mamas-accent outline-none"
-                  >
-                    <option value="MTN">MTN Mobile Money</option>
-                    <option value="Airtel">Airtel Money</option>
-                  </select>
-                </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
+                Village / Town <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. Matuumu Village, Kyebando..."
+                value={formData.villageTown}
+                onChange={(e) => handleFieldChange('villageTown', e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-900 focus:outline-none focus:border-amber-500 focus:bg-white transition-all"
+              />
+            </div>
+          </div>
+        </div>
 
-                <div className="sm:col-span-2">
-                  <label htmlFor="recipientPhoneNumber" className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
-                    Mobile Money Number <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="tel"
-                    name="recipientPhoneNumber"
-                    id="recipientPhoneNumber"
-                    required
-                    placeholder="e.g. 0772123456 or +256772123456"
-                    value={formData.recipientPhoneNumber}
-                    onChange={handleChange}
-                    className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm font-bold text-mamas-text focus:ring-2 focus:ring-mamas-accent outline-none"
-                  />
-                </div>
+        {/* SECTION 3: MOBILE MONEY PAYOUT RECEIVER */}
+        <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 space-y-4">
+          <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-3 flex items-center gap-2">
+            <Phone className="w-4 h-4 text-amber-500" /> Payout Mobile Money Account
+          </h2>
+
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="sm:col-span-1">
+                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
+                  Network <span className="text-rose-500">*</span>
+                </label>
+                <SelectDropdown
+                  options={networkOptions}
+                  value={formData.recipientNetwork}
+                  onChange={(val) => handleFieldChange('recipientNetwork', val)}
+                  placeholder="Network"
+                />
               </div>
 
-              <div>
-                <label htmlFor="recipientName" className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
-                  Name Registered on Number <span className="text-slate-400 font-normal">(Optional)</span>
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
+                  Mobile Money Number <span className="text-rose-500">*</span>
                 </label>
                 <input
-                  type="text"
-                  name="recipientName"
-                  id="recipientName"
-                  placeholder="e.g. Namubiru Sarah"
-                  value={formData.recipientName}
-                  onChange={handleChange}
-                  className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm font-semibold text-mamas-text focus:ring-2 focus:ring-mamas-accent outline-none"
+                  type="tel"
+                  required
+                  placeholder="e.g. 0772123456"
+                  value={formData.recipientPhoneNumber}
+                  onChange={(e) => handleFieldChange('recipientPhoneNumber', e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold text-slate-900 focus:outline-none focus:border-amber-500 focus:bg-white transition-all"
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="description" className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                Description / Details <span className="text-rose-500">*</span>
+              <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
+                Registered Name on Account <span className="text-slate-400 font-normal">(Optional)</span>
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Namubiru Sarah"
+                value={formData.recipientName}
+                onChange={(e) => handleFieldChange('recipientName', e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-900 focus:outline-none focus:border-amber-500 focus:bg-white transition-all"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* SECTION 4: DESCRIPTION & EVIDENCE */}
+        <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 space-y-4">
+          <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-3 flex items-center gap-2">
+            <FileText className="w-4 h-4 text-amber-500" /> Explanation & Supporting Evidence
+          </h2>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
+                Detailed Circumstances <span className="text-rose-500">*</span>
               </label>
               <textarea
-                id="description"
-                name="description"
                 rows={4}
                 required
                 value={formData.description}
-                onChange={handleChange}
-                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-sm font-medium text-mamas-text focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-mamas-accent outline-none"
-                placeholder="Provide detailed circumstances surrounding this welfare request..."
+                onChange={(e) => handleFieldChange('description', e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm font-medium text-slate-900 focus:outline-none focus:border-amber-500 focus:bg-white transition-all"
+                placeholder="Describe the emergency or circumstances surrounding this request..."
               />
             </div>
 
             <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-2">
-                <FileText className="w-4 h-4 text-mamas-primary" /> Supporting Evidence (Certificates, Receipts, Medical Reports)
+              <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
+                Attach Supporting Documents (Medical report, Death certificate, Invoices)
               </label>
               <input 
                 type="file" 
                 multiple 
                 accept="image/*,.pdf"
                 onChange={handleFileChange}
-                className="mt-1 block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-mamas-primary file:text-white hover:file:bg-mamas-primary-hover transition-colors" 
+                className="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-slate-900 file:text-white hover:file:bg-slate-800 cursor-pointer transition-colors" 
               />
             </div>
-
-            <div className="pt-4 border-t border-slate-100 flex justify-end">
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full sm:w-auto bg-mamas-primary hover:bg-mamas-primary-hover text-white py-3 px-8 rounded-xl font-bold shadow-md transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {loading ? 'Submitting Application...' : 'Submit Application'}
-              </button>
-            </div>
-          </form>
+          </div>
         </div>
-      </div>
+
+        {/* SUBMIT BUTTON */}
+        <div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-slate-900 text-white rounded-full py-4 text-base font-bold shadow-xl hover:bg-slate-800 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            {loading ? 'Submitting Welfare Application...' : 'Submit Relief Application'}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

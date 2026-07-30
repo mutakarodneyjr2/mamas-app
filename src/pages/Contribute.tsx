@@ -102,7 +102,7 @@ export default function Contribute() {
     }
   };
 
-  const presetAmounts = [5000, 10000, 20000, 50000, 100000];
+  const presetAmounts = [1000, 2000, 5000, 10000, 20000, 50000, 100000];
 
   return (
     <div className="max-w-2xl mx-auto w-full pb-12 animate-in fade-in duration-300">

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { User } from '../types';
+import { SelectDropdown } from '../components/SelectDropdown';
 
 export default function Directory() {
   const [members, setMembers] = useState<User[]>([]);
@@ -41,38 +42,49 @@ export default function Directory() {
     return matchesSearch && matchesYear && matchesDistrict;
   });
 
+  const yearOptions = [
+    { label: 'All Years', value: '' },
+    ...years.map(y => ({ label: String(y), value: String(y) }))
+  ];
+
+  const districtOptions = [
+    { label: 'All Districts', value: '' },
+    ...districts.map(d => ({ label: String(d), value: String(d) }))
+  ];
+
   return (
-    <div className="space-y-6">
-      <div className="bg-mamas-card rounded-lg shadow-sm border border-slate-200 p-6 flex flex-col md:flex-row gap-4 items-center justify-between">
+    <div className="space-y-6 pb-28">
+      <div className="bg-mamas-card rounded-3xl shadow-sm border border-slate-200 p-6 flex flex-col md:flex-row gap-4 items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-mamas-text">Alumni Directory</h2>
           <p className="text-mamas-text-muted text-sm mt-1">Connect with fellow MAMAS members.</p>
         </div>
         
-        <div className="flex flex-col sm:flex-row w-full md:w-auto gap-3">
+        <div className="flex flex-col sm:flex-row w-full md:w-auto gap-3 items-center">
           <input
             type="text"
             placeholder="Search by name..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full sm:w-48 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-mamas-primary focus:border-mamas-primary sm:text-sm"
+            className="w-full sm:w-48 px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:outline-none focus:border-amber-500"
           />
-          <select
-            value={yearFilter}
-            onChange={(e) => setYearFilter(e.target.value)}
-            className="w-full sm:w-32 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-mamas-primary focus:border-mamas-primary sm:text-sm"
-          >
-            <option value="">All Years</option>
-            {years.map(y => <option key={y} value={y}>{y}</option>)}
-          </select>
-          <select
-            value={districtFilter}
-            onChange={(e) => setDistrictFilter(e.target.value)}
-            className="w-full sm:w-36 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-mamas-primary focus:border-mamas-primary sm:text-sm"
-          >
-            <option value="">All Districts</option>
-            {districts.map(d => <option key={d} value={d}>{d}</option>)}
-          </select>
+          <div className="w-full sm:w-36">
+            <SelectDropdown
+              options={yearOptions}
+              value={yearFilter}
+              onChange={setYearFilter}
+              placeholder="All Years"
+            />
+          </div>
+          <div className="w-full sm:w-44">
+            <SelectDropdown
+              options={districtOptions}
+              value={districtFilter}
+              onChange={setDistrictFilter}
+              placeholder="All Districts"
+              searchable
+            />
+          </div>
         </div>
       </div>
 

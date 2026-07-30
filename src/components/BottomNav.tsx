@@ -19,8 +19,8 @@ export function BottomNav() {
   ];
 
   return (
-    <div className="md:hidden fixed bottom-6 left-4 right-4 z-50 pb-safe">
-      <div className="bg-white/90 backdrop-blur-xl shadow-2xl shadow-gray-200/50 rounded-full border border-white/50 h-16 px-4 flex justify-between items-center">
+    <div className="md:hidden fixed bottom-4 left-4 right-4 z-40 pb-safe">
+      <div className="bg-white/95 backdrop-blur-lg shadow-xl shadow-slate-900/10 rounded-3xl border border-slate-100 h-16 px-2 flex justify-around items-center">
         {links.map(({ to, icon: Icon, label }) => {
           const isActive = location.pathname.startsWith(to) && (to !== '/dashboard' || location.pathname === '/dashboard');
           
@@ -28,34 +28,30 @@ export function BottomNav() {
             <Link 
               key={to} 
               to={to} 
-              className="relative flex flex-col items-center justify-center w-14 h-full"
+              className="relative flex flex-col items-center justify-center flex-1 h-full py-1"
             >
-              <motion.div
-                whileTap={{ scale: 0.9 }}
-                animate={{ scale: isActive ? 1 : 1 }}
-                className={`flex flex-col items-center justify-center transition-colors ${
-                  isActive ? 'text-mamas-primary' : 'text-gray-400'
+              {isActive && (
+                <motion.div 
+                  layoutId="activeGoldDot"
+                  className="absolute top-1.5 w-1 h-1 bg-amber-500 rounded-full"
+                  transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                />
+              )}
+              
+              <Icon 
+                className={`w-6 h-6 transition-colors ${
+                  isActive ? 'text-slate-900' : 'text-slate-400'
+                }`} 
+                strokeWidth={1.5} 
+              />
+              
+              <span 
+                className={`text-[10px] font-medium tracking-tight mt-0.5 transition-colors ${
+                  isActive ? 'text-slate-900 font-bold' : 'text-slate-400'
                 }`}
               >
-                {isActive && (
-                  <motion.div 
-                    layoutId="navIndicator"
-                    className="absolute -top-1 w-1 h-1 bg-mamas-accent rounded-full"
-                  />
-                )}
-                
-                <Icon className="w-5 h-5 mb-1" strokeWidth={1.5} />
-                
-                {isActive && (
-                  <motion.span 
-                    initial={{ opacity: 0, y: 5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="text-[10px] font-semibold tracking-wide"
-                  >
-                    {label}
-                  </motion.span>
-                )}
-              </motion.div>
+                {label}
+              </span>
             </Link>
           );
         })}

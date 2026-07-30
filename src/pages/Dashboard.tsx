@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
-  Wallet, Users, Target, Shield, ArrowRight, Bell, BellOff, ArrowUpRight, TrendingUp 
+  Wallet, Users, Target, Shield, ArrowRight, Bell, BellOff, ArrowUpRight, TrendingUp, ShieldCheck 
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../firebase';
@@ -83,7 +83,6 @@ export default function Dashboard() {
         campaignsCountStr = campSnap.size.toString();
       } catch (err) {
         console.warn("Could not load active schoolCampaigns query:", err);
-        // Fallback: try fetching all schoolCampaigns without query filter if index or status mismatch
         try {
           const campSnapAll = await getDocs(collection(db, 'schoolCampaigns'));
           campsList = campSnapAll.docs
@@ -136,127 +135,181 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center min-h-[50vh]">
-        <div className="w-10 h-10 border-4 border-slate-200 border-t-amber-500 rounded-full animate-spin"></div>
-        <p className="text-xs font-semibold text-slate-500 mt-3">Loading Dashboard...</p>
+      <div className="flex-1 flex flex-col items-center justify-center min-h-[40vh]">
+        <div className="w-9 h-9 border-3 border-slate-200 border-t-amber-500 rounded-full animate-spin"></div>
+        <p className="text-xs font-semibold text-slate-500 mt-2.5">Loading Dashboard...</p>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-6 pb-12 animate-in fade-in duration-300">
+    <div className="flex flex-col gap-4 pb-28 animate-in fade-in duration-300">
       
-      {/* EXECUTIVE TOP BANNER */}
-      <section className="bg-gradient-to-r from-slate-900 via-slate-800 to-mamas-primary rounded-3xl p-6 sm:p-8 text-white shadow-xl shadow-slate-900/10 border border-slate-700/50 relative overflow-hidden">
-        <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 rounded-full bg-amber-500/10 blur-3xl pointer-events-none"></div>
-        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* COMPACT HERO GREETING BANNER */}
+      <section className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 rounded-2xl p-4 sm:p-5 text-white shadow-md border border-slate-700/50 relative overflow-hidden">
+        <div className="absolute top-0 right-0 -mr-12 -mt-12 w-48 h-48 rounded-full bg-amber-500/10 blur-2xl pointer-events-none"></div>
+        <div className="relative z-10 flex items-center justify-between gap-3">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-400/30 text-amber-300 text-xs font-bold uppercase tracking-widest mb-3">
-              <Shield className="w-3.5 h-3.5" />
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-400/30 text-amber-300 text-[10px] font-bold uppercase tracking-wider mb-1">
+              <Shield className="w-3 h-3" />
               {userProfile?.role?.replace('_', ' ') || 'Alumni Member'}
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
-              {getGreeting()}, {userProfile?.fullName?.split(' ')[0] || 'Alumnus'} <span className="inline-block animate-bounce">👋</span>
+            <h1 className="text-lg sm:text-2xl font-extrabold tracking-tight text-white leading-tight">
+              {getGreeting()}, {userProfile?.fullName?.split(' ')[0] || 'Alumnus'} 👋
             </h1>
-            <p className="text-slate-300 text-sm mt-1 max-w-lg">
-              Matuumu Alumni Mutual Aid Association • Official Portal
+            <p className="text-slate-300 text-xs mt-0.5">
+              Matuumu Alumni Mutual Aid Association Portal
             </p>
           </div>
+          
+          <Link 
+            to="/contribute"
+            className="hidden sm:inline-flex bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs shadow-md transition-all shrink-0"
+          >
+            Pay Dues
+          </Link>
         </div>
       </section>
 
-      {/* STATS ROW - RICH NAVY CARDS */}
-      <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard 
-          icon={Wallet} 
-          amount={stats.totalFund !== null ? stats.totalFund : '--'} 
-          label="Welfare Treasury" 
-          badge="Verified" 
-          accentColor="gold"
-        />
-        <StatCard 
-          icon={Users} 
-          amount={stats.members !== null ? stats.members : '--'} 
-          label="Verified Alumni" 
-          badge="Active" 
-          accentColor="emerald"
-        />
-        <StatCard 
-          icon={Target} 
-          amount={stats.campaigns !== null ? stats.campaigns : '--'} 
-          label="Active Campaigns" 
-          badge="Ongoing" 
-          accentColor="cyan"
-        />
-      </section>
+      {/* STATS ROW - 2 COLUMNS ON MOBILE, 4 ON DESKTOP */}
+      <section className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {/* Card 1: Welfare Treasury */}
+        <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-2xl p-3.5 sm:p-4 text-white shadow-sm border border-slate-800 flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
+            <div className="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-400/30 flex items-center justify-center">
+              <Wallet className="w-4 h-4 text-amber-400" />
+            </div>
+            <span className="text-[9px] font-bold uppercase tracking-wider text-amber-300 px-1.5 py-0.5 rounded bg-amber-500/10">
+              Verified
+            </span>
+          </div>
+          <div>
+            <h3 className="text-lg sm:text-xl font-extrabold text-white tracking-tight leading-none mb-1">
+              {stats.totalFund !== null ? stats.totalFund : '--'}
+            </h3>
+            <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Welfare Treasury</p>
+          </div>
+        </div>
 
-      {/* PRIMARY ACTION CARD */}
-      <section>
-        <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl p-6 sm:p-7 shadow-xl border border-slate-700/60 text-white relative overflow-hidden">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-            <div>
-              <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">Mutual Aid Quick Actions</p>
-              <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">Support Our Alma Mater & Members</h2>
-              <p className="text-slate-300 text-xs sm:text-sm mt-1 max-w-md leading-relaxed">
-                Contribute monthly welfare dues or back ongoing school infrastructure projects directly via Mobile Money.
-              </p>
+        {/* Card 2: Verified Alumni */}
+        <div className="bg-gradient-to-br from-emerald-950 via-emerald-900 to-slate-900 rounded-2xl p-3.5 sm:p-4 text-white shadow-sm border border-emerald-900/60 flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
+            <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center">
+              <Users className="w-4 h-4 text-emerald-300" />
             </div>
-            
-            <div className="flex items-center gap-3 shrink-0">
-              <Link 
-                to="/contribute" 
-                className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 px-6 rounded-full text-sm shadow-lg shadow-amber-500/20 active:scale-95 transition-all text-center"
-              >
-                Pay Dues / Support
-              </Link>
-              <Link 
-                to="/welfare/apply" 
-                className="bg-white/10 hover:bg-white/20 text-white font-bold py-3 px-5 rounded-full text-sm border border-white/10 active:scale-95 transition-all text-center backdrop-blur-sm"
-              >
-                Request Aid
-              </Link>
+            <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-300 px-1.5 py-0.5 rounded bg-emerald-500/10">
+              Active
+            </span>
+          </div>
+          <div>
+            <h3 className="text-lg sm:text-xl font-extrabold text-white tracking-tight leading-none mb-1">
+              {stats.members !== null ? stats.members : '--'}
+            </h3>
+            <p className="text-[11px] font-semibold text-emerald-200/80 uppercase tracking-wide">Verified Alumni</p>
+          </div>
+        </div>
+
+        {/* Card 3: Active Campaigns */}
+        <div className="bg-gradient-to-br from-amber-600 via-amber-700 to-amber-800 rounded-2xl p-3.5 sm:p-4 text-white shadow-sm border border-amber-500/40 flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
+            <div className="w-8 h-8 rounded-xl bg-white/20 border border-white/30 flex items-center justify-center">
+              <Target className="w-4 h-4 text-amber-100" />
             </div>
+            <span className="text-[9px] font-bold uppercase tracking-wider text-amber-100 px-1.5 py-0.5 rounded bg-black/20">
+              Ongoing
+            </span>
+          </div>
+          <div>
+            <h3 className="text-lg sm:text-xl font-extrabold text-white tracking-tight leading-none mb-1">
+              {stats.campaigns !== null ? stats.campaigns : '--'}
+            </h3>
+            <p className="text-[11px] font-semibold text-amber-100/90 uppercase tracking-wide">Active Campaigns</p>
+          </div>
+        </div>
+
+        {/* Card 4: Member Status */}
+        <div className="bg-gradient-to-br from-indigo-950 via-slate-900 to-indigo-950 rounded-2xl p-3.5 sm:p-4 text-white shadow-sm border border-indigo-900/50 flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
+            <div className="w-8 h-8 rounded-xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center">
+              <ShieldCheck className="w-4 h-4 text-indigo-300" />
+            </div>
+            <span className="text-[9px] font-bold uppercase tracking-wider text-indigo-300 px-1.5 py-0.5 rounded bg-indigo-500/10">
+              Status
+            </span>
+          </div>
+          <div>
+            <h3 className="text-sm sm:text-base font-extrabold text-emerald-400 tracking-tight leading-none mb-1">
+              Good Standing
+            </h3>
+            <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Membership</p>
           </div>
         </div>
       </section>
 
-      {/* EXECUTIVE ADMIN PORTAL BANNER (If Admin) */}
+      {/* COMPACT QUICK ACTION CARD */}
+      <section>
+        <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-2xl p-4 sm:p-5 shadow-sm border border-slate-700/60 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 className="text-base font-bold text-white tracking-tight">Mutual Aid & Dues</h2>
+            <p className="text-slate-300 text-xs mt-0.5 leading-snug">
+              Pay monthly welfare dues or request financial emergency relief.
+            </p>
+          </div>
+          
+          <div className="flex items-center gap-2 shrink-0">
+            <Link 
+              to="/contribute" 
+              className="flex-1 sm:flex-none bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-2.5 px-4 rounded-xl text-xs shadow-md active:scale-95 transition-all text-center"
+            >
+              Pay Dues / Support
+            </Link>
+            <Link 
+              to="/welfare/apply" 
+              className="flex-1 sm:flex-none bg-white/10 hover:bg-white/20 text-white font-bold py-2.5 px-4 rounded-xl text-xs border border-white/10 active:scale-95 transition-all text-center"
+            >
+              Request Aid
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ADMIN PORTAL LINK */}
       {isAdmin && (
         <section>
           <Link 
             to="/admin" 
-            className="block bg-gradient-to-r from-purple-900/90 to-slate-900 rounded-3xl p-5 shadow-sm border border-purple-800/40 hover:border-purple-500/50 transition-all group"
+            className="block bg-gradient-to-r from-purple-950 via-slate-900 to-purple-950 rounded-2xl p-3.5 shadow-sm border border-purple-800/40 hover:border-purple-500/50 transition-all group"
           >
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-purple-500/20 border border-purple-400/30 flex items-center justify-center shrink-0">
-                  <Shield className="w-6 h-6 text-purple-300" />
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-purple-500/20 border border-purple-400/30 flex items-center justify-center shrink-0">
+                  <Shield className="w-4 h-4 text-purple-300" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-white group-hover:text-purple-200 transition-colors">Executive Admin Portal</h3>
-                  <p className="text-xs text-purple-200/70 mt-0.5">Manage member approvals, welfare payouts & financial requisitions</p>
+                  <h3 className="font-bold text-white text-xs group-hover:text-purple-200 transition-colors">Executive Admin Portal</h3>
+                  <p className="text-[11px] text-purple-200/70">Member approvals, payouts & requisitions</p>
                 </div>
               </div>
-              <ArrowRight className="w-5 h-5 text-purple-300 group-hover:translate-x-1 transition-transform" />
+              <ArrowRight className="w-4 h-4 text-purple-300 group-hover:translate-x-1 transition-transform" />
             </div>
           </Link>
         </section>
       )}
 
       {/* ACTIVE SCHOOL CAMPAIGNS */}
-      <section className="space-y-4">
+      <section className="space-y-3">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-bold text-slate-900 tracking-tight">Active School Campaigns</h3>
-            <p className="text-xs text-slate-500">Infrastructure & educational development for Matuumu</p>
+            <h3 className="text-base font-bold text-slate-900 tracking-tight">Active Campaigns</h3>
+            <p className="text-[11px] text-slate-500">Infrastructure projects for Matuumu</p>
           </div>
-          <Link to="/campaigns" className="text-xs font-bold text-amber-600 hover:text-amber-700 transition-colors flex items-center gap-1">
+          <Link to="/campaigns" className="text-xs font-bold text-amber-600 hover:text-amber-700 flex items-center gap-1">
             View All <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
         
         {activeCampaigns.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {activeCampaigns.map(camp => {
               const raised = Number(camp.raisedAmount) || 0;
               const target = Number(camp.targetAmount) || 1;
@@ -264,170 +317,118 @@ export default function Dashboard() {
               const imgUrl = (camp.imageUrls && camp.imageUrls[0]) || camp.imageUrl;
 
               return (
-                <div key={camp.id} className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden flex flex-col hover:border-slate-300 transition-all">
-                  {imgUrl && (
-                    <div className="h-36 bg-slate-100 relative overflow-hidden">
-                      <img src={imgUrl} alt={camp.title} className="w-full h-full object-cover" />
-                      <div className="absolute top-3 right-3 bg-slate-900/80 backdrop-blur-sm text-amber-400 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">
-                        {pct}% Funded
+                <div key={camp.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 flex flex-col justify-between hover:border-slate-300 transition-all">
+                  <div className="flex gap-3 items-start mb-3">
+                    {imgUrl && (
+                      <img src={imgUrl} alt={camp.title} className="w-16 h-16 rounded-xl object-cover shrink-0 bg-slate-100" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-1">
+                        <h4 className="font-bold text-slate-900 text-sm truncate">{camp.title}</h4>
+                        <span className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full shrink-0">
+                          {pct}%
+                        </span>
                       </div>
+                      <p className="text-xs text-slate-500 line-clamp-2 mt-0.5 leading-snug">{camp.description}</p>
                     </div>
-                  )}
-                  <div className="p-5 flex-1 flex flex-col justify-between">
-                    <div>
-                      <h4 className="font-bold text-slate-900 text-base mb-1">{camp.title}</h4>
-                      <p className="text-xs text-slate-500 line-clamp-2 mb-4 leading-relaxed">{camp.description}</p>
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between text-[11px] font-bold mb-1">
+                      <span className="text-slate-900">{formatUGX(raised)}</span>
+                      <span className="text-slate-400">Target: {formatUGX(target)}</span>
+                    </div>
+                    <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden mb-3">
+                      <div className="h-full bg-amber-500 rounded-full" style={{ width: `${pct}%` }}></div>
                     </div>
 
-                    <div>
-                      <div className="flex justify-between text-xs font-bold mb-1.5">
-                        <span className="text-slate-900">{formatUGX(raised)} Raised</span>
-                        <span className="text-slate-400">Target: {formatUGX(target)}</span>
-                      </div>
-                      <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden mb-4">
-                        <div className="h-full bg-amber-500 rounded-full transition-all duration-500" style={{ width: `${pct}%` }}></div>
-                      </div>
-
-                      <Link 
-                        to={`/contribute?campaignId=${camp.id}`} 
-                        className="block w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs text-center transition-colors"
-                      >
-                        Support Campaign
-                      </Link>
-                    </div>
+                    <Link 
+                      to={`/contribute?campaignId=${camp.id}`} 
+                      className="block w-full py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs text-center transition-colors"
+                    >
+                      Support Campaign
+                    </Link>
                   </div>
                 </div>
               );
             })}
           </div>
         ) : (
-          <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-8 text-center flex flex-col items-center">
-            <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mb-3">
-              <Target className="w-6 h-6 text-slate-400" strokeWidth={1.5} />
-            </div>
-            <h4 className="font-bold text-slate-900 text-sm">No Active Campaigns Right Now</h4>
-            <p className="text-xs text-slate-500 mt-1">Check back soon for new school projects.</p>
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 text-center flex flex-col items-center">
+            <Target className="w-7 h-7 text-slate-300 mb-1" strokeWidth={1.5} />
+            <p className="text-xs font-bold text-slate-700">No Active Campaigns Right Now</p>
           </div>
         )}
       </section>
 
-      {/* LATEST ANNOUNCEMENTS & NOTICES */}
-      <section className="space-y-4">
-        <div className="flex items-center gap-2">
-          <Bell className="w-5 h-5 text-amber-500" />
-          <h3 className="text-lg font-bold text-slate-900 tracking-tight">Latest Announcements</h3>
+      {/* LATEST ANNOUNCEMENTS */}
+      <section className="space-y-3">
+        <div className="flex items-center gap-1.5">
+          <Bell className="w-4 h-4 text-amber-500" />
+          <h3 className="text-base font-bold text-slate-900 tracking-tight">Announcements</h3>
         </div>
         
         {notices.length > 0 ? (
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             {notices.map(notice => (
-              <div key={notice.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 border-l-4 border-l-amber-500 p-5">
+              <div key={notice.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 border-l-4 border-l-amber-500 p-4">
                 <div className="flex items-start justify-between gap-2 mb-1">
-                  <h4 className="font-bold text-slate-900 text-base">{notice.title}</h4>
+                  <h4 className="font-bold text-slate-900 text-sm">{notice.title}</h4>
                   {notice.isPinned && (
-                    <span className="bg-amber-50 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-200/60 uppercase shrink-0">
+                    <span className="bg-amber-50 text-amber-700 text-[9px] font-bold px-1.5 py-0.5 rounded border border-amber-200 shrink-0 uppercase">
                       Pinned
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-slate-600 line-clamp-3 mb-3 leading-relaxed">
+                <p className="text-xs text-slate-600 line-clamp-2 mb-2 leading-snug">
                   {notice.body || notice.content || 'No description provided.'}
                 </p>
-                <div className="flex items-center justify-between text-[11px] text-slate-400 font-medium">
-                  <span>Posted by: <strong className="text-slate-600">{notice.postedBy || 'Association Executive'}</strong></span>
+                <div className="flex items-center justify-between text-[10px] text-slate-400 font-medium">
+                  <span>By: <strong className="text-slate-600">{notice.postedBy || 'Executive'}</strong></span>
                   <span>{notice.createdAt ? new Date(notice.createdAt).toLocaleDateString() : ''}</span>
                 </div>
               </div>
             ))}
           </div>
         ) : (
-          <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-8 text-center flex flex-col items-center">
-            <BellOff className="w-8 h-8 text-slate-300 mb-2" />
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 text-center flex flex-col items-center">
+            <BellOff className="w-6 h-6 text-slate-300 mb-1" />
             <p className="text-xs text-slate-500">No announcements posted yet.</p>
           </div>
         )}
       </section>
 
-      {/* QUICK EXPENSES & FINANCIALS LINKS (Admin only) */}
+      {/* QUICK EXPENSES LINKS (Admin only) */}
       {isAdmin && (
-        <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Link to="/money-out" className="bg-white rounded-2xl p-4 border border-slate-200 flex items-center justify-between hover:bg-slate-50 transition-colors">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-rose-50 flex items-center justify-center">
-                <ArrowUpRight className="w-5 h-5 text-rose-500" />
+        <section className="grid grid-cols-2 gap-3">
+          <Link to="/money-out" className="bg-white rounded-2xl p-3.5 border border-slate-200 flex items-center justify-between hover:bg-slate-50 transition-colors">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-xl bg-rose-50 flex items-center justify-center shrink-0">
+                <ArrowUpRight className="w-4 h-4 text-rose-500" />
               </div>
-              <div>
-                <h4 className="font-bold text-slate-900 text-sm">Money Out Disburshments</h4>
-                <p className="text-[11px] text-slate-500">Audit all outward Mobile Money transfers</p>
+              <div className="truncate">
+                <h4 className="font-bold text-slate-900 text-xs truncate">Money Out</h4>
+                <p className="text-[10px] text-slate-400 truncate">Mobile Money transfers</p>
               </div>
             </div>
-            <ArrowRight className="w-4 h-4 text-slate-400" />
+            <ArrowRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
           </Link>
           
-          <Link to="/expenses" className="bg-white rounded-2xl p-4 border border-slate-200 flex items-center justify-between hover:bg-slate-50 transition-colors">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center">
-                <TrendingUp className="w-5 h-5 text-emerald-600" />
+          <Link to="/expenses" className="bg-white rounded-2xl p-3.5 border border-slate-200 flex items-center justify-between hover:bg-slate-50 transition-colors">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
+                <TrendingUp className="w-4 h-4 text-emerald-600" />
               </div>
-              <div>
-                <h4 className="font-bold text-slate-900 text-sm">Budget & Requisitions</h4>
-                <p className="text-[11px] text-slate-500">Executive vote approvals and expenses</p>
+              <div className="truncate">
+                <h4 className="font-bold text-slate-900 text-xs truncate">Requisitions</h4>
+                <p className="text-[10px] text-slate-400 truncate">Executive vote approvals</p>
               </div>
             </div>
-            <ArrowRight className="w-4 h-4 text-slate-400" />
+            <ArrowRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
           </Link>
         </section>
       )}
 
-    </div>
-  );
-}
-
-function StatCard({ 
-  icon: Icon, 
-  amount, 
-  label, 
-  badge,
-  accentColor 
-}: { 
-  icon: any, 
-  amount: string, 
-  label: string, 
-  badge: string,
-  accentColor: 'gold' | 'emerald' | 'cyan' 
-}) {
-  const accentStyles = {
-    gold: {
-      bg: 'bg-amber-500/10 border-amber-500/20',
-      icon: 'text-amber-400',
-      text: 'text-amber-400',
-    },
-    emerald: {
-      bg: 'bg-emerald-500/10 border-emerald-500/20',
-      icon: 'text-emerald-400',
-      text: 'text-emerald-400',
-    },
-    cyan: {
-      bg: 'bg-cyan-500/10 border-cyan-500/20',
-      icon: 'text-cyan-400',
-      text: 'text-cyan-400',
-    }
-  }[accentColor];
-
-  return (
-    <div className="bg-slate-900 rounded-3xl p-5 border border-slate-800 text-white flex flex-col justify-between shadow-md relative overflow-hidden">
-      <div className="flex items-center justify-between mb-4">
-        <div className={`w-10 h-10 rounded-2xl border flex items-center justify-center ${accentStyles.bg}`}>
-          <Icon className={`w-5 h-5 ${accentStyles.icon}`} strokeWidth={2} />
-        </div>
-        <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-2.5 py-1 rounded-full bg-slate-800 border border-slate-700">
-          {badge}
-        </span>
-      </div>
-      <div>
-        <h3 className="text-2xl font-extrabold text-white tracking-tight mb-1">{amount}</h3>
-        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{label}</p>
-      </div>
     </div>
   );
 }

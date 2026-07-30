@@ -7,6 +7,7 @@ import { verifyContribution, rejectContribution, logActivity } from '../lib/serv
 import { triggerContributionReminders } from '../lib/reminderService';
 import { formatUGX, exportToCSV } from '../lib/utils';
 import { Check, X, FileText, Search, Filter, Download, ChevronDown, Calendar, DollarSign, Bell, Send, Users, Sparkles } from 'lucide-react';
+import { SelectDropdown } from '../components/SelectDropdown';
 
 export default function AdminContributions() {
   const { currentUser, userProfile } = useAuth();
@@ -362,18 +363,18 @@ export default function AdminContributions() {
               </div>
 
               <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end flex-wrap">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 min-w-[140px]">
                   <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Status:</span>
-                  <select
+                  <SelectDropdown
+                    options={[
+                      { label: 'All Status', value: 'all' },
+                      { label: 'Pending', value: 'pending' },
+                      { label: 'Verified', value: 'verified' },
+                      { label: 'Rejected', value: 'rejected' }
+                    ]}
                     value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value as any)}
-                    className="bg-slate-50 border border-slate-200 text-mamas-text text-xs rounded-xl px-3 py-2 outline-none font-bold"
-                  >
-                    <option value="all">All Status</option>
-                    <option value="pending">Pending</option>
-                    <option value="verified">Verified</option>
-                    <option value="rejected">Rejected</option>
-                  </select>
+                    onChange={(val) => setStatusFilter(val as any)}
+                  />
                 </div>
 
                 <button
@@ -402,15 +403,15 @@ export default function AdminContributions() {
               <div className="pt-3 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-4 gap-3 animate-in fade-in duration-200">
                 <div>
                   <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Category / Type</label>
-                  <select
+                  <SelectDropdown
+                    options={[
+                      { label: 'All Categories', value: 'all' },
+                      { label: 'Welfare Fund', value: 'welfare' },
+                      { label: 'Campaign', value: 'campaign' }
+                    ]}
                     value={categoryFilter}
-                    onChange={(e) => setCategoryFilter(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-mamas-text outline-none"
-                  >
-                    <option value="all">All Categories</option>
-                    <option value="welfare">Welfare Fund</option>
-                    <option value="campaign">Campaign</option>
-                  </select>
+                    onChange={setCategoryFilter}
+                  />
                 </div>
                 <div>
                   <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Start Date</label>

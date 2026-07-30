@@ -7,6 +7,7 @@ import { approveMember, rejectMember, updateUserRole } from '../lib/auth';
 import { logActivity } from '../lib/services';
 import { exportToCSV } from '../lib/utils';
 import { Users, CheckCircle, XCircle, Shield, Search, Filter, Phone, Mail, GraduationCap, MapPin, Download, ChevronDown } from 'lucide-react';
+import { SelectDropdown } from '../components/SelectDropdown';
 
 export default function AdminUsers() {
   const { currentUser, userProfile } = useAuth();
@@ -250,18 +251,18 @@ export default function AdminUsers() {
           </div>
 
           <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end flex-wrap">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 min-w-[140px]">
               <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Status:</span>
-              <select
+              <SelectDropdown
+                options={[
+                  { label: `All Status (${users.length})`, value: 'all' },
+                  { label: 'Approved', value: 'approved' },
+                  { label: 'Pending', value: 'pending' },
+                  { label: 'Rejected', value: 'rejected' }
+                ]}
                 value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as any)}
-                className="bg-slate-50 border border-slate-200 text-mamas-text text-xs rounded-xl px-3 py-2 outline-none font-bold"
-              >
-                <option value="all">All Status ({users.length})</option>
-                <option value="approved">Approved</option>
-                <option value="pending">Pending</option>
-                <option value="rejected">Rejected</option>
-              </select>
+                onChange={(val) => setStatusFilter(val as any)}
+              />
             </div>
 
             <button
@@ -290,20 +291,20 @@ export default function AdminUsers() {
           <div className="pt-3 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-3 gap-3 animate-in fade-in duration-200">
             <div>
               <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Role</label>
-              <select
+              <SelectDropdown
+                options={[
+                  { label: 'All Roles', value: 'all' },
+                  { label: 'Super Admin', value: 'super_admin' },
+                  { label: 'Chairperson', value: 'chairperson' },
+                  { label: 'Vice Chairperson', value: 'vice_chairperson' },
+                  { label: 'Treasurer', value: 'treasurer' },
+                  { label: 'Auditor', value: 'auditor' },
+                  { label: 'Secretary', value: 'secretary' },
+                  { label: 'Member', value: 'member' }
+                ]}
                 value={roleFilter}
-                onChange={(e) => setRoleFilter(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-mamas-text outline-none"
-              >
-                <option value="all">All Roles</option>
-                <option value="super_admin">Super Admin</option>
-                <option value="chairperson">Chairperson</option>
-                <option value="vice_chairperson">Vice Chairperson</option>
-                <option value="treasurer">Treasurer</option>
-                <option value="auditor">Auditor</option>
-                <option value="secretary">Secretary</option>
-                <option value="member">Member</option>
-              </select>
+                onChange={setRoleFilter}
+              />
             </div>
             <div>
               <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">District</label>
