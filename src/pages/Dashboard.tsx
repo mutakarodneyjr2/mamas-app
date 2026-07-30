@@ -1,23 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { 
-  Wallet, Users, Target, Shield, ArrowRight, Heart, Bell, BellOff, ArrowUpRight, TrendingUp, CreditCard 
+  Wallet, Users, Target, Shield, ArrowRight, Bell, BellOff, ArrowUpRight, TrendingUp 
 } from 'lucide-react';
-import { motion } from 'motion/react';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../firebase';
-import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { formatUGX } from '../lib/utils';
 
 export default function Dashboard() {
-  const { userProfile } = useAuth();
-  const navigate = useNavigate();
+  const { currentUser, userProfile } = useAuth();
   
-  const [stats, setStats] = useState({
-    totalFund: 0,
-    members: 0,
-    campaigns: 0,
+  const [stats, setStats] = useState<{
+    totalFund: string | null;
+    members: string | null;
+    campaigns: string | null;
+  }>({
+    totalFund: null,
+    members: null,
+    campaigns: null,
   });
+
   const [activeCampaigns, setActiveCampaigns] = useState<any[]>([]);
   const [notices, setNotices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -25,39 +28,104 @@ export default function Dashboard() {
   const isAdmin = ['super_admin', 'chairperson', 'vice_chairperson', 'treasurer', 'secretary'].includes(userProfile?.role || '');
 
   useEffect(() => {
+    let isSubscribed = true;
+
     async function fetchDashboardData() {
+      if (!currentUser) {
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+
+      // 1. Fetch Welfare Treasury (Contributions)
+      let calculatedTotal: string | null = null;
       try {
-        // Fetch stats (Mocked logic for speed, replace with real if needed)
-        // In reality, this would query users, campaigns, and total funds
-        const usersSnap = await getDocs(query(collection(db, 'users'), where('status', '==', 'approved')));
-        const campaignsSnap = await getDocs(query(collection(db, 'campaigns'), where('status', '==', 'active')));
-        const contributionsSnap = await getDocs(query(collection(db, 'contributions'), where('status', '==', 'successful')));
-        
-        const total = contributionsSnap.docs.reduce((acc, doc) => acc + (doc.data().amount || 0), 0);
-        
-        setStats({
-          totalFund: total,
-          members: usersSnap.size,
-          campaigns: campaignsSnap.size
+        const contribsSnap = await getDocs(collection(db, 'contributions'));
+        let sum = 0;
+        contribsSnap.docs.forEach(doc => {
+          const data = doc.data();
+          const st = (data.status || '').toLowerCase();
+          if (['verified', 'completed', 'successful', 'active'].includes(st)) {
+            sum += Number(data.amount) || 0;
+          }
         });
+        calculatedTotal = formatUGX(sum);
+      } catch (err) {
+        console.warn("Could not load total contributions treasury:", err);
+        calculatedTotal = null; // Shows '--'
+      }
 
-        // Fetch Campaigns
-        const camps = campaignsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })).slice(0, 5);
-        setActiveCampaigns(camps);
+      // 2. Fetch Verified Alumni (Users)
+      let memberCountStr: string | null = null;
+      try {
+        const usersSnap = await getDocs(collection(db, 'users'));
+        let approvedCount = 0;
+        usersSnap.docs.forEach(doc => {
+          const st = (doc.data().status || '').toLowerCase();
+          if (['approved', 'active'].includes(st)) {
+            approvedCount++;
+          }
+        });
+        memberCountStr = approvedCount.toString();
+      } catch (err) {
+        console.warn("Could not load users count:", err);
+        memberCountStr = null;
+      }
 
-        // Fetch Notices
-        const noticesSnap = await getDocs(query(collection(db, 'notices'), orderBy('createdAt', 'desc'), limit(3)));
-        setNotices(noticesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        
-      } catch (error) {
-        console.error("Error fetching dashboard data:", error);
-      } finally {
+      // 3. Fetch Active Campaigns (schoolCampaigns)
+      let campaignsCountStr: string | null = null;
+      let campsList: any[] = [];
+      try {
+        const qCamp = query(collection(db, 'schoolCampaigns'), where('status', '==', 'active'));
+        const campSnap = await getDocs(qCamp);
+        campsList = campSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        campaignsCountStr = campSnap.size.toString();
+      } catch (err) {
+        console.warn("Could not load active schoolCampaigns query:", err);
+        // Fallback: try fetching all schoolCampaigns without query filter if index or status mismatch
+        try {
+          const campSnapAll = await getDocs(collection(db, 'schoolCampaigns'));
+          campsList = campSnapAll.docs
+            .map(doc => ({ id: doc.id, ...doc.data() }))
+            .filter((c: any) => (c.status || '').toLowerCase() === 'active');
+          campaignsCountStr = campsList.length.toString();
+        } catch (err2) {
+          console.warn("Fallback schoolCampaigns read failed:", err2);
+          campaignsCountStr = null;
+        }
+      }
+
+      // 4. Fetch Latest Notices (notices)
+      let noticeList: any[] = [];
+      try {
+        const noticesSnap = await getDocs(collection(db, 'notices'));
+        noticeList = noticesSnap.docs
+          .map(doc => ({ id: doc.id, ...doc.data() }))
+          .sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0))
+          .slice(0, 3);
+      } catch (err) {
+        console.warn("Could not load notices:", err);
+      }
+
+      if (isSubscribed) {
+        setStats({
+          totalFund: calculatedTotal,
+          members: memberCountStr,
+          campaigns: campaignsCountStr,
+        });
+        setActiveCampaigns(campsList);
+        setNotices(noticeList);
         setLoading(false);
       }
     }
 
     fetchDashboardData();
-  }, []);
+
+    return () => {
+      isSubscribed = false;
+    };
+  }, [currentUser]);
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -69,198 +137,297 @@ export default function Dashboard() {
   if (loading) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center min-h-[50vh]">
-        <div className="w-12 h-12 border-4 border-gray-200 border-t-mamas-accent rounded-full animate-spin"></div>
+        <div className="w-10 h-10 border-4 border-slate-200 border-t-amber-500 rounded-full animate-spin"></div>
+        <p className="text-xs font-semibold text-slate-500 mt-3">Loading Dashboard...</p>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-8 pb-8 animate-in fade-in duration-300">
-      {/* SECTION A — HERO GREETING */}
-      <section className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
-            {getGreeting()}, {userProfile?.fullName?.split(' ')[0] || 'User'} <span className="text-xl">👋</span>
-          </h1>
-          <div className="mt-2 inline-flex items-center px-3 py-1 rounded-full border border-mamas-accent/30 bg-amber-50 text-mamas-accent text-xs font-bold uppercase tracking-widest">
-            {userProfile?.role?.replace('_', ' ') || 'Member'}
+    <div className="flex flex-col gap-6 pb-12 animate-in fade-in duration-300">
+      
+      {/* EXECUTIVE TOP BANNER */}
+      <section className="bg-gradient-to-r from-slate-900 via-slate-800 to-mamas-primary rounded-3xl p-6 sm:p-8 text-white shadow-xl shadow-slate-900/10 border border-slate-700/50 relative overflow-hidden">
+        <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 rounded-full bg-amber-500/10 blur-3xl pointer-events-none"></div>
+        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-400/30 text-amber-300 text-xs font-bold uppercase tracking-widest mb-3">
+              <Shield className="w-3.5 h-3.5" />
+              {userProfile?.role?.replace('_', ' ') || 'Alumni Member'}
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
+              {getGreeting()}, {userProfile?.fullName?.split(' ')[0] || 'Alumnus'} <span className="inline-block animate-bounce">👋</span>
+            </h1>
+            <p className="text-slate-300 text-sm mt-1 max-w-lg">
+              Matuumu Alumni Mutual Aid Association • Official Portal
+            </p>
           </div>
         </div>
       </section>
 
-      {/* SECTION B — QUICK STATS ROW */}
-      <section className="flex overflow-x-auto snap-x snap-mandatory gap-4 pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 no-scrollbar">
-        <StatCard icon={Wallet} color="navy" amount={formatUGX(stats.totalFund)} label="Welfare Treasury" />
-        <StatCard icon={Users} color="emerald" amount={stats.members.toString()} label="Verified Alumni" />
-        <StatCard icon={Target} color="gold" amount={stats.campaigns.toString()} label="Active Now" />
+      {/* STATS ROW - RICH NAVY CARDS */}
+      <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <StatCard 
+          icon={Wallet} 
+          amount={stats.totalFund !== null ? stats.totalFund : '--'} 
+          label="Welfare Treasury" 
+          badge="Verified" 
+          accentColor="gold"
+        />
+        <StatCard 
+          icon={Users} 
+          amount={stats.members !== null ? stats.members : '--'} 
+          label="Verified Alumni" 
+          badge="Active" 
+          accentColor="emerald"
+        />
+        <StatCard 
+          icon={Target} 
+          amount={stats.campaigns !== null ? stats.campaigns : '--'} 
+          label="Active Campaigns" 
+          badge="Ongoing" 
+          accentColor="cyan"
+        />
       </section>
 
-      {/* SECTION C — PRIMARY ACTION CARD */}
+      {/* PRIMARY ACTION CARD */}
       <section>
-        <div className="bg-gradient-to-br from-mamas-primary to-slate-800 rounded-3xl p-6 shadow-xl shadow-mamas-primary/20 relative overflow-hidden">
-          {/* Decorative shapes */}
-          <div className="absolute top-0 right-0 -mr-16 -mt-16 w-48 h-48 rounded-full bg-white/5 blur-2xl"></div>
-          
-          <p className="text-white/70 text-sm font-medium mb-1">My Total Contributions</p>
-          <h2 className="text-3xl font-bold text-white mb-6">{formatUGX(0)}</h2> {/* Fetch actual user contribution total if needed */}
-          
-          <div className="w-full h-1 bg-white/10 rounded-full mb-8 overflow-hidden">
-            <div className="h-full bg-mamas-accent w-1/3 rounded-full"></div>
-          </div>
-          
-          <div className="flex items-center gap-3">
-            <Link to="/contribute" className="flex-1 bg-mamas-accent text-mamas-primary font-bold py-3 px-4 rounded-full text-center text-sm hover:bg-mamas-accent-hover active:scale-95 transition-all">
-              Pay Dues
-            </Link>
-            <Link to="/welfare/apply" className="flex-1 bg-white/10 text-white font-bold py-3 px-4 rounded-full text-center text-sm hover:bg-white/20 active:scale-95 transition-all backdrop-blur-sm">
-              Request Aid
-            </Link>
+        <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl p-6 sm:p-7 shadow-xl border border-slate-700/60 text-white relative overflow-hidden">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+            <div>
+              <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">Mutual Aid Quick Actions</p>
+              <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">Support Our Alma Mater & Members</h2>
+              <p className="text-slate-300 text-xs sm:text-sm mt-1 max-w-md leading-relaxed">
+                Contribute monthly welfare dues or back ongoing school infrastructure projects directly via Mobile Money.
+              </p>
+            </div>
+            
+            <div className="flex items-center gap-3 shrink-0">
+              <Link 
+                to="/contribute" 
+                className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 px-6 rounded-full text-sm shadow-lg shadow-amber-500/20 active:scale-95 transition-all text-center"
+              >
+                Pay Dues / Support
+              </Link>
+              <Link 
+                to="/welfare/apply" 
+                className="bg-white/10 hover:bg-white/20 text-white font-bold py-3 px-5 rounded-full text-sm border border-white/10 active:scale-95 transition-all text-center backdrop-blur-sm"
+              >
+                Request Aid
+              </Link>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* SECTION D — ADMIN PORTAL */}
+      {/* EXECUTIVE ADMIN PORTAL BANNER (If Admin) */}
       {isAdmin && (
         <section>
-          <Link to="/admin" className="block bg-white rounded-3xl p-5 shadow-sm border border-gray-100 hover:scale-[1.01] transition-transform">
+          <Link 
+            to="/admin" 
+            className="block bg-gradient-to-r from-purple-900/90 to-slate-900 rounded-3xl p-5 shadow-sm border border-purple-800/40 hover:border-purple-500/50 transition-all group"
+          >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-purple-50 flex items-center justify-center">
-                  <Shield className="w-6 h-6 text-purple-600" />
+                <div className="w-12 h-12 rounded-2xl bg-purple-500/20 border border-purple-400/30 flex items-center justify-center shrink-0">
+                  <Shield className="w-6 h-6 text-purple-300" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-gray-900">Executive Admin Portal</h3>
-                  <p className="text-xs text-gray-500 mt-0.5">Manage approvals & payouts</p>
+                  <h3 className="font-bold text-white group-hover:text-purple-200 transition-colors">Executive Admin Portal</h3>
+                  <p className="text-xs text-purple-200/70 mt-0.5">Manage member approvals, welfare payouts & financial requisitions</p>
                 </div>
               </div>
-              <ArrowRight className="w-5 h-5 text-gray-300" />
+              <ArrowRight className="w-5 h-5 text-purple-300 group-hover:translate-x-1 transition-transform" />
             </div>
           </Link>
         </section>
       )}
 
-      {/* SECTION E — ACTIVE CAMPAIGNS */}
-      <section>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-bold text-gray-900 tracking-tight">Active School Campaigns</h3>
-          <Link to="/campaigns" className="text-sm font-semibold text-mamas-accent hover:text-mamas-accent-hover transition-colors">View All →</Link>
+      {/* ACTIVE SCHOOL CAMPAIGNS */}
+      <section className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-bold text-slate-900 tracking-tight">Active School Campaigns</h3>
+            <p className="text-xs text-slate-500">Infrastructure & educational development for Matuumu</p>
+          </div>
+          <Link to="/campaigns" className="text-xs font-bold text-amber-600 hover:text-amber-700 transition-colors flex items-center gap-1">
+            View All <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
         </div>
         
         {activeCampaigns.length > 0 ? (
-          <div className="flex overflow-x-auto snap-x snap-mandatory gap-4 pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 no-scrollbar">
-            {activeCampaigns.map(camp => (
-              <div key={camp.id} className="min-w-[280px] w-72 bg-white rounded-3xl shadow-sm border border-gray-100 snap-center overflow-hidden flex flex-col">
-                <div className="h-32 bg-gradient-to-br from-gray-100 to-gray-200 relative">
-                  {camp.imageUrl && <img src={camp.imageUrl} alt={camp.title} className="w-full h-full object-cover" />}
-                  <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full text-[10px] font-bold text-emerald-700">Active</div>
-                </div>
-                <div className="p-5 flex-1 flex flex-col">
-                  <h4 className="font-bold text-gray-900 mb-3 truncate">{camp.title}</h4>
-                  
-                  <div className="mt-auto">
-                    <div className="w-full h-1.5 bg-gray-100 rounded-full mb-2 overflow-hidden">
-                      <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${Math.min(100, ((camp.raisedAmount || 0) / (camp.targetAmount || 1)) * 100)}%` }}></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {activeCampaigns.map(camp => {
+              const raised = Number(camp.raisedAmount) || 0;
+              const target = Number(camp.targetAmount) || 1;
+              const pct = Math.min(100, Math.round((raised / target) * 100));
+              const imgUrl = (camp.imageUrls && camp.imageUrls[0]) || camp.imageUrl;
+
+              return (
+                <div key={camp.id} className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden flex flex-col hover:border-slate-300 transition-all">
+                  {imgUrl && (
+                    <div className="h-36 bg-slate-100 relative overflow-hidden">
+                      <img src={imgUrl} alt={camp.title} className="w-full h-full object-cover" />
+                      <div className="absolute top-3 right-3 bg-slate-900/80 backdrop-blur-sm text-amber-400 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">
+                        {pct}% Funded
+                      </div>
                     </div>
-                    <p className="text-[10px] text-gray-500 font-medium mb-4">
-                      {formatUGX(camp.raisedAmount || 0)} of {formatUGX(camp.targetAmount)}
-                    </p>
-                    
-                    <Link to={`/contribute?campaignId=${camp.id}`} className="block w-full py-2.5 rounded-full border border-mamas-primary text-mamas-primary font-bold text-xs text-center hover:bg-slate-50 transition-colors">
-                      Support
-                    </Link>
+                  )}
+                  <div className="p-5 flex-1 flex flex-col justify-between">
+                    <div>
+                      <h4 className="font-bold text-slate-900 text-base mb-1">{camp.title}</h4>
+                      <p className="text-xs text-slate-500 line-clamp-2 mb-4 leading-relaxed">{camp.description}</p>
+                    </div>
+
+                    <div>
+                      <div className="flex justify-between text-xs font-bold mb-1.5">
+                        <span className="text-slate-900">{formatUGX(raised)} Raised</span>
+                        <span className="text-slate-400">Target: {formatUGX(target)}</span>
+                      </div>
+                      <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden mb-4">
+                        <div className="h-full bg-amber-500 rounded-full transition-all duration-500" style={{ width: `${pct}%` }}></div>
+                      </div>
+
+                      <Link 
+                        to={`/contribute?campaignId=${camp.id}`} 
+                        className="block w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs text-center transition-colors"
+                      >
+                        Support Campaign
+                      </Link>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
-          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 text-center flex flex-col items-center">
-            <div className="w-16 h-16 rounded-full bg-gray-50 flex items-center justify-center mb-3">
-              <Target className="w-8 h-8 text-gray-400" strokeWidth={1.5} />
+          <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-8 text-center flex flex-col items-center">
+            <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mb-3">
+              <Target className="w-6 h-6 text-slate-400" strokeWidth={1.5} />
             </div>
-            <h4 className="font-bold text-gray-900">No Active Campaigns</h4>
-            <p className="text-sm text-gray-500 mt-1">Check back later for new school projects.</p>
+            <h4 className="font-bold text-slate-900 text-sm">No Active Campaigns Right Now</h4>
+            <p className="text-xs text-slate-500 mt-1">Check back soon for new school projects.</p>
           </div>
         )}
       </section>
 
-      {/* SECTION F — LATEST NOTICES */}
-      <section>
-        <div className="flex items-center gap-2 mb-4">
-          <h3 className="font-bold text-gray-900 tracking-tight">Latest Notices</h3>
-          <Bell className="w-4 h-4 text-gray-400" />
+      {/* LATEST ANNOUNCEMENTS & NOTICES */}
+      <section className="space-y-4">
+        <div className="flex items-center gap-2">
+          <Bell className="w-5 h-5 text-amber-500" />
+          <h3 className="text-lg font-bold text-slate-900 tracking-tight">Latest Announcements</h3>
         </div>
         
         {notices.length > 0 ? (
           <div className="space-y-3">
             {notices.map(notice => (
-              <div key={notice.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-mamas-accent p-4">
-                <h4 className="font-bold text-gray-900 mb-1">{notice.title}</h4>
-                <p className="text-sm text-gray-500 line-clamp-2 mb-2 leading-relaxed">{notice.content}</p>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-gray-400">{new Date(notice.createdAt?.toDate()).toLocaleDateString()}</span>
-                  <button className="text-xs font-bold text-mamas-accent">Read →</button>
+              <div key={notice.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 border-l-4 border-l-amber-500 p-5">
+                <div className="flex items-start justify-between gap-2 mb-1">
+                  <h4 className="font-bold text-slate-900 text-base">{notice.title}</h4>
+                  {notice.isPinned && (
+                    <span className="bg-amber-50 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-200/60 uppercase shrink-0">
+                      Pinned
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-slate-600 line-clamp-3 mb-3 leading-relaxed">
+                  {notice.body || notice.content || 'No description provided.'}
+                </p>
+                <div className="flex items-center justify-between text-[11px] text-slate-400 font-medium">
+                  <span>Posted by: <strong className="text-slate-600">{notice.postedBy || 'Association Executive'}</strong></span>
+                  <span>{notice.createdAt ? new Date(notice.createdAt).toLocaleDateString() : ''}</span>
                 </div>
               </div>
             ))}
           </div>
         ) : (
-          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 text-center flex flex-col items-center">
-            <BellOff className="w-8 h-8 text-gray-300 mb-3" />
-            <p className="text-sm text-gray-500">No notices yet.</p>
+          <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-8 text-center flex flex-col items-center">
+            <BellOff className="w-8 h-8 text-slate-300 mb-2" />
+            <p className="text-xs text-slate-500">No announcements posted yet.</p>
           </div>
         )}
       </section>
 
-      {/* SECTION G — MONEY OUT & EXPENSES (Admin only) */}
+      {/* QUICK EXPENSES & FINANCIALS LINKS (Admin only) */}
       {isAdmin && (
         <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Link to="/money-out" className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100 flex items-center justify-between hover:scale-[1.02] transition-transform">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-rose-50 flex items-center justify-center">
+          <Link to="/money-out" className="bg-white rounded-2xl p-4 border border-slate-200 flex items-center justify-between hover:bg-slate-50 transition-colors">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-rose-50 flex items-center justify-center">
                 <ArrowUpRight className="w-5 h-5 text-rose-500" />
               </div>
               <div>
-                <h4 className="font-bold text-gray-900">Money Out</h4>
-                <p className="text-xs text-gray-500">View all payouts</p>
+                <h4 className="font-bold text-slate-900 text-sm">Money Out Disburshments</h4>
+                <p className="text-[11px] text-slate-500">Audit all outward Mobile Money transfers</p>
               </div>
             </div>
-            <ArrowRight className="w-4 h-4 text-gray-300" />
+            <ArrowRight className="w-4 h-4 text-slate-400" />
           </Link>
           
-          <Link to="/expenses" className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100 flex items-center justify-between hover:scale-[1.02] transition-transform">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center">
-                <TrendingUp className="w-5 h-5 text-emerald-500" />
+          <Link to="/expenses" className="bg-white rounded-2xl p-4 border border-slate-200 flex items-center justify-between hover:bg-slate-50 transition-colors">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center">
+                <TrendingUp className="w-5 h-5 text-emerald-600" />
               </div>
               <div>
-                <h4 className="font-bold text-gray-900">Expenses</h4>
-                <p className="text-xs text-gray-500">Requisitions & votes</p>
+                <h4 className="font-bold text-slate-900 text-sm">Budget & Requisitions</h4>
+                <p className="text-[11px] text-slate-500">Executive vote approvals and expenses</p>
               </div>
             </div>
-            <ArrowRight className="w-4 h-4 text-gray-300" />
+            <ArrowRight className="w-4 h-4 text-slate-400" />
           </Link>
         </section>
       )}
+
     </div>
   );
 }
 
-function StatCard({ icon: Icon, color, amount, label }: { icon: any, color: 'navy'|'emerald'|'gold', amount: string, label: string }) {
-  const colorMap = {
-    navy: { bg: 'bg-slate-100', icon: 'text-slate-600', text: 'text-gray-900' },
-    emerald: { bg: 'bg-emerald-50', icon: 'text-emerald-600', text: 'text-gray-900' },
-    gold: { bg: 'bg-amber-50', icon: 'text-amber-600', text: 'text-gray-900' },
-  };
-  const theme = colorMap[color];
-  
+function StatCard({ 
+  icon: Icon, 
+  amount, 
+  label, 
+  badge,
+  accentColor 
+}: { 
+  icon: any, 
+  amount: string, 
+  label: string, 
+  badge: string,
+  accentColor: 'gold' | 'emerald' | 'cyan' 
+}) {
+  const accentStyles = {
+    gold: {
+      bg: 'bg-amber-500/10 border-amber-500/20',
+      icon: 'text-amber-400',
+      text: 'text-amber-400',
+    },
+    emerald: {
+      bg: 'bg-emerald-500/10 border-emerald-500/20',
+      icon: 'text-emerald-400',
+      text: 'text-emerald-400',
+    },
+    cyan: {
+      bg: 'bg-cyan-500/10 border-cyan-500/20',
+      icon: 'text-cyan-400',
+      text: 'text-cyan-400',
+    }
+  }[accentColor];
+
   return (
-    <div className="min-w-[140px] flex-1 bg-gray-50 rounded-2xl p-4 flex flex-col snap-center">
-      <div className={`w-8 h-8 rounded-full ${theme.bg} flex items-center justify-center mb-3`}>
-        <Icon className={`w-4 h-4 ${theme.icon}`} strokeWidth={2} />
+    <div className="bg-slate-900 rounded-3xl p-5 border border-slate-800 text-white flex flex-col justify-between shadow-md relative overflow-hidden">
+      <div className="flex items-center justify-between mb-4">
+        <div className={`w-10 h-10 rounded-2xl border flex items-center justify-center ${accentStyles.bg}`}>
+          <Icon className={`w-5 h-5 ${accentStyles.icon}`} strokeWidth={2} />
+        </div>
+        <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-2.5 py-1 rounded-full bg-slate-800 border border-slate-700">
+          {badge}
+        </span>
       </div>
-      <h3 className={`text-lg font-bold ${theme.text} mb-0.5 tracking-tight`}>{amount}</h3>
-      <p className="text-[10px] uppercase tracking-widest text-gray-500 font-semibold">{label}</p>
+      <div>
+        <h3 className="text-2xl font-extrabold text-white tracking-tight mb-1">{amount}</h3>
+        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{label}</p>
+      </div>
     </div>
   );
 }
