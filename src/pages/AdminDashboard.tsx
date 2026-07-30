@@ -669,7 +669,16 @@ export default function AdminDashboard() {
                   </div>
                 </div>
                 <span className="text-[10px] text-slate-400 whitespace-nowrap font-medium flex-shrink-0">
-                  {log.timestamp ? new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                  {(() => {
+                    const ts = (log as any).createdAt || (log as any).timestamp;
+                    if (!ts) return '';
+                    try {
+                      const dateObj = typeof ts === 'number' ? new Date(ts) : (ts?.toDate ? ts.toDate() : new Date(ts));
+                      return isNaN(dateObj.getTime()) ? '' : dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    } catch {
+                      return '';
+                    }
+                  })()}
                 </span>
               </div>
             ))

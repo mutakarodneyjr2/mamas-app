@@ -15,7 +15,8 @@ export default function AdminMedia() {
   const [message, setMessage] = useState('');
 
   useEffect(() => {
-    const q = query(collection(db, 'banners'), orderBy('order', 'asc'));
+    if (!currentUser) return;
+    const q = query(collection(db, 'landingBanners'), orderBy('order', 'asc'));
     const unsub = onSnapshot(q, (snap) => {
       const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Banner));
       setBanners(data);
@@ -24,7 +25,7 @@ export default function AdminMedia() {
       setError("Failed to load banners.");
     });
     return unsub;
-  }, []);
+  }, [currentUser]);
 
   const showMessage = (msg: string) => {
     setMessage(msg);

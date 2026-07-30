@@ -29,13 +29,14 @@ export default function AdminRoles() {
   const [error, setError] = useState('');
 
   useEffect(() => {
+    if (!currentUser) return;
     const q = query(collection(db, 'users'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const uList: User[] = [];
       snapshot.forEach(doc => {
         uList.push(doc.data() as User);
       });
-      uList.sort((a, b) => a.fullName.localeCompare(b.fullName));
+      uList.sort((a, b) => (a.fullName || '').localeCompare(b.fullName || ''));
       setUsers(uList);
       setLoading(false);
     }, (error) => {
@@ -44,7 +45,7 @@ export default function AdminRoles() {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [currentUser]);
 
   if (!userProfile || !currentUser) return null;
 

@@ -7,7 +7,7 @@ import { exportToCSV } from '../lib/utils';
 import { FileText, Search, Calendar, Filter, Activity, Download } from 'lucide-react';
 
 export default function AdminLogs() {
-  const { userProfile } = useAuth();
+  const { currentUser, userProfile } = useAuth();
   const canExport = ["super_admin", "chairperson", "vice_chairperson", "treasurer", "auditor", "secretary"].includes(userProfile?.role || "");
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [users, setUsers] = useState<Record<string, User>>({});
@@ -18,14 +18,19 @@ export default function AdminLogs() {
   const [endDate, setEndDate] = useState('');
 
   useEffect(() => {
+    if (!currentUser) return;
     const fetchUsers = async () => {
-      const q = query(collection(db, 'users'));
-      const snap = await getDocs(q);
-      const userMap: Record<string, User> = {};
-      snap.forEach(doc => {
-        userMap[doc.id] = doc.data() as User;
-      });
-      setUsers(userMap);
+      try {
+        const q = query(collection(db, 'users'));
+        const snap = await getDocs(q);
+        const userMap: Record<string, User> = {};
+        snap.forEach(doc => {
+          userMap[doc.id] = doc.data() as User;
+        });
+        setUsers(userMap);
+      } catch (err) {
+        console.error("Error loading users in AdminLogs:", err);
+      }
     };
     fetchUsers();
 
@@ -40,7 +45,7 @@ export default function AdminLogs() {
     });
 
     return () => unsub();
-  }, []);
+  }, [currentUser]);
 
   const filteredLogs = (Array.isArray(logs) ? logs : []).filter(log => {
     if (!log) return false;

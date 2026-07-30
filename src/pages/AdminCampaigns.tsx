@@ -23,6 +23,7 @@ export default function AdminCampaigns() {
   const [message, setMessage] = useState('');
 
   useEffect(() => {
+    if (!currentUser) return;
     const q = query(
       collection(db, 'schoolCampaigns'),
       orderBy('createdAt', 'desc')
@@ -37,7 +38,7 @@ export default function AdminCampaigns() {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [currentUser]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

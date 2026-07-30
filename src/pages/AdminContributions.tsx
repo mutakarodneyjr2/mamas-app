@@ -38,6 +38,7 @@ export default function AdminContributions() {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
   useEffect(() => {
+    if (!currentUser) return;
     const fetchUsers = async () => {
       try {
         const uSnap = await getDocs(collection(db, 'users'));
@@ -73,9 +74,10 @@ export default function AdminContributions() {
     });
 
     return () => unsubscribe();
-  }, [usersCache]);
+  }, [currentUser]);
 
   useEffect(() => {
+    if (!currentUser) return;
     if (activeTab === 'reminders') {
       const fetchApprovedAndContribs = async () => {
         try {

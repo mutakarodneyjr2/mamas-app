@@ -20,6 +20,7 @@ export default function AdminNotices() {
   const [successMsg, setSuccessMsg] = useState('');
 
   useEffect(() => {
+    if (!currentUser) return;
     const q = query(collection(db, 'notices'), orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setNotices(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Notice)));
@@ -30,7 +31,7 @@ export default function AdminNotices() {
       setLoading(false);
     });
     return () => unsubscribe();
-  }, []);
+  }, [currentUser]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
