@@ -20,7 +20,7 @@ export default function AdminWelfare() {
 
   // Search & Filters
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'accepted' | 'rejected' | 'paid'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'accepted' | 'declined' | 'paid'>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -132,7 +132,7 @@ export default function AdminWelfare() {
         AmountRequested: r.amountRequested,
         Status: r.status,
         Relationship: r.relationship || '',
-        BeneficiaryName: r.beneficiaryName || ''
+        BeneficiaryName: r.personName || ''
       };
     });
     exportToCSV('mamas_welfare_requests', exportData);
@@ -229,7 +229,7 @@ export default function AdminWelfare() {
                 <option value="all">All Status</option>
                 <option value="pending">Pending</option>
                 <option value="accepted">Accepted</option>
-                <option value="rejected">Rejected</option>
+                <option value="declined">Declined</option>
                 <option value="paid">Paid</option>
               </select>
             </div>
@@ -347,7 +347,7 @@ export default function AdminWelfare() {
                         <div>
                           <div className="flex items-center gap-3 mb-1 flex-wrap">
                             <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                              isPaid ? 'bg-blue-50 text-blue-700' : isAccepted ? 'bg-teal-50 text-teal-700' : request.status === 'rejected' ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700'
+                              isPaid ? 'bg-blue-50 text-blue-700' : isAccepted ? 'bg-teal-50 text-teal-700' : request.status === 'declined' ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700'
                             }`}>
                               {request.status}
                             </span>
@@ -372,7 +372,7 @@ export default function AdminWelfare() {
                         </div>
                         <div>
                           <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Beneficiary Name</span>
-                          <span className="font-semibold text-mamas-text">{request.beneficiaryName}</span>
+                          <span className="font-semibold text-mamas-text">{request.personName}</span>
                         </div>
                       </div>
 

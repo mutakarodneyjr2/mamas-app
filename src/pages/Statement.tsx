@@ -1,259 +1,160 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Download, FileText, Wallet, Heart, Target } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { getMemberStatement } from '../lib/services';
-import { Contribution, WelfareRequest } from '../types';
+import { db } from '../firebase';
+import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { StatusBadge } from '../components/StatusBadge';
+import { EmptyState } from '../components/EmptyState';
 import { formatUGX } from '../lib/utils';
-import { FileText, Download, CheckCircle, Clock, XCircle, Heart, Target, Wallet } from 'lucide-react';
 
 export default function Statement() {
   const { currentUser } = useAuth();
-  const [contributions, setContributions] = useState<Contribution[]>([]);
-  const [welfareRequests, setWelfareRequests] = useState<WelfareRequest[]>([]);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [filter, setFilter] = useState<'all' | 'welfare' | 'campaign'>('all');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (currentUser) {
-      getMemberStatement(currentUser.uid).then(data => {
-        setContributions(data.contributions);
-        setWelfareRequests(data.welfareRequests);
+    async function fetchTransactions() {
+      if (!currentUser) return;
+      try {
+        const q = query(
+          collection(db, 'contributions'),
+          where('userId', '==', currentUser.uid),
+          orderBy('timestamp', 'desc')
+        );
+        const snap = await getDocs(q);
+        setTransactions(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      } catch (err) {
+        console.error("Error fetching transactions", err);
+      } finally {
         setLoading(false);
-      });
+      }
     }
+    fetchTransactions();
   }, [currentUser]);
 
-  if (loading) return <div className="p-10 text-center text-mamas-text-muted font-medium">Loading statement statement...</div>;
-
-  const welfareContributions = contributions.filter(c => c.type === 'welfare');
-  const campaignContributions = contributions.filter(c => c.type === 'school_support');
-
-  const totalVerifiedWelfare = welfareContributions
-    .filter(c => c.status === 'verified')
-    .reduce((sum, c) => sum + c.amount, 0);
+  const filteredData = transactions.filter(t => filter === 'all' || t.purpose === filter);
   
-  const totalVerifiedCampaigns = campaignContributions
-    .filter(c => c.status === 'verified')
-    .reduce((sum, c) => sum + c.amount, 0);
+  const totalWelfare = transactions.filter(t => t.purpose === 'welfare' && t.status === 'successful').reduce((acc, curr) => acc + (curr.amount || 0), 0);
+  const totalCampaigns = transactions.filter(t => t.purpose === 'campaign' && t.status === 'successful').reduce((acc, curr) => acc + (curr.amount || 0), 0);
+  const totalAll = totalWelfare + totalCampaigns;
 
-  const totalVerifiedAll = totalVerifiedWelfare + totalVerifiedCampaigns;
-
-  const StatusIcon = ({ status }: { status: string }) => {
-    switch (status) {
-      case 'verified': case 'paid': return <CheckCircle className="w-4 h-4 text-teal-600" />;
-      case 'pending': return <Clock className="w-4 h-4 text-amber-600" />;
-      case 'rejected': return <XCircle className="w-4 h-4 text-rose-600" />;
-      default: return null;
-    }
-  };
-
-  const getStatusClass = (status: string) => {
-    switch (status) {
-      case 'verified': case 'paid': return 'bg-teal-50 text-teal-800 border-teal-200';
-      case 'pending': return 'bg-amber-50 text-amber-800 border-amber-200';
-      case 'rejected': return 'bg-rose-50 text-rose-800 border-rose-200';
-      default: return 'bg-slate-50 text-slate-700 border-slate-200';
-    }
+  const handleDownload = () => {
+    // Basic CSV download
+    const csvRows = ['Date,Purpose,Amount,Status,Reference'];
+    filteredData.forEach(t => {
+      const date = t.timestamp ? t.timestamp.toDate().toLocaleDateString() : 'N/A';
+      csvRows.push(`${date},${t.purpose},${t.amount},${t.status},${t.transactionReference || 'N/A'}`);
+    });
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'mamas_statement.csv';
+    a.click();
+    window.URL.revokeObjectURL(url);
   };
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto pb-12">
+    <div className="max-w-4xl mx-auto w-full animate-in fade-in duration-300 pb-8">
       
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
-        <div>
-          <h2 className="text-2xl font-display font-bold text-mamas-text flex items-center gap-2">
-            <FileText className="w-6 h-6 text-mamas-accent" /> Financial Statement
-          </h2>
-          <p className="text-mamas-text-muted text-sm mt-1">Official statement of member contributions and welfare aid history.</p>
-        </div>
+      {/* HEADER */}
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Financial Statement</h1>
         <button 
-          onClick={() => window.print()}
-          className="inline-flex items-center justify-center gap-2 bg-mamas-card hover:bg-slate-50 text-mamas-text border border-slate-200 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all shadow-sm active:scale-95"
+          onClick={handleDownload}
+          className="flex items-center gap-2 border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 px-4 py-2 rounded-full text-sm font-bold shadow-sm transition-all active:scale-95"
         >
-          <Download className="w-4 h-4 text-mamas-primary" /> Download / Print PDF
+          <Download className="w-4 h-4" />
+          <span className="hidden sm:inline">Download CSV</span>
         </button>
       </div>
 
-      {/* Balanced Metric Cards Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {/* SUMMARY CARD */}
+      <div className="bg-gradient-to-br from-mamas-primary to-slate-800 rounded-3xl p-6 sm:p-8 mb-8 shadow-xl shadow-mamas-primary/10 text-white relative overflow-hidden">
+        <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 rounded-full bg-white/5 blur-3xl"></div>
         
-        {/* Total Contributions */}
-        <div className="bg-gradient-to-br from-mamas-primary to-mamas-primary-hover text-white p-5 rounded-3xl shadow-sm flex flex-col justify-between border border-mamas-primary-hover">
-          <div className="flex items-center justify-between text-mamas-accent mb-2">
-            <span className="text-[10px] font-bold uppercase tracking-widest bg-white/10 px-2.5 py-0.5 rounded-full border border-white/10">
-              Total Verified
-            </span>
-            <Wallet className="w-4 h-4" />
+        <p className="text-white/70 text-sm font-medium mb-1 uppercase tracking-widest">Total Verified Contributions</p>
+        <h2 className="text-4xl font-bold mb-8 tracking-tight">{formatUGX(totalAll)}</h2>
+        
+        <div className="grid grid-cols-2 gap-4">
+          <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-white/10">
+            <div className="flex items-center gap-2 mb-2 text-white/70">
+              <Heart className="w-4 h-4 text-rose-300" />
+              <span className="text-xs font-semibold uppercase tracking-widest">Welfare Fund</span>
+            </div>
+            <p className="font-bold text-lg">{formatUGX(totalWelfare)}</p>
           </div>
-          <p className="text-2xl font-display font-bold tracking-tight text-white mt-1">{formatUGX(totalVerifiedAll)}</p>
-          <p className="text-[11px] text-slate-300 font-medium mt-1">Combined Contributions</p>
-        </div>
-
-        {/* Welfare Contributions */}
-        <div className="bg-mamas-card border border-slate-200/90 p-5 rounded-3xl shadow-sm flex flex-col justify-between">
-          <div className="flex items-center justify-between text-rose-500 mb-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-mamas-text-muted">
-              Welfare Fund
-            </span>
-            <Heart className="w-4 h-4" />
+          <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-white/10">
+            <div className="flex items-center gap-2 mb-2 text-white/70">
+              <Target className="w-4 h-4 text-mamas-accent" />
+              <span className="text-xs font-semibold uppercase tracking-widest">Campaigns</span>
+            </div>
+            <p className="font-bold text-lg">{formatUGX(totalCampaigns)}</p>
           </div>
-          <p className="text-2xl font-display font-bold text-mamas-text mt-1">{formatUGX(totalVerifiedWelfare)}</p>
-          <p className="text-[11px] text-slate-400 font-medium mt-1">Regular Member Dues</p>
         </div>
-
-        {/* School Campaigns */}
-        <div className="bg-mamas-card border border-slate-200/90 p-5 rounded-3xl shadow-sm flex flex-col justify-between">
-          <div className="flex items-center justify-between text-mamas-accent mb-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-mamas-text-muted">
-              School Campaigns
-            </span>
-            <Target className="w-4 h-4 text-mamas-accent" />
-          </div>
-          <p className="text-2xl font-display font-bold text-mamas-text mt-1">{formatUGX(totalVerifiedCampaigns)}</p>
-          <p className="text-[11px] text-slate-400 font-medium mt-1">Alumni Projects</p>
-        </div>
-
       </div>
 
-      {/* Lists Section */}
-      <div className="space-y-6">
-        
-        {/* Welfare Contributions */}
-        <div className="bg-mamas-card border border-slate-200/90 rounded-3xl shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-            <h3 className="text-base font-bold text-mamas-text flex items-center gap-2">
-              <Heart className="w-4 h-4 text-rose-500" /> Welfare Dues Ledger
-            </h3>
-            <span className="text-xs text-slate-400 font-medium">{welfareContributions.length} item(s)</span>
+      {/* FILTER TABS */}
+      <div className="flex items-center gap-2 mb-6 overflow-x-auto no-scrollbar pb-2">
+        {(['all', 'welfare', 'campaign'] as const).map(f => (
+          <button
+            key={f}
+            onClick={() => setFilter(f)}
+            className={`px-5 py-2.5 rounded-full text-sm font-bold tracking-wide capitalize transition-all whitespace-nowrap ${
+              filter === f 
+                ? 'bg-gray-900 text-white shadow-md' 
+                : 'bg-white text-gray-500 hover:bg-gray-100 border border-gray-100'
+            }`}
+          >
+            {f === 'all' ? 'All Transactions' : f === 'campaign' ? 'School Campaigns' : 'Welfare Fund'}
+          </button>
+        ))}
+      </div>
+
+      {/* TRANSACTION LIST */}
+      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+        {loading ? (
+          <div className="flex justify-center p-12">
+            <div className="w-8 h-8 border-4 border-gray-200 border-t-mamas-accent rounded-full animate-spin"></div>
           </div>
-
-          <ul className="divide-y divide-slate-100">
-            {welfareContributions.length === 0 ? (
-              <li className="px-6 py-12 text-center flex flex-col items-center justify-center">
-                <div className="w-12 h-12 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center mb-3">
-                  <Wallet className="w-6 h-6" />
-                </div>
-                <p className="text-sm font-bold text-mamas-text">No Welfare Dues Yet</p>
-                <p className="text-xs text-slate-500 mt-1 max-w-xs">You haven't made any welfare contributions yet. Your dues keep the association strong.</p>
-                <a href="/contribute" className="mt-4 text-xs font-bold bg-mamas-primary hover:bg-mamas-primary-hover text-white px-4 py-2 rounded-xl transition-colors">Make a Contribution</a>
-              </li>
-            ) : (
-              welfareContributions.map(c => (
-                <li key={c.id} className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/50 transition-colors">
-                  <div className="flex-1">
-                    <p className="text-base font-bold text-mamas-text">{formatUGX(c.amount)}</p>
-                    <div className="flex flex-wrap items-center gap-2 mt-1">
-                      <span className="text-xs font-mono font-semibold bg-slate-100 text-slate-600 px-2 py-0.5 rounded border border-slate-200">
-                        Ref: {c.transactionReference}
-                      </span>
-                      <span className="text-xs text-slate-400">
-                        {new Date(c.createdAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${getStatusClass(c.status)}`}>
-                      <StatusIcon status={c.status} /> {c.status}
-                    </span>
-                  </div>
-                </li>
-              ))
-            )}
-          </ul>
-        </div>
-
-        {/* Campaign Contributions */}
-        <div className="bg-mamas-card border border-slate-200/90 rounded-3xl shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-            <h3 className="text-base font-bold text-mamas-text flex items-center gap-2">
-              <Target className="w-4 h-4 text-mamas-accent" /> School Campaign Ledger
-            </h3>
-            <span className="text-xs text-slate-400 font-medium">{campaignContributions.length} item(s)</span>
-          </div>
-
-          <ul className="divide-y divide-slate-100">
-            {campaignContributions.length === 0 ? (
-              <li className="px-6 py-12 text-center flex flex-col items-center justify-center">
-                <div className="w-12 h-12 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center mb-3">
-                  <Target className="w-6 h-6" />
-                </div>
-                <p className="text-sm font-bold text-mamas-text">No Campaign Support Yet</p>
-                <p className="text-xs text-slate-500 mt-1 max-w-xs">You haven't participated in any school support campaigns.</p>
-                <a href="/campaigns" className="mt-4 text-xs font-bold bg-mamas-primary hover:bg-mamas-primary-hover text-white px-4 py-2 rounded-xl transition-colors">View Active Campaigns</a>
-              </li>
-            ) : (
-              campaignContributions.map(c => (
-                <li key={c.id} className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/50 transition-colors">
-                  <div className="flex-1">
-                    <p className="text-base font-bold text-mamas-text">{formatUGX(c.amount)}</p>
-                    <p className="text-xs font-semibold text-mamas-primary mt-0.5">Campaign: {c.campaignTitle}</p>
-                    <div className="flex flex-wrap items-center gap-2 mt-1">
-                      <span className="text-xs font-mono font-semibold bg-slate-100 text-slate-600 px-2 py-0.5 rounded border border-slate-200">
-                        Ref: {c.transactionReference}
-                      </span>
-                      <span className="text-xs text-slate-400">
-                        {new Date(c.createdAt).toLocaleDateString(undefined, { dateStyle: 'medium' })}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${getStatusClass(c.status)}`}>
-                      <StatusIcon status={c.status} /> {c.status}
-                    </span>
-                  </div>
-                </li>
-              ))
-            )}
-          </ul>
-        </div>
-
-        {/* Welfare Requests History */}
-        <div className="bg-mamas-card border border-slate-200/90 rounded-3xl shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-            <h3 className="text-base font-bold text-mamas-text flex items-center gap-2">
-              <Heart className="w-4 h-4 text-rose-500" /> My Welfare Aid Requests
-            </h3>
-            <span className="text-xs text-slate-400 font-medium">{welfareRequests.length} item(s)</span>
-          </div>
-
-          <ul className="divide-y divide-slate-100">
-            {welfareRequests.length === 0 ? (
-              <li className="px-6 py-12 text-center flex flex-col items-center justify-center">
-                <div className="w-12 h-12 bg-rose-50 text-rose-300 rounded-full flex items-center justify-center mb-3">
-                  <Heart className="w-6 h-6" />
-                </div>
-                <p className="text-sm font-bold text-mamas-text">No Welfare Claims</p>
-                <p className="text-xs text-slate-500 mt-1 max-w-xs">You haven't submitted any welfare aid requests.</p>
-                <a href="/apply-welfare" className="mt-4 text-xs font-bold bg-white border border-slate-200 hover:bg-slate-50 text-mamas-text px-4 py-2 rounded-xl transition-colors">Apply for Support</a>
-              </li>
-            ) : (
-              welfareRequests.map(r => (
-                <li key={r.id} className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/50 transition-colors">
-                  <div className="flex-1">
-                    <p className="font-bold text-mamas-text text-sm">
-                      {r.category} <span className="text-slate-400 font-normal">({r.relationship})</span>
-                    </p>
-                    <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">{r.description}</p>
-                    {r.paidAmount && (
-                      <p className="text-xs font-bold text-teal-700 mt-1">Disbursed: {formatUGX(r.paidAmount)}</p>
+        ) : filteredData.length > 0 ? (
+          <div className="divide-y divide-gray-100">
+            {filteredData.map(t => (
+              <div key={t.id} className="p-5 sm:px-6 flex items-center justify-between hover:bg-gray-50/50 transition-colors">
+                <div className="flex items-center gap-4">
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${
+                    t.purpose === 'welfare' ? 'bg-rose-50' : 'bg-amber-50'
+                  }`}>
+                    {t.purpose === 'welfare' ? (
+                      <Heart className="w-5 h-5 text-rose-500" />
+                    ) : (
+                      <Target className="w-5 h-5 text-amber-500" />
                     )}
                   </div>
-
-                  <div className="flex flex-col sm:items-end gap-1">
-                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${getStatusClass(r.status)}`}>
-                      <StatusIcon status={r.status} /> {r.status}
-                    </span>
-                    <span className="text-[11px] text-slate-400">
-                      {new Date(r.createdAt).toLocaleDateString(undefined, { dateStyle: 'medium' })}
-                    </span>
+                  <div>
+                    <h3 className="font-bold text-gray-900 text-sm sm:text-base capitalize">
+                      {t.purpose === 'welfare' ? 'Welfare Contribution' : 'Campaign Support'}
+                    </h3>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      {t.timestamp ? t.timestamp.toDate().toLocaleDateString() : 'Pending Date'} • Ref: {t.transactionReference || 'N/A'}
+                    </p>
                   </div>
-                </li>
-              ))
-            )}
-          </ul>
-        </div>
-
+                </div>
+                <div className="text-right flex flex-col items-end gap-1.5">
+                  <span className="font-bold text-gray-900">{formatUGX(t.amount)}</span>
+                  <StatusBadge status={t.status} />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <EmptyState 
+            icon={FileText} 
+            title="No Transactions" 
+            subtitle="You haven't made any contributions in this category yet."
+          />
+        )}
       </div>
     </div>
   );

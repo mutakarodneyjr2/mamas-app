@@ -12,6 +12,9 @@ export interface User {
   district: string;
   placeOfResidence: string;
   occupation: string;
+  otherOccupation?: string;
+  university?: string;
+  course?: string;
   nextOfKinName: string;
   nextOfKinPhone: string;
   role: UserRole;

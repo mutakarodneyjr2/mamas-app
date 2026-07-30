@@ -26,7 +26,7 @@ function Layout() {
       {userProfile && userProfile.status === 'approved' && userProfile.hasCompletedOnboarding !== true && (
         <OnboardingTour userProfile={userProfile} onComplete={() => {}} />
       )}
-      <header className="bg-mamas-primary border-b border-mamas-primary-hover sticky top-0 z-10 shadow-sm">
+      <header className="bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-8">
             <Link to="/dashboard" className="flex items-center">
@@ -34,34 +34,36 @@ function Layout() {
             </Link>
             {userProfile && userProfile.status === 'approved' && (
               <nav className="hidden md:flex gap-6">
-                <Link to="/dashboard" className="text-sm font-medium text-slate-300 hover:text-white transition-colors">Dashboard</Link>
-                <Link to="/directory" className="text-sm font-medium text-slate-300 hover:text-white transition-colors">Directory</Link>
-                <Link to="/welfare" className="text-sm font-medium text-slate-300 hover:text-white transition-colors">Welfare</Link>
-                <Link to="/expenses" className="text-sm font-medium text-slate-300 hover:text-white transition-colors">Expenses</Link>
-                <Link to="/campaigns" className="text-sm font-medium text-slate-300 hover:text-white transition-colors">Campaigns</Link>
-                <Link to="/statement" className="text-sm font-medium text-slate-300 hover:text-white transition-colors">Statement</Link>
-                <Link to="/help" className="text-sm font-medium text-slate-300 hover:text-white transition-colors">Help</Link>
+                <Link to="/dashboard" className="text-sm font-medium text-gray-600 hover:text-mamas-primary transition-colors">Dashboard</Link>
+                <Link to="/directory" className="text-sm font-medium text-gray-600 hover:text-mamas-primary transition-colors">Directory</Link>
+                <Link to="/welfare" className="text-sm font-medium text-gray-600 hover:text-mamas-primary transition-colors">Welfare</Link>
+                <Link to="/expenses" className="text-sm font-medium text-gray-600 hover:text-mamas-primary transition-colors">Expenses</Link>
+                <Link to="/campaigns" className="text-sm font-medium text-gray-600 hover:text-mamas-primary transition-colors">Campaigns</Link>
+                <Link to="/statement" className="text-sm font-medium text-gray-600 hover:text-mamas-primary transition-colors">Statement</Link>
+                <Link to="/help" className="text-sm font-medium text-gray-600 hover:text-mamas-primary transition-colors">Help</Link>
               </nav>
             )}
           </div>
           <div className="flex items-center gap-2 sm:gap-4">
             {userProfile && <NotificationBell />}
             {userProfile && (
-              <Link to="/profile" className="text-sm text-slate-300 hover:text-white hidden sm:block font-medium">
-                {userProfile.fullName} <span className="opacity-70 text-xs ml-1 bg-mamas-primary-hover px-2 py-1 rounded">({userProfile.role.replace('_', ' ')})</span>
+              <Link to="/profile" className="text-sm text-gray-600 hover:text-mamas-primary hidden sm:block font-medium">
+                {userProfile.fullName} <span className="opacity-70 text-xs ml-1 bg-amber-50 text-mamas-accent border border-amber-200/50 px-2 py-1 rounded-full uppercase tracking-widest">{userProfile.role.replace('_', ' ')}</span>
               </Link>
             )}
-            <button onClick={logout} className="text-sm font-medium text-mamas-accent hover:text-mamas-accent-hover transition-colors">Logout</button>
+            <button onClick={logout} className="text-sm font-bold text-mamas-accent hover:text-mamas-accent-hover transition-colors px-3 py-1.5 rounded-full hover:bg-amber-50">Log Out</button>
           </div>
         </div>
       </header>
-      <main className="flex-1 w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 pb-20 md:pb-8">
+      <main className="flex-1 w-full max-w-7xl mx-auto p-4 sm:px-5 lg:px-8 pb-24 md:pb-8 flex flex-col gap-6">
         <Outlet />
       </main>
       <BottomNav />
     </div>
   );
 }
+
+import PendingApproval from './pages/PendingApproval';
 
 function ProtectedRoute({ children, requiredRole, allowPending = false }: { children: React.ReactNode, requiredRole?: string[], allowPending?: boolean }) {
   const { currentUser, userProfile, loading } = useAuth();
@@ -71,18 +73,8 @@ function ProtectedRoute({ children, requiredRole, allowPending = false }: { chil
   if (!currentUser) return <Navigate to="/login" replace />;
   if (!userProfile) return <Navigate to="/register" replace />;
 
-  if (!allowPending && userProfile.status === "pending") {
-    return <div className="p-8 text-center bg-mamas-card m-4 rounded-lg shadow">
-      <h2 className="text-2xl font-bold mb-2">Account Pending Approval</h2>
-      <p className="text-mamas-text-muted">Your account is waiting for approval by a Secretary or Super Admin.</p>
-    </div>;
-  }
-  
-  if (!allowPending && userProfile.status === "rejected") {
-    return <div className="p-8 text-center bg-mamas-card m-4 rounded-lg shadow">
-      <h2 className="text-2xl font-bold mb-2 text-mamas-danger">Account Rejected</h2>
-      <p className="text-mamas-text-muted">Your registration was not approved.</p>
-    </div>;
+  if (!allowPending && (userProfile.status === "pending" || userProfile.status === "rejected")) {
+    return <PendingApproval />;
   }
 
   if (requiredRole && !requiredRole.includes(userProfile.role)) {

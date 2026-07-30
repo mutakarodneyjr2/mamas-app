@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
-import { LogoLarge } from '../components/Logo';
+import { Logo } from '../components/Logo';
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '../firebase';
-import { Mail, KeyRound, HelpCircle, ChevronDown, ChevronUp, PhoneCall, MessageSquare } from 'lucide-react';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../firebase';
+import { Mail, KeyRound, Eye, EyeOff, ShieldCheck, Heart, GraduationCap, ArrowRight, Sparkles } from 'lucide-react';
 import { GoogleSignInButton } from '../components/GoogleSignInButton';
 
 type LoginStep = 'login' | 'forgot-password';
@@ -19,31 +17,11 @@ export default function Login() {
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [step, setStep] = useState<LoginStep>('login');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showLoginHelp, setShowLoginHelp] = useState(false);
-
-  // Support contacts
-  const [supportPhone, setSupportPhone] = useState('+256 770 000000');
-  const [supportWhatsApp, setSupportWhatsApp] = useState('+256 700 000000');
-
-  useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        const snap = await getDoc(doc(db, 'appSettings', 'main'));
-        if (snap.exists()) {
-          const data = snap.data();
-          if (data.supportPhone) setSupportPhone(data.supportPhone);
-          if (data.supportWhatsApp) setSupportWhatsApp(data.supportWhatsApp);
-        }
-      } catch (e) {
-        console.error("Error loading support contacts:", e);
-      }
-    };
-    fetchSettings();
-  }, []);
 
   useEffect(() => {
     if (currentUser && step === 'login') {
@@ -100,7 +78,7 @@ export default function Login() {
 
     try {
       await sendPasswordResetEmail(auth, email);
-      setSuccess('Check your email for reset instructions.');
+      setSuccess('Check your email for password reset instructions.');
     } catch (err: any) {
       console.error(err);
       setError('Failed to send reset email. Please check the email address.');
@@ -110,203 +88,280 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-mamas-bg flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans relative overflow-hidden">
-      <div className="absolute -top-40 -right-40 w-96 h-96 bg-mamas-accent opacity-10 rounded-full blur-3xl pointer-events-none"></div>
-      <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-mamas-primary opacity-5 rounded-full blur-3xl pointer-events-none"></div>
+    <div className="min-h-screen bg-slate-950 font-sans text-slate-100 flex items-center justify-center p-4 sm:p-6 lg:p-8 relative overflow-hidden selection:bg-mamas-accent selection:text-mamas-primary">
+      {/* Background Floating Abstract Blobs */}
+      <div className="absolute top-1/4 -left-32 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-blue-600/15 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-10 right-1/3 w-64 h-64 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
 
-      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center z-10">
-        <LogoLarge className="scale-75 origin-center mx-auto" />
-      </div>
-
-      <div className="mt-4 sm:mx-auto sm:w-full sm:max-w-md z-10">
-        <div className="bg-mamas-card py-10 px-6 shadow-xl shadow-mamas-primary/5 sm:rounded-2xl sm:px-12 border border-slate-100">
+      {/* Main Split Screen Container */}
+      <div className="w-full max-w-5xl bg-slate-900/90 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden grid grid-cols-1 lg:grid-cols-12 relative z-10 backdrop-blur-xl animate-in fade-in zoom-in-95 duration-300">
+        
+        {/* Left Desktop Hero Section (50% on lg) */}
+        <div className="hidden lg:flex lg:col-span-6 bg-gradient-to-br from-slate-900 via-mamas-primary to-slate-950 p-12 flex-col justify-between relative overflow-hidden border-r border-slate-800">
           
-          <h2 className="text-2xl font-display font-bold text-mamas-primary text-center mb-6">
-            {step === 'login' ? 'Welcome Back' : 'Reset Password'}
-          </h2>
+          {/* Subtle Graphic Accents */}
+          <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/10 rounded-full blur-2xl pointer-events-none" />
+          <div className="absolute bottom-0 left-0 w-80 h-80 bg-blue-500/10 rounded-full blur-2xl pointer-events-none" />
 
-          {step === 'login' && (
-            <div className="mb-6 border border-slate-200 rounded-2xl overflow-hidden bg-slate-50/60 text-left">
-              <button
-                type="button"
-                onClick={() => setShowLoginHelp(!showLoginHelp)}
-                className="w-full p-3.5 flex items-center justify-between text-left text-xs font-bold text-mamas-primary hover:bg-slate-100/80 transition-colors"
-              >
-                <span className="flex items-center gap-2">
-                  <HelpCircle className="w-4 h-4 text-mamas-accent shrink-0" />
-                  Important Update: Email Login
-                </span>
-                {showLoginHelp ? <ChevronUp className="w-4 h-4 text-slate-400 shrink-0" /> : <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />}
-              </button>
+          {/* Top Header Logo */}
+          <div className="relative z-10">
+            <Logo />
+          </div>
 
-              {showLoginHelp && (
-                <div className="p-4 pt-0 text-xs text-slate-600 space-y-3 border-t border-slate-200/60 bg-white">
-                  <p className="font-semibold text-mamas-text mt-3">We have upgraded our security.</p>
-                  <p>MAMAS now uses Email and Password for logging in instead of phone number and PIN.</p>
-                  <p><strong>If you previously used a phone number and PIN, you must create a new account by clicking "Become a Member" below.</strong></p>
-
-                  <div className="pt-3 border-t border-slate-100">
-                    <p className="font-bold text-slate-700 mb-2">Need Help?</p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      <a
-                        href={`tel:${supportPhone}`}
-                        className="flex items-center justify-center gap-1.5 p-2.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-xl hover:bg-emerald-100 font-bold transition-colors text-xs"
-                      >
-                        <PhoneCall className="w-3.5 h-3.5" /> Call Executive
-                      </a>
-                      <a
-                        href={`https://wa.me/${supportWhatsApp.replace(/[^0-9]/g, '')}?text=Hello%20MAMAS%20Executive,%20I%20need%20help%20with%20my%20Matuumu%20Alumni%20login`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center justify-center gap-1.5 p-2.5 bg-teal-50 text-teal-800 border border-teal-200 rounded-xl hover:bg-teal-100 font-bold transition-colors text-xs"
-                      >
-                        <MessageSquare className="w-3.5 h-3.5" /> WhatsApp Help
-                      </a>
-                    </div>
-                  </div>
-                </div>
-              )}
+          {/* Middle Content Quote */}
+          <div className="relative z-10 space-y-6 my-auto">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-400 text-xs font-bold uppercase tracking-wider">
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              <span>Matuumu Alumni Network</span>
             </div>
-          )}
 
+            <h2 className="text-3xl xl:text-4xl font-serif font-extrabold text-white leading-tight">
+              Welcome Back to <br />
+              <span className="text-amber-400">Our Alumni Family.</span>
+            </h2>
+
+            <p className="text-slate-300 text-sm leading-relaxed max-w-md">
+              Where alumni support one another in times of need, fund school development, and grow together as one strong community.
+            </p>
+
+            {/* Feature Pills */}
+            <div className="space-y-3 pt-2">
+              <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
+                <div className="w-8 h-8 rounded-xl bg-amber-500/20 flex items-center justify-center shrink-0">
+                  <Heart className="w-4 h-4 text-amber-400 fill-amber-400/20" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-white">Mutual Aid Welfare</h4>
+                  <p className="text-[11px] text-slate-400">Grants and emergency support for members</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
+                <div className="w-8 h-8 rounded-xl bg-blue-500/20 flex items-center justify-center shrink-0">
+                  <GraduationCap className="w-4 h-4 text-blue-400" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-white">School Development</h4>
+                  <p className="text-[11px] text-slate-400">Giving back to Matuumu projects</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Footer Note */}
+          <div className="relative z-10 pt-6 text-xs text-slate-400 border-t border-white/10 flex items-center justify-between">
+            <span>&copy; {new Date().getFullYear()} MAMAS</span>
+            <span className="flex items-center gap-1.5 text-amber-400 font-semibold">
+              <ShieldCheck className="w-4 h-4" /> Official Portal
+            </span>
+          </div>
+        </div>
+
+        {/* Right Form Card Section */}
+        <div className="lg:col-span-6 p-6 sm:p-10 md:p-12 flex flex-col justify-center bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
+          
+          {/* Mobile Logo Header */}
+          <div className="lg:hidden mb-6 text-center">
+            <div className="inline-block">
+              <Logo />
+            </div>
+          </div>
+
+          {/* Form Hero Titles */}
+          <div className="text-center sm:text-left mb-8">
+            <h1 className="text-2xl sm:text-3xl font-serif font-extrabold text-slate-900 dark:text-white tracking-tight">
+              {step === 'login' ? 'Welcome Back' : 'Reset Password'}
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1.5">
+              {step === 'login' 
+                ? 'Sign in to continue your journey with the Matuumu Alumni family.'
+                : 'Enter your email address to receive password reset instructions.'}
+            </p>
+          </div>
+
+          {/* Feedback Messages */}
           {error && (
-            <div className="mb-6 bg-rose-50 border-l-4 border-mamas-danger text-mamas-danger px-4 py-3 rounded-r text-sm font-medium shadow-sm flex flex-col gap-2">
-              <span>{error}</span>
+            <div className="mb-6 p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300 text-xs font-semibold animate-in fade-in space-y-2">
+              <p>{error}</p>
               {error.includes('register first') && (
-                <Link to="/register" className="inline-block mt-2 font-semibold text-mamas-primary hover:underline">
-                  Register with Google &rarr;
+                <Link to="/register" className="inline-flex items-center gap-1 font-bold text-amber-600 dark:text-amber-400 hover:underline">
+                  <span>Register with Google now</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
                 </Link>
               )}
             </div>
           )}
+
           {success && (
-            <div className="mb-6 bg-teal-50 border-l-4 border-teal-600 text-teal-700 px-4 py-3 rounded-r text-sm font-medium shadow-sm">
+            <div className="mb-6 p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-900 text-emerald-700 dark:text-emerald-300 text-xs font-semibold animate-in fade-in">
               {success}
             </div>
           )}
 
+          {/* LOGIN STEP */}
           {step === 'login' && (
             <div className="space-y-6">
-              <GoogleSignInButton
-                mode="login"
-                onClick={handleGoogleSignIn}
-                loading={loading}
-              />
-
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-slate-200"></div>
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-mamas-card text-slate-500 font-medium">— OR —</span>
-                </div>
+              
+              {/* Google Sign-In Button */}
+              <div>
+                <GoogleSignInButton
+                  mode="login"
+                  onClick={handleGoogleSignIn}
+                  loading={loading}
+                  className="rounded-xl py-3.5 font-semibold text-sm shadow-sm hover:shadow-md border-slate-300 dark:border-slate-700 transition-all active:scale-[0.99]"
+                />
               </div>
 
-              <form className="space-y-6" onSubmit={handleLogin}>
+              {/* Divider */}
+              <div className="relative flex items-center justify-center my-4">
+                <div className="w-full border-t border-slate-200 dark:border-slate-800" />
+                <span className="absolute bg-white dark:bg-slate-900 px-3 text-[11px] font-bold tracking-widest text-slate-400 uppercase">
+                  OR
+                </span>
+              </div>
+
+              {/* Email & Password Form */}
+              <form onSubmit={handleLogin} className="space-y-4">
+                
+                {/* Email Field */}
                 <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-slate-700">
+                  <label htmlFor="email" className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 uppercase tracking-wider">
                     Email Address
                   </label>
-                  <div className="mt-2 relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <Mail className="h-5 w-5 text-slate-400" />
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                      <Mail className="h-4 h-4" />
                     </div>
                     <input
                       id="email"
                       type="email"
                       required
+                      placeholder="e.g. member@mamas.org"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="appearance-none block w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-mamas-primary sm:text-base transition-colors"
+                      className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 text-slate-900 dark:text-white placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
                     />
                   </div>
                 </div>
 
+                {/* Password Field */}
                 <div>
-                  <label htmlFor="password" className="block text-sm font-medium text-slate-700">
-                    Password
-                  </label>
-                  <div className="mt-2 relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <KeyRound className="h-5 w-5 text-slate-400" />
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label htmlFor="password" className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                      Password
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => { setError(''); setSuccess(''); setStep('forgot-password'); }}
+                      className="text-xs font-semibold text-amber-600 dark:text-amber-400 hover:underline"
+                    >
+                      Forgot Password?
+                    </button>
+                  </div>
+                  
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                      <KeyRound className="h-4 h-4" />
                     </div>
                     <input
                       id="password"
-                      type="password"
+                      type={showPassword ? 'text' : 'password'}
                       required
+                      placeholder="Enter your password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="appearance-none block w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-mamas-primary sm:text-base transition-colors"
+                      className="w-full pl-10 pr-10 py-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 text-slate-900 dark:text-white placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
                   </div>
                 </div>
 
-                <div>
+                {/* Submit Button */}
+                <div className="pt-2">
                   <button
                     type="submit"
                     disabled={loading || !email || !password}
-                    className="w-full flex justify-center py-3 px-4 border border-transparent rounded-full shadow-md text-sm font-medium text-white bg-mamas-primary hover:bg-mamas-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-mamas-primary disabled:opacity-50 transition-colors"
+                    className="w-full py-3.5 px-6 rounded-full bg-slate-900 dark:bg-amber-500 hover:bg-slate-800 dark:hover:bg-amber-400 text-white dark:text-slate-950 font-bold text-sm shadow-xl hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 transition-all cursor-pointer flex items-center justify-center gap-2"
                   >
-                    {loading ? 'Logging in...' : 'Log In'}
+                    {loading ? (
+                      <span>Signing in...</span>
+                    ) : (
+                      <>
+                        <span>Sign In</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </>
+                    )}
                   </button>
                 </div>
-                
-                <div className="text-center mt-4">
-                  <button
-                    type="button"
-                    onClick={() => { setError(''); setSuccess(''); setStep('forgot-password'); }}
-                    className="text-sm font-medium text-mamas-primary hover:text-mamas-primary-hover transition-colors"
-                  >
-                    Forgot Password?
-                  </button>
-                </div>
+
               </form>
+
+              {/* Bottom Register CTA */}
+              <div className="pt-4 border-t border-slate-100 dark:border-slate-800 text-center text-xs text-slate-600 dark:text-slate-400">
+                Don't have an account yet?{' '}
+                <Link 
+                  to="/register" 
+                  className="font-bold text-amber-600 dark:text-amber-400 hover:underline"
+                >
+                  Become a Member
+                </Link>
+              </div>
+
             </div>
           )}
 
+          {/* FORGOT PASSWORD STEP */}
           {step === 'forgot-password' && (
-            <form className="space-y-6 animate-in fade-in slide-in-from-right-4" onSubmit={handleForgotPassword}>
-              <p className="text-sm text-slate-600 mb-4 text-center">
-                Enter your email address to receive a password reset link.
-              </p>
+            <form onSubmit={handleForgotPassword} className="space-y-4 animate-in fade-in duration-200">
               <div>
-                <label htmlFor="resetEmail" className="block text-sm font-medium text-slate-700">Email Address</label>
-                <div className="mt-2 relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Mail className="h-5 w-5 text-slate-400" />
+                <label htmlFor="resetEmail" className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 uppercase tracking-wider">
+                  Your Account Email
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <Mail className="h-4 h-4" />
                   </div>
                   <input
                     id="resetEmail"
                     type="email"
                     required
+                    placeholder="e.g. member@mamas.org"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="appearance-none block w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-mamas-primary transition-colors"
+                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 text-slate-900 dark:text-white placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all"
                   />
                 </div>
               </div>
+
               <button
                 type="submit"
                 disabled={loading || !email}
-                className="w-full flex justify-center py-3 px-4 rounded-full shadow-md text-sm font-medium text-white bg-slate-800 hover:bg-slate-900 disabled:opacity-50"
+                className="w-full py-3.5 px-6 rounded-full bg-slate-900 dark:bg-amber-500 text-white dark:text-slate-950 font-bold text-sm shadow-lg hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 transition-all"
               >
-                {loading ? 'Sending...' : 'Send Reset Link'}
+                {loading ? 'Sending link...' : 'Send Reset Link'}
               </button>
-              <div className="text-center mt-4">
-                <button type="button" onClick={() => setStep('login')} className="text-sm text-slate-500 hover:text-mamas-primary">Back to Login</button>
+
+              <div className="text-center pt-2">
+                <button
+                  type="button"
+                  onClick={() => { setError(''); setSuccess(''); setStep('login'); }}
+                  className="text-xs font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-white transition-colors"
+                >
+                  &larr; Back to Login
+                </button>
               </div>
             </form>
           )}
 
-          {step === 'login' && (
-            <div className="mt-8 text-center text-sm text-slate-600 border-t border-slate-200 pt-6">
-              Don't have an account?{' '}
-              <Link to="/register" className="font-semibold text-mamas-accent hover:text-mamas-accent-hover transition-colors">
-                Become a Member
-              </Link>
-            </div>
-          )}
         </div>
+
       </div>
     </div>
   );
