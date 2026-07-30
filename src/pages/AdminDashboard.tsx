@@ -162,7 +162,7 @@ export default function AdminDashboard() {
     });
 
     // 6. Recent Activity Logs
-    const qLogs = query(collection(db, 'activityLogs'), orderBy('timestamp', 'desc'), limit(6));
+    const qLogs = query(collection(db, 'activityLogs'), orderBy('createdAt', 'desc'), limit(6));
     const unsubLogs = onSnapshot(qLogs, (snap) => {
       const logs: ActivityLog[] = [];
       snap.forEach(d => {

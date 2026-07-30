@@ -24,6 +24,10 @@ export default function AdminNotices() {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setNotices(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Notice)));
       setLoading(false);
+    }, (error) => {
+      console.error("Error loading notices:", error);
+      setError("Failed to load notices.");
+      setLoading(false);
     });
     return () => unsubscribe();
   }, []);

@@ -1,21 +1,32 @@
 import express from 'express';
 import { getApps, initializeApp, cert } from 'firebase-admin/app';
 
-// Firebase Admin SDK init
-if (!getApps().length) {
+let firebaseInitError: Error | null = null;
+
+function ensureFirebaseInit() {
+  if (getApps().length) return; // already initialized
+
   const base64ServiceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_BASE64;
   if (!base64ServiceAccount) {
-    throw new Error('FIREBASE_SERVICE_ACCOUNT_BASE64 environment variable is required');
+    firebaseInitError = new Error('FIREBASE_SERVICE_ACCOUNT_BASE64 environment variable is required');
+    console.error('Firebase Admin init failed:', firebaseInitError.message);
+    throw firebaseInitError;
   }
 
-  const serviceAccountJson = Buffer.from(base64ServiceAccount, 'base64').toString('utf8');
-  const serviceAccount = JSON.parse(serviceAccountJson);
+  try {
+    const serviceAccountJson = Buffer.from(base64ServiceAccount, 'base64').toString('utf8');
+    const serviceAccount = JSON.parse(serviceAccountJson);
 
-  initializeApp({
-    credential: cert(serviceAccount),
-  });
+    initializeApp({
+      credential: cert(serviceAccount),
+    });
 
-  console.log(`Firebase Admin initialized successfully for: ${serviceAccount.client_email}`);
+    console.log(`Firebase Admin initialized successfully for: ${serviceAccount.client_email}`);
+  } catch (error: any) {
+    firebaseInitError = new Error(`Failed to initialize Firebase Admin: ${error.message}`);
+    console.error('Firebase Admin init error:', error);
+    throw firebaseInitError;
+  }
 }
 
 // Import handlers from relworxService
@@ -29,6 +40,20 @@ import {
 
 const app = express();
 
+// Middleware to ensure Firebase Admin is initialized
+const requireFirebaseAdmin = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  try {
+    ensureFirebaseInit();
+    next();
+  } catch (error: any) {
+    return res.status(503).json({ 
+      success: false, 
+      message: 'Service unavailable: Firebase Admin SDK not properly configured',
+      error: error.message 
+    });
+  }
+};
+
 // Middleware for JSON parsing on standard endpoint routes
 app.use('/api/relworx/initiate-collection', express.json());
 app.use('/api/relworx/initiate-disbursement', express.json());
@@ -37,7 +62,7 @@ app.use('/api/relworx/initiate-disbursement', express.json());
 app.use('/api/relworx/webhook', express.raw({ type: 'application/json' }));
 
 // 1. POST /api/relworx/initiate-collection
-app.post('/api/relworx/initiate-collection', async (req, res) => {
+app.post('/api/relworx/initiate-collection', requireFirebaseAdmin, async (req, res) => {
   try {
     const { amount, phoneNumber, network, userId, purpose, metadata } = req.body || {};
 
@@ -54,7 +79,7 @@ app.post('/api/relworx/initiate-collection', async (req, res) => {
 });
 
 // 2. POST /api/relworx/webhook
-app.post('/api/relworx/webhook', async (req, res) => {
+app.post('/api/relworx/webhook', requireFirebaseAdmin, async (req, res) => {
   try {
     const signature = req.headers['x-signature'] as string;
     const rawBody = Buffer.isBuffer(req.body)
@@ -101,7 +126,7 @@ app.post('/api/relworx/webhook', async (req, res) => {
 });
 
 // 3. POST /api/relworx/initiate-disbursement
-app.post('/api/relworx/initiate-disbursement', async (req, res) => {
+app.post('/api/relworx/initiate-disbursement', requireFirebaseAdmin, async (req, res) => {
   try {
     const { amount, phoneNumber, network, reference, metadata } = req.body || {};
 

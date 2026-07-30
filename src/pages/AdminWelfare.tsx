@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { collection, query, onSnapshot, doc, getDoc } from 'firebase/firestore';
+import { collection, query, onSnapshot, doc, getDoc, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
 import { WelfareRequest, User, AppSettings } from '../types';
 import { useAuth } from '../contexts/AuthContext';
@@ -42,29 +42,31 @@ export default function AdminWelfare() {
     };
     fetchSettings();
 
+    const fetchUsers = async () => {
+      try {
+        const uSnap = await getDocs(collection(db, 'users'));
+        const uMap: Record<string, User> = {};
+        uSnap.forEach(d => {
+          uMap[d.id] = d.data() as User;
+        });
+        setUsersCache(uMap);
+      } catch (err) {
+        console.error("Error loading users:", err);
+      }
+    };
+    fetchUsers();
+
     const q = query(collection(db, 'welfareRequests'));
 
-    const unsubscribe = onSnapshot(q, async (snapshot) => {
+    const unsubscribe = onSnapshot(q, (snapshot) => {
       const data: WelfareRequest[] = [];
-      const userIds = new Set<string>();
 
       snapshot.forEach(d => {
         const r = { id: d.id, ...d.data() } as WelfareRequest;
         data.push(r);
-        userIds.add(r.userId);
       });
 
       data.sort((a, b) => b.createdAt - a.createdAt);
-
-      userIds.forEach(uid => {
-        if (!usersCache[uid]) {
-          getDoc(doc(db, 'users', uid)).then(uDoc => {
-            if (uDoc.exists()) {
-              setUsersCache(curr => ({ ...curr, [uid]: uDoc.data() as User }));
-            }
-          });
-        }
-      });
 
       setRequests(data);
       setLoading(false);

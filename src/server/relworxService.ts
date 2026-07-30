@@ -1,16 +1,7 @@
 import crypto from 'crypto';
-import { getApps, initializeApp, applicationDefault } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
-// Initialize Firebase Admin if it hasn't been already
-if (!getApps().length) {
-  initializeApp({
-    credential: applicationDefault(),
-    projectId: process.env.GOOGLE_CLOUD_PROJECT || 'mama-alumin'
-  });
-}
-
-const db = getFirestore();
+const getDb = () => getFirestore();
 
 /**
  * Validates the Relworx webhook signature.
@@ -151,7 +142,7 @@ export async function handleCollectionWebhook(payload: any) {
   const amount = payload.amount;
   
   // 1. Log the transaction in the 'transactions' collection for full audit
-  const txRef = db.collection('transactions').doc(transactionId || `tx_${Date.now()}`);
+  const txRef = getDb().collection('transactions').doc(transactionId || `tx_${Date.now()}`);
   await txRef.set({
     id: txRef.id,
     type: 'collection',
@@ -167,7 +158,7 @@ export async function handleCollectionWebhook(payload: any) {
 
   // 2. Query Firestore for the corresponding contribution
   if (reference) {
-    const contributionsRef = db.collection('contributions');
+    const contributionsRef = getDb().collection('contributions');
     const q = contributionsRef.where('relworxReference', '==', reference).limit(1);
     const snapshot = await q.get();
     
@@ -176,7 +167,7 @@ export async function handleCollectionWebhook(payload: any) {
       const docRef = docSnap.ref;
       
       try {
-        await db.runTransaction(async (transaction) => {
+        await getDb().runTransaction(async (transaction) => {
           const contribDoc = await transaction.get(docRef);
           if (!contribDoc.exists) return;
           
@@ -201,7 +192,7 @@ export async function handleCollectionWebhook(payload: any) {
 
             // Update user stats
             if (contribData.userId) {
-              const userRef = db.collection('users').doc(contribData.userId);
+              const userRef = getDb().collection('users').doc(contribData.userId);
               const userDoc = await transaction.get(userRef);
               
               if (userDoc.exists) {
@@ -228,7 +219,7 @@ export async function handleCollectionWebhook(payload: any) {
             
             // Update campaign stats if applicable
             if (contribData.type === 'school_support' && contribData.campaignId) {
-              const campaignRef = db.collection('schoolCampaigns').doc(contribData.campaignId);
+              const campaignRef = getDb().collection('schoolCampaigns').doc(contribData.campaignId);
               const campaignDoc = await transaction.get(campaignRef);
               
               if (campaignDoc.exists) {
@@ -254,7 +245,7 @@ export async function handleCollectionWebhook(payload: any) {
         });
         
         // 3. Trigger activity log outside the transaction
-        await db.collection('activityLogs').add({
+        await getDb().collection('activityLogs').add({
           action: 'RELWORX_COLLECTION',
           adminId: 'SYSTEM',
           targetId: docSnap.id,
@@ -265,7 +256,7 @@ export async function handleCollectionWebhook(payload: any) {
         if (status === 'successful') {
           const contribData = docSnap.data();
           if (contribData?.userId) {
-            await db.collection('notifications').add({
+            await getDb().collection('notifications').add({
               userId: contribData.userId,
               title: "Payment Received",
               body: `Your mobile money payment of UGX ${new Intl.NumberFormat('en-UG').format(contribData.amount || 0)} was successful. Thank you!`,
@@ -297,7 +288,7 @@ export async function handleDisbursementWebhook(payload: any) {
   const amount = payload.amount;
   
   // 1. Log the transaction in 'transactions' collection
-  const txRef = db.collection('transactions').doc(disbursementId || `disb_${Date.now()}`);
+  const txRef = getDb().collection('transactions').doc(disbursementId || `disb_${Date.now()}`);
   await txRef.set({
     id: txRef.id,
     type: 'disbursement',
@@ -314,7 +305,7 @@ export async function handleDisbursementWebhook(payload: any) {
   // 2. Query Firestore to update the corresponding Expense or Welfare Request
   if (reference) {
     // Check Expenses first
-    const expenseRef = db.collection('expenses').doc(reference);
+    const expenseRef = getDb().collection('expenses').doc(reference);
     const expenseDoc = await expenseRef.get();
     
     if (expenseDoc.exists) {
@@ -331,7 +322,7 @@ export async function handleDisbursementWebhook(payload: any) {
         const expenseData = expenseDoc.data();
         if (expenseData) {
           // Record public money-out
-          const moneyOutRef = db.collection('moneyOut').doc();
+          const moneyOutRef = getDb().collection('moneyOut').doc();
           await moneyOutRef.set({
             id: moneyOutRef.id,
             type: "expense",
@@ -343,7 +334,7 @@ export async function handleDisbursementWebhook(payload: any) {
             createdAt: Date.now()
           });
 
-          await db.collection('notifications').add({
+          await getDb().collection('notifications').add({
             userId: 'ALL_APPROVED',
             title: "Association Expense Paid",
             body: `An expense for ${expenseData.reason} (UGX ${new Intl.NumberFormat('en-UG').format(expenseData.amount || 0)}) was paid.`,
@@ -358,7 +349,7 @@ export async function handleDisbursementWebhook(payload: any) {
       await expenseRef.update(updateData);
       
       // 3. Trigger activity log
-      await db.collection('activityLogs').add({
+      await getDb().collection('activityLogs').add({
         action: 'RELWORX_DISBURSEMENT_EXPENSE',
         adminId: 'SYSTEM',
         targetId: reference,
@@ -370,7 +361,7 @@ export async function handleDisbursementWebhook(payload: any) {
     }
     
     // Check Welfare Requests
-    const welfareRef = db.collection('welfareRequests').doc(reference);
+    const welfareRef = getDb().collection('welfareRequests').doc(reference);
     const welfareDoc = await welfareRef.get();
     
     if (welfareDoc.exists) {
@@ -387,7 +378,7 @@ export async function handleDisbursementWebhook(payload: any) {
         const welfareData = welfareDoc.data();
         if (welfareData) {
           // Record public money-out
-          const moneyOutRef = db.collection('moneyOut').doc();
+          const moneyOutRef = getDb().collection('moneyOut').doc();
           await moneyOutRef.set({
             id: moneyOutRef.id,
             type: "welfare",
@@ -399,7 +390,7 @@ export async function handleDisbursementWebhook(payload: any) {
             createdAt: Date.now()
           });
 
-          await db.collection('notifications').add({
+          await getDb().collection('notifications').add({
             userId: 'ALL_APPROVED',
             title: "Welfare Payout Disbursed",
             body: `A welfare payout of UGX ${new Intl.NumberFormat('en-UG').format(welfareData.amountRequested || 0)} for ${welfareData.personName} was completed.`,
@@ -410,7 +401,7 @@ export async function handleDisbursementWebhook(payload: any) {
           });
           
           if (welfareData.userId) {
-             await db.collection('notifications').add({
+             await getDb().collection('notifications').add({
               userId: welfareData.userId,
               title: "Your Welfare Request Paid",
               body: `Your welfare request payout of UGX ${new Intl.NumberFormat('en-UG').format(welfareData.amountRequested || 0)} was successfully processed.`,
@@ -426,7 +417,7 @@ export async function handleDisbursementWebhook(payload: any) {
       await welfareRef.update(updateData);
       
       // Trigger activity log
-      await db.collection('activityLogs').add({
+      await getDb().collection('activityLogs').add({
         action: 'RELWORX_DISBURSEMENT_WELFARE',
         adminId: 'SYSTEM',
         targetId: reference,

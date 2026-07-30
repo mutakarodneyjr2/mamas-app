@@ -58,33 +58,31 @@ export default function Expenses() {
     };
     fetchSettingsAndCampaigns();
 
+    const fetchUsers = async () => {
+      try {
+        const uSnap = await getDocs(collection(db, 'users'));
+        const uMap: Record<string, User> = {};
+        uSnap.forEach(d => {
+          uMap[d.id] = d.data() as User;
+        });
+        setUsersCache(uMap);
+      } catch (err) {
+        console.error("Error loading users:", err);
+      }
+    };
+    fetchUsers();
+
     const q = query(collection(db, 'expenses'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data: Expense[] = [];
-      const userIds = new Set<string>();
 
       snapshot.forEach(d => {
         const exp = { id: d.id, ...d.data() } as Expense;
         data.push(exp);
-        if (exp.userId) userIds.add(exp.userId);
-        exp.votes?.forEach(v => {
-          if (v.userId) userIds.add(v.userId);
-        });
       });
 
       data.sort((a, b) => b.createdAt - a.createdAt);
       setExpenses(data);
-
-      userIds.forEach(uid => {
-        if (!usersCache[uid]) {
-          getDoc(doc(db, 'users', uid)).then(uDoc => {
-            if (uDoc.exists()) {
-              setUsersCache(curr => ({ ...curr, [uid]: uDoc.data() as User }));
-            }
-          });
-        }
-      });
-
       setLoading(false);
     }, (error) => {
       console.error("Error loading expenses:", error);

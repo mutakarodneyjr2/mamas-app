@@ -34,6 +34,9 @@ export default function AdminLogs() {
       const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as ActivityLog));
       setLogs(data);
       setLoading(false);
+    }, (error) => {
+      console.error("Error loading logs:", error);
+      setLoading(false);
     });
 
     return () => unsub();

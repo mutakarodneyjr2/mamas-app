@@ -53,34 +53,30 @@ export default function MoneyOut() {
 
   useEffect(() => {
     if (!currentUser) return;
+    const fetchUsers = async () => {
+      try {
+        const uSnap = await getDocs(collection(db, 'users'));
+        const uMap: Record<string, User> = {};
+        uSnap.forEach(d => {
+          uMap[d.id] = d.data() as User;
+        });
+        setUsersCache(uMap);
+      } catch (err) {
+        console.error("Error loading users:", err);
+      }
+    };
+    fetchUsers();
+
     const q = query(collection(db, 'moneyOut'), orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data: MoneyOutRecord[] = [];
-      const userIds = new Set<string>();
 
       snapshot.forEach(d => {
         const r = { id: d.id, ...d.data() } as MoneyOutRecord;
         data.push(r);
-        if (r.approvedBy) userIds.add(r.approvedBy);
       });
 
       setRecords(data);
-
-      // Fetch users safely
-      setUsersCache(prevCache => {
-        const newCache = { ...prevCache };
-        userIds.forEach(uid => {
-          if (!newCache[uid]) {
-            getDoc(doc(db, 'users', uid)).then(uDoc => {
-              if (uDoc.exists()) {
-                setUsersCache(curr => ({ ...curr, [uid]: uDoc.data() as User }));
-              }
-            });
-          }
-        });
-        return newCache;
-      });
-
       setLoading(false);
     }, (error) => {
       console.error("Error loading money out records:", error);

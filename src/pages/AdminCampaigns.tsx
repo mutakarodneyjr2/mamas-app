@@ -31,6 +31,9 @@ export default function AdminCampaigns() {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setCampaigns(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SchoolCampaign)));
       setLoading(false);
+    }, (error) => {
+      console.error("Error loading campaigns:", error);
+      setLoading(false);
     });
 
     return () => unsubscribe();

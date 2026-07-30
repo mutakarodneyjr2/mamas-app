@@ -38,6 +38,9 @@ export default function AdminRoles() {
       uList.sort((a, b) => a.fullName.localeCompare(b.fullName));
       setUsers(uList);
       setLoading(false);
+    }, (error) => {
+      console.error("Error loading users:", error);
+      setLoading(false);
     });
 
     return () => unsubscribe();

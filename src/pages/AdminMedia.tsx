@@ -19,6 +19,9 @@ export default function AdminMedia() {
     const unsub = onSnapshot(q, (snap) => {
       const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Banner));
       setBanners(data);
+    }, (error) => {
+      console.error("Error loading banners:", error);
+      setError("Failed to load banners.");
     });
     return unsub;
   }, []);

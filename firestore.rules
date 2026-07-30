@@ -27,6 +27,10 @@ service cloud.firestore {
       return getUserRole() in allowedRoles;
     }
 
+    function isPayoutAdmin() {
+      return hasRole(['super_admin', 'treasurer', 'chairperson']);
+    }
+
     function notUpdatingRelworxFields() {
       return !request.resource.data.diff(resource.data).affectedKeys().hasAny([
         'paymentStatus', 'gatewayResponse', 'relworxTransactionId', 'relworxReference', 
@@ -67,7 +71,11 @@ service cloud.firestore {
     match /contributions/{contributionId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      allow update: if hasRole(['super_admin', 'chairperson', 'treasurer']) && notUpdatingRelworxFields();
+      allow update: if isPayoutAdmin() && (
+        !(request.resource.data.diff(resource.data).affectedKeys().hasAny(['paymentStatus', 'status'])) || 
+        request.resource.data.status != 'verified' || 
+        request.auth.uid != resource.data.userId
+      );
       allow delete: if false;
     }
 
@@ -81,7 +89,14 @@ service cloud.firestore {
     match /welfareRequests/{requestId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid && request.resource.data.recipientPhoneNumber is string;
-      allow update: if (hasRole(['super_admin', 'chairperson', 'vice_chairperson', 'secretary', 'treasurer']) || (isAuthenticated() && resource.data.userId == request.auth.uid && resource.data.status == 'pending')) && notUpdatingRelworxFields();
+      allow update: if (
+        (isPayoutAdmin() && (
+          !(request.resource.data.diff(resource.data).affectedKeys().hasAny(['paidAt', 'disbursementStatus', 'paidAmount'])) || 
+          request.auth.uid != resource.data.userId
+        )) ||
+        (hasRole(['vice_chairperson', 'secretary', 'auditor']) && notUpdatingRelworxFields()) ||
+        (isAuthenticated() && resource.data.userId == request.auth.uid && resource.data.status == 'pending' && notUpdatingRelworxFields())
+      );
       allow delete: if false;
     }
 
@@ -91,7 +106,14 @@ service cloud.firestore {
     match /expenses/{expenseId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() && hasRole(['super_admin', 'chairperson', 'vice_chairperson', 'treasurer', 'secretary']) && request.resource.data.userId == request.auth.uid && request.resource.data.recipientPhoneNumber is string;
-      allow update: if (hasRole(['super_admin', 'chairperson', 'vice_chairperson', 'secretary', 'treasurer']) || (isAuthenticated() && resource.data.userId == request.auth.uid && resource.data.status == 'pending')) && notUpdatingRelworxFields();
+      allow update: if (
+        (isPayoutAdmin() && (
+          !(request.resource.data.diff(resource.data).affectedKeys().hasAny(['paidAt', 'disbursementStatus', 'paidAmount'])) || 
+          request.auth.uid != resource.data.userId
+        )) ||
+        (hasRole(['vice_chairperson', 'secretary', 'auditor']) && notUpdatingRelworxFields()) ||
+        (isAuthenticated() && resource.data.userId == request.auth.uid && resource.data.status == 'pending' && notUpdatingRelworxFields())
+      );
       allow delete: if false;
     }
 

@@ -38,35 +38,32 @@ export default function AdminContributions() {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
   useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const uSnap = await getDocs(collection(db, 'users'));
+        const uMap: Record<string, User> = {};
+        uSnap.forEach(d => {
+          uMap[d.id] = d.data() as User;
+        });
+        setUsersCache(uMap);
+      } catch (err) {
+        console.error("Error loading users:", err);
+      }
+    };
+    fetchUsers();
+
     const q = query(collection(db, 'contributions'));
 
-    const unsubscribe = onSnapshot(q, async (snapshot) => {
+    const unsubscribe = onSnapshot(q, (snapshot) => {
       const data: Contribution[] = [];
-      const userIds = new Set<string>();
 
       snapshot.forEach(d => {
         const c = { id: d.id, ...d.data() } as Contribution;
         data.push(c);
-        userIds.add(c.userId);
       });
 
       data.sort((a, b) => b.createdAt - a.createdAt);
 
-      const newCache = { ...usersCache };
-      let updatedCache = false;
-      for (const uid of userIds) {
-        if (!newCache[uid]) {
-          const uDoc = await getDoc(doc(db, 'users', uid));
-          if (uDoc.exists()) {
-            newCache[uid] = uDoc.data() as User;
-            updatedCache = true;
-          }
-        }
-      }
-
-      if (updatedCache) {
-        setUsersCache(newCache);
-      }
       setContributions(data);
       setLoading(false);
     }, (error) => {
