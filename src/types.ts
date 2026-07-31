@@ -35,6 +35,9 @@ export interface User {
   totalCampaignContributed?: number;
   fcmTokens?: string[];
   themePreference?: 'light' | 'dark' | 'system';
+  rejectionReason?: string;
+  rejectedAt?: number;
+  rejectedBy?: string;
 }
 
 export type NotificationType = "notice" | "welfare" | "campaign" | "contribution" | "approval";
@@ -173,6 +176,7 @@ export interface AppSettings {
   landingBanners?: any[];
   supportPhone?: string;
   supportWhatsApp?: string;
+  supportEmail?: string;
 }
 
 export interface HelpArticle {

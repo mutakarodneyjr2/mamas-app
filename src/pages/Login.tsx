@@ -4,8 +4,9 @@ import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { Logo } from '../components/Logo';
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '../firebase';
-import { Mail, KeyRound, Eye, EyeOff, ShieldCheck, Heart, GraduationCap, ArrowRight, Sparkles } from 'lucide-react';
+import { Mail, KeyRound, Eye, EyeOff, ShieldCheck, Heart, GraduationCap, ArrowRight, Sparkles, PhoneCall, MessageSquare, HelpCircle } from 'lucide-react';
 import { GoogleSignInButton } from '../components/GoogleSignInButton';
+import { getAppSettings } from '../lib/services';
 
 type LoginStep = 'login' | 'forgot-password';
 
@@ -22,6 +23,23 @@ export default function Login() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const [supportPhone, setSupportPhone] = useState<string>('');
+  const [supportWhatsApp, setSupportWhatsApp] = useState<string>('');
+  const [supportEmail, setSupportEmail] = useState<string>('');
+
+  useEffect(() => {
+    let isMounted = true;
+    getAppSettings().then(settings => {
+      if (isMounted) {
+        if (settings.supportPhone) setSupportPhone(settings.supportPhone);
+        if (settings.supportWhatsApp) setSupportWhatsApp(settings.supportWhatsApp);
+        if (settings.supportEmail) setSupportEmail(settings.supportEmail);
+      }
+    }).catch(err => console.error("Error loading app settings for Login page:", err));
+
+    return () => { isMounted = false; };
+  }, []);
 
   useEffect(() => {
     if (currentUser && step === 'login') {
@@ -358,6 +376,49 @@ export default function Login() {
                 </button>
               </div>
             </form>
+          )}
+
+          {/* Executive Support Contacts */}
+          {(supportPhone || supportWhatsApp || supportEmail) && (
+            <div className="mt-6 pt-5 border-t border-slate-100 dark:border-slate-800/80">
+              <div className="text-center mb-2.5">
+                <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center justify-center gap-1.5">
+                  <HelpCircle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                  Need Help or Executive Support?
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                {supportPhone && (
+                  <a
+                    href={`tel:${supportPhone}`}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 font-semibold text-xs transition-colors"
+                  >
+                    <PhoneCall className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <span>Call Support</span>
+                  </a>
+                )}
+                {supportWhatsApp && (
+                  <a
+                    href={`https://wa.me/${supportWhatsApp.replace(/[^0-9]/g, '')}?text=${encodeURIComponent('Hello MAMAS Executive, I need assistance with my account access.')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-50 dark:bg-teal-950/40 border border-teal-200 dark:border-teal-900/60 text-teal-700 dark:text-teal-300 hover:bg-teal-100 dark:hover:bg-teal-900/60 font-semibold text-xs transition-colors"
+                  >
+                    <MessageSquare className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 shrink-0" />
+                    <span>WhatsApp</span>
+                  </a>
+                )}
+                {supportEmail && (
+                  <a
+                    href={`mailto:${supportEmail}?subject=${encodeURIComponent('MAMAS Account Assistance Request')}`}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/60 font-semibold text-xs transition-colors"
+                  >
+                    <Mail className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+                    <span>Email Us</span>
+                  </a>
+                )}
+              </div>
+            </div>
           )}
 
         </div>

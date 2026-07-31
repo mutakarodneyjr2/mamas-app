@@ -1,16 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
-  Wallet, Users, Target, Shield, ArrowRight, Bell, BellOff, ArrowUpRight, TrendingUp, ShieldCheck 
+  Wallet, Users, Target, Shield, ArrowRight, Bell, BellOff, ArrowUpRight, TrendingUp, ShieldCheck, Trophy 
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, onSnapshot } from 'firebase/firestore';
 import { formatUGX } from '../lib/utils';
 
 export default function Dashboard() {
   const { currentUser, userProfile } = useAuth();
   
+  const [appSettings, setAppSettings] = useState<any>(null);
+  const [topContributors, setTopContributors] = useState<any[]>([]);
+
   const [stats, setStats] = useState<{
     totalFund: string | null;
     members: string | null;
@@ -26,6 +29,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   const isAdmin = ['super_admin', 'chairperson', 'vice_chairperson', 'treasurer', 'secretary'].includes(userProfile?.role || '');
+  const isExecutive = ['super_admin', 'chairperson', 'vice_chairperson', 'treasurer', 'secretary', 'auditor', 'mobiliser'].includes(userProfile?.role || '');
 
   useEffect(() => {
     let isSubscribed = true;
@@ -107,6 +111,20 @@ export default function Dashboard() {
         console.warn("Could not load notices:", err);
       }
 
+      // 5. Fetch Top Contributors (for leaderboard)
+      let topContributorsList: any[] = [];
+      try {
+        const usersSnap = await getDocs(collection(db, 'users'));
+        const approved = usersSnap.docs
+          .map(doc => ({ uid: doc.id, ...doc.data() } as any))
+          .filter(u => ['approved', 'active'].includes((u.status || '').toLowerCase()))
+          .sort((a, b) => (b.totalContributed || 0) - (a.totalContributed || 0))
+          .slice(0, 5); // top 5 contributors
+        topContributorsList = approved;
+      } catch (err) {
+        console.warn("Could not load top contributors for leaderboard:", err);
+      }
+
       if (isSubscribed) {
         setStats({
           totalFund: calculatedTotal,
@@ -115,14 +133,42 @@ export default function Dashboard() {
         });
         setActiveCampaigns(campsList);
         setNotices(noticeList);
+        setTopContributors(topContributorsList);
         setLoading(false);
       }
     }
 
     fetchDashboardData();
 
+    // Real-time appSettings listener
+    const unsubSettings = onSnapshot(doc(db, 'appSettings', 'main'), (snap) => {
+      if (!isSubscribed) return;
+      if (snap.exists()) {
+        const data = snap.data();
+        setAppSettings({
+          showTotalBalanceToMembers: data.showTotalBalanceToMembers !== undefined ? !!data.showTotalBalanceToMembers : true,
+          showTopContributors: data.showTopContributors !== undefined ? !!data.showTopContributors : true,
+          ...data
+        });
+      } else {
+        setAppSettings({
+          showTotalBalanceToMembers: true,
+          showTopContributors: true,
+        });
+      }
+    }, (err) => {
+      console.warn("Could not load real-time app settings:", err);
+      if (isSubscribed) {
+        setAppSettings({
+          showTotalBalanceToMembers: true,
+          showTopContributors: true,
+        });
+      }
+    });
+
     return () => {
       isSubscribed = false;
+      unsubSettings();
     };
   }, [currentUser]);
 
@@ -132,6 +178,9 @@ export default function Dashboard() {
     if (hour < 18) return 'Good Afternoon';
     return 'Good Evening';
   };
+
+  const showBalance = isExecutive || (appSettings?.showTotalBalanceToMembers !== false);
+  const showLeaderboard = isExecutive || (appSettings?.showTopContributors !== false);
 
   if (loading) {
     return (
@@ -172,24 +221,26 @@ export default function Dashboard() {
       </section>
 
       {/* STATS ROW - 2 COLUMNS ON MOBILE, 4 ON DESKTOP */}
-      <section className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <section className={`grid gap-3 ${showBalance ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-2 sm:grid-cols-3'}`}>
         {/* Card 1: Welfare Treasury */}
-        <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-2xl p-3.5 sm:p-4 text-white shadow-sm border border-slate-800 flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-2">
-            <div className="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-400/30 flex items-center justify-center">
-              <Wallet className="w-4 h-4 text-amber-400" />
+        {showBalance && (
+          <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-2xl p-3.5 sm:p-4 text-white shadow-sm border border-slate-800 flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-2">
+              <div className="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-400/30 flex items-center justify-center">
+                <Wallet className="w-4 h-4 text-amber-400" />
+              </div>
+              <span className="text-[9px] font-bold uppercase tracking-wider text-amber-300 px-1.5 py-0.5 rounded bg-amber-500/10">
+                Verified
+              </span>
             </div>
-            <span className="text-[9px] font-bold uppercase tracking-wider text-amber-300 px-1.5 py-0.5 rounded bg-amber-500/10">
-              Verified
-            </span>
+            <div>
+              <h3 className="text-lg sm:text-xl font-extrabold text-white tracking-tight leading-none mb-1">
+                {stats.totalFund !== null ? stats.totalFund : '--'}
+              </h3>
+              <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Welfare Treasury</p>
+            </div>
           </div>
-          <div>
-            <h3 className="text-lg sm:text-xl font-extrabold text-white tracking-tight leading-none mb-1">
-              {stats.totalFund !== null ? stats.totalFund : '--'}
-            </h3>
-            <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Welfare Treasury</p>
-          </div>
-        </div>
+        )}
 
         {/* Card 2: Verified Alumni */}
         <div className="bg-gradient-to-br from-emerald-950 via-emerald-900 to-slate-900 rounded-2xl p-3.5 sm:p-4 text-white shadow-sm border border-emerald-900/60 flex flex-col justify-between">
@@ -361,39 +412,108 @@ export default function Dashboard() {
         )}
       </section>
 
-      {/* LATEST ANNOUNCEMENTS */}
-      <section className="space-y-3">
-        <div className="flex items-center gap-1.5">
-          <Bell className="w-4 h-4 text-amber-500" />
-          <h3 className="text-base font-bold text-slate-900 tracking-tight">Announcements</h3>
-        </div>
-        
-        {notices.length > 0 ? (
-          <div className="space-y-2.5">
-            {notices.map(notice => (
-              <div key={notice.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 border-l-4 border-l-amber-500 p-4">
-                <div className="flex items-start justify-between gap-2 mb-1">
-                  <h4 className="font-bold text-slate-900 text-sm">{notice.title}</h4>
-                  {notice.isPinned && (
-                    <span className="bg-amber-50 text-amber-700 text-[9px] font-bold px-1.5 py-0.5 rounded border border-amber-200 shrink-0 uppercase">
-                      Pinned
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-slate-600 line-clamp-2 mb-2 leading-snug">
-                  {notice.body || notice.content || 'No description provided.'}
-                </p>
-                <div className="flex items-center justify-between text-[10px] text-slate-400 font-medium">
-                  <span>By: <strong className="text-slate-600">{notice.postedBy || 'Executive'}</strong></span>
-                  <span>{notice.createdAt ? new Date(notice.createdAt).toLocaleDateString() : ''}</span>
-                </div>
-              </div>
-            ))}
+      {/* ANNOUNCEMENTS & LEADERBOARD GROUP */}
+      <section className={`grid grid-cols-1 ${showLeaderboard ? 'lg:grid-cols-12' : ''} gap-5`}>
+        {/* LATEST ANNOUNCEMENTS */}
+        <div className={`space-y-3 ${showLeaderboard ? 'lg:col-span-7' : ''}`}>
+          <div className="flex items-center gap-1.5">
+            <Bell className="w-4 h-4 text-amber-500" />
+            <h3 className="text-base font-bold text-slate-900 tracking-tight">Announcements</h3>
           </div>
-        ) : (
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 text-center flex flex-col items-center">
-            <BellOff className="w-6 h-6 text-slate-300 mb-1" />
-            <p className="text-xs text-slate-500">No announcements posted yet.</p>
+          
+          {notices.length > 0 ? (
+            <div className="space-y-2.5">
+              {notices.map(notice => (
+                <div key={notice.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 border-l-4 border-l-amber-500 p-4">
+                  <div className="flex items-start justify-between gap-2 mb-1">
+                    <h4 className="font-bold text-slate-900 text-sm">{notice.title}</h4>
+                    {notice.isPinned && (
+                      <span className="bg-amber-50 text-amber-700 text-[9px] font-bold px-1.5 py-0.5 rounded border border-amber-200 shrink-0 uppercase">
+                        Pinned
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-600 line-clamp-2 mb-2 leading-snug">
+                    {notice.body || notice.content || 'No description provided.'}
+                  </p>
+                  <div className="flex items-center justify-between text-[10px] text-slate-400 font-medium">
+                    <span>By: <strong className="text-slate-600">{notice.postedBy || 'Executive'}</strong></span>
+                    <span>{notice.createdAt ? new Date(notice.createdAt).toLocaleDateString() : ''}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 text-center flex flex-col items-center justify-center min-h-[140px]">
+              <BellOff className="w-6 h-6 text-slate-300 mb-1.5" />
+              <p className="text-xs font-semibold text-slate-500">No announcements posted yet.</p>
+            </div>
+          )}
+        </div>
+
+        {/* TOP CONTRIBUTORS LEADERBOARD */}
+        {showLeaderboard && (
+          <div className="space-y-3 lg:col-span-5">
+            <div className="flex items-center gap-1.5">
+              <Trophy className="w-4 h-4 text-amber-500" />
+              <h3 className="text-base font-bold text-slate-900 tracking-tight">Top Contributors</h3>
+            </div>
+            
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 min-h-[140px] flex flex-col justify-between">
+              {topContributors.length > 0 ? (
+                <div className="divide-y divide-slate-100">
+                  {topContributors.map((member, index) => {
+                    const isTopThree = index < 3;
+                    const rankColors = [
+                      'bg-amber-50 text-amber-600 border-amber-200', // Gold
+                      'bg-slate-50 text-slate-500 border-slate-200',  // Silver
+                      'bg-amber-50 text-amber-700/80 border-amber-200/50' // Bronze
+                    ];
+                    const rankLabel = ['1st', '2nd', '3rd', '4th', '5th'][index] || `${index + 1}th`;
+                    const initials = member.fullName ? member.fullName.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() : 'AM';
+                    
+                    return (
+                      <div key={member.uid} className={`flex items-center justify-between py-2.5 ${index === 0 ? 'pt-0' : ''} ${index === topContributors.length - 1 ? 'pb-0' : ''}`}>
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          {/* Rank badge */}
+                          <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded-full border shrink-0 text-center w-8 ${isTopThree ? rankColors[index] : 'bg-slate-50 text-slate-500 border-slate-250'}`}>
+                            {rankLabel}
+                          </span>
+                          
+                          {/* Avatar */}
+                          {member.profilePictureUrl ? (
+                            <img src={member.profilePictureUrl} alt={member.fullName} className="w-8 h-8 rounded-full object-cover border border-slate-200 shrink-0" referrerPolicy="no-referrer" />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-600 font-extrabold text-[10px] flex items-center justify-center border border-slate-200 shrink-0 uppercase">
+                              {initials}
+                            </div>
+                          )}
+                          
+                          {/* Name & Class info */}
+                          <div className="truncate">
+                            <h4 className="font-bold text-slate-900 text-xs truncate leading-none mb-1">{member.fullName}</h4>
+                            <p className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider">Class of {member.yearLeftSchool || '—'}</p>
+                          </div>
+                        </div>
+                        
+                        {/* Contribution Total */}
+                        <div className="text-right shrink-0 pl-2">
+                          <span className="font-extrabold text-slate-900 text-xs leading-none block">
+                            {formatUGX(member.totalContributed || 0)}
+                          </span>
+                          <p className="text-[9px] font-medium text-slate-400 uppercase tracking-wider leading-none mt-0.5">Total Dues</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-6 flex flex-col items-center justify-center flex-1">
+                  <Trophy className="w-7 h-7 text-slate-300 mb-1.5" strokeWidth={1.5} />
+                  <p className="text-xs font-semibold text-slate-500">No contributors yet.</p>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </section>

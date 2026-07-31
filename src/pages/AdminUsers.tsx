@@ -25,6 +25,8 @@ export default function AdminUsers() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [rejectingUser, setRejectingUser] = useState<{uid: string, name: string} | null>(null);
+  const [rejectionReason, setRejectionReason] = useState('');
 
   useEffect(() => {
     const q = query(collection(db, 'users'));
@@ -64,24 +66,29 @@ export default function AdminUsers() {
     }
   };
 
-  const handleReject = async (uid: string, name: string) => {
+  const handleReject = (uid: string, name: string) => {
     if (!canApprove) return;
-    if (window.confirm(`Are you sure you want to reject registration for ${name}?`)) {
-      setErrorMsg(''); setSuccessMsg('');
-      setActionLoading(uid);
-      try {
-        await rejectMember(uid);
-        if (currentUser) {
-          await logActivity('REJECT_MEMBER', currentUser.uid, uid, `Rejected member registration for ${name}`);
-        }
-        setSuccessMsg(`Rejected member ${name}.`);
-        setTimeout(() => setSuccessMsg(''), 3000);
-      } catch (error: any) {
-        setErrorMsg("Failed to reject member: " + error.message);
-        setTimeout(() => setErrorMsg(''), 5000);
-      } finally {
-        setActionLoading(null);
-      }
+    setRejectingUser({ uid, name });
+    setRejectionReason('');
+  };
+
+  const confirmReject = async () => {
+    if (!rejectingUser || !rejectionReason.trim()) return;
+    const { uid, name } = rejectingUser;
+    
+    setErrorMsg(''); setSuccessMsg('');
+    setActionLoading(uid);
+    setRejectingUser(null);
+    
+    try {
+      await rejectMember(uid, rejectionReason.trim(), currentUser?.uid);
+      setSuccessMsg(`Rejected member ${name}.`);
+      setTimeout(() => setSuccessMsg(''), 3000);
+    } catch (error: any) {
+      setErrorMsg("Failed to reject member: " + error.message);
+      setTimeout(() => setErrorMsg(''), 5000);
+    } finally {
+      setActionLoading(null);
     }
   };
 
@@ -433,6 +440,59 @@ export default function AdminUsers() {
           </div>
         )}
       </div>
+
+      {/* Rejection Modal */}
+      {rejectingUser && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-xl animate-in zoom-in-95 duration-200">
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="font-bold text-lg text-mamas-text">Reject Member</h3>
+              <button
+                onClick={() => { setRejectingUser(null); setRejectionReason(''); }}
+                className="text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <XCircle className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-slate-600">
+                You are about to reject the registration for <span className="font-bold text-mamas-text">{rejectingUser.name}</span>. 
+                Please provide a reason for this rejection. The user will be notified.
+              </p>
+              
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Reason for Rejection *</label>
+                <textarea
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-mamas-accent h-24 resize-none font-medium"
+                  placeholder="e.g., Verification failed, invalid alumni details..."
+                />
+              </div>
+            </div>
+
+            <div className="p-5 border-t border-slate-100 flex items-center gap-3 bg-slate-50/50">
+              <button
+                onClick={() => { setRejectingUser(null); setRejectionReason(''); }}
+                className="flex-1 px-4 py-2.5 rounded-xl font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmReject}
+                disabled={!rejectionReason.trim() || actionLoading === rejectingUser.uid}
+                className="flex-1 px-4 py-2.5 rounded-xl font-bold text-white bg-rose-600 hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+              >
+                {actionLoading === rejectingUser.uid ? (
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : null}
+                Confirm Reject
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

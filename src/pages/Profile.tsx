@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { 
-  Camera, Mail, MapPin, Briefcase, Phone, User, Shield, ChevronRight, LogOut, SunMoon, Sparkles, Check, Edit3, X, Save 
+  Camera, Mail, MapPin, Briefcase, Phone, User, Shield, ChevronRight, LogOut, SunMoon, Sparkles, Check, Edit3, X, Save, Bell, BellRing
 } from 'lucide-react';
 import { db } from '../firebase';
 import { doc, updateDoc } from 'firebase/firestore';
+import { registerFCMToken } from '../lib/fcmService';
 
 export default function Profile() {
   const { userProfile, logout } = useAuth();
@@ -21,6 +22,43 @@ export default function Profile() {
   
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+
+  const [enablingNotifications, setEnablingNotifications] = useState(false);
+  const [notifPermission, setNotifPermission] = useState<NotificationPermission>(
+    typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'default'
+  );
+  const hasTokens = Array.isArray(userProfile?.fcmTokens) && userProfile.fcmTokens.length > 0;
+
+  const handleEnableNotifications = async () => {
+    if (!userProfile?.uid) return;
+    setEnablingNotifications(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+
+    try {
+      const token = await registerFCMToken(userProfile.uid);
+      if (typeof window !== 'undefined' && 'Notification' in window) {
+        setNotifPermission(Notification.permission);
+      }
+      if (token) {
+        setSuccessMsg('Push notifications enabled successfully for this device!');
+        setTimeout(() => setSuccessMsg(''), 4000);
+      } else {
+        if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'denied') {
+          setErrorMsg('Notification permission was blocked in your browser settings. Please allow notifications for this site to receive alerts.');
+        } else {
+          setErrorMsg('Could not register push notifications. Please verify browser notification support.');
+        }
+        setTimeout(() => setErrorMsg(''), 6000);
+      }
+    } catch (err: any) {
+      console.error('Push notification registration error:', err);
+      setErrorMsg('Failed to enable push notifications: ' + (err.message || 'Unknown error'));
+      setTimeout(() => setErrorMsg(''), 6000);
+    } finally {
+      setEnablingNotifications(false);
+    }
+  };
 
   const handleTogglePrivacy = async (field: 'showPhone' | 'showEmail', value: boolean) => {
     if (!userProfile?.uid) return;
@@ -245,6 +283,50 @@ export default function Profile() {
                 checked={showEmail} 
                 onChange={(val) => handleTogglePrivacy('showEmail', val)} 
               />
+            </div>
+          </section>
+
+          {/* PUSH NOTIFICATIONS */}
+          <section className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+              <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                <Bell className="w-4 h-4 text-amber-500" /> Push Notifications
+              </h2>
+              <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border ${
+                hasTokens && notifPermission === 'granted'
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  : notifPermission === 'denied'
+                  ? 'bg-rose-50 text-rose-700 border-rose-200'
+                  : 'bg-amber-50 text-amber-700 border-amber-200'
+              }`}>
+                {hasTokens && notifPermission === 'granted' ? 'Enabled' : notifPermission === 'denied' ? 'Blocked' : 'Not Setup'}
+              </span>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              <p className="text-xs text-slate-600 leading-relaxed font-medium">
+                Receive real-time push alerts for member approvals, welfare request updates, contribution verifications, and urgent announcements on this device.
+              </p>
+
+              <button
+                type="button"
+                onClick={handleEnableNotifications}
+                disabled={enablingNotifications}
+                className={`w-full py-3.5 px-4 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 border ${
+                  hasTokens && notifPermission === 'granted'
+                    ? 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                    : 'bg-amber-500 text-slate-950 border-amber-600/20 hover:bg-amber-400 shadow-md active:scale-[0.98]'
+                }`}
+              >
+                {enablingNotifications ? (
+                  <div className="w-4 h-4 border-2 border-slate-950/30 border-t-slate-950 rounded-full animate-spin" />
+                ) : (
+                  <BellRing className="w-4 h-4" />
+                )}
+                {hasTokens && notifPermission === 'granted'
+                  ? 'Refresh Push Token'
+                  : 'Enable Push Notifications'}
+              </button>
             </div>
           </section>
 

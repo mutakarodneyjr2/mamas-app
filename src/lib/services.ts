@@ -56,7 +56,10 @@ export const getAppSettings = async (): Promise<AppSettings> => {
       showTopContributors: !!data.showTopContributors,
       minimumWeeklyContribution: data.minimumWeeklyContribution || 5000,
       banners: data.banners || data.landingBanners || [],
-      landingBanners: data.banners || data.landingBanners || []
+      landingBanners: data.banners || data.landingBanners || [],
+      supportPhone: data.supportPhone || '+256 770 000000',
+      supportWhatsApp: data.supportWhatsApp || '+256 700 000000',
+      supportEmail: data.supportEmail || 'support@mamas.org'
     } as AppSettings;
   }
   return {
@@ -69,7 +72,10 @@ export const getAppSettings = async (): Promise<AppSettings> => {
     showTopContributors: true,
     minimumWeeklyContribution: 5000,
     banners: [],
-    landingBanners: []
+    landingBanners: [],
+    supportPhone: '+256 770 000000',
+    supportWhatsApp: '+256 700 000000',
+    supportEmail: 'support@mamas.org'
   };
 };
 

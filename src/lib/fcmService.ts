@@ -30,7 +30,7 @@ export const registerFCMToken = async (userId: string): Promise<string | null> =
 
     const permission = await Notification.requestPermission();
     if (permission !== "granted") {
-      console.log("Notification permission denied by user");
+      console.warn("Notification permission denied by user");
       return null;
     }
 
@@ -41,9 +41,15 @@ export const registerFCMToken = async (userId: string): Promise<string | null> =
 
     const messaging = getMessaging(app);
 
+    const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY;
+    if (!vapidKey) {
+      console.warn("VITE_FIREBASE_VAPID_KEY is not set in environment. FCM token generation might fail or require default key.");
+    }
+
     // Get FCM Token
     const currentToken = await getToken(messaging, {
-      serviceWorkerRegistration: swRegistration
+      serviceWorkerRegistration: swRegistration,
+      ...(vapidKey ? { vapidKey } : {})
     });
 
     if (currentToken) {
@@ -72,7 +78,7 @@ export const registerFCMToken = async (userId: string): Promise<string | null> =
 
       return currentToken;
     } else {
-      console.warn("No registration token available. Request permission to generate one.");
+      console.warn("No registration token available. Check FCM setup or VAPID key configuration.");
       return null;
     }
   } catch (err) {
@@ -82,9 +88,42 @@ export const registerFCMToken = async (userId: string): Promise<string | null> =
 };
 
 /**
- * Core notification dispatcher that logs to Firestore and displays browser notification
+ * Core notification dispatcher that dispatches real server push via /api/notifications/send
+ * and logs in-app notification to Firestore.
  */
 export const sendNotification = async (payload: NotificationPayload): Promise<string> => {
+  try {
+    // Attempt real server-side push notification + in-app notification write via API endpoint
+    const response = await fetch('/api/notifications/send', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      
+      // If display is granted and user is in active browser session, trigger foreground fallback
+      if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+        new Notification(payload.title, {
+          body: payload.body,
+          icon: "/logo.png",
+          data: { url: payload.targetUrl }
+        });
+      }
+
+      return data.notificationId || "success";
+    } else {
+      const errData = await response.json().catch(() => ({}));
+      console.warn("Server push endpoint error, falling back to direct Firestore write:", errData.message);
+    }
+  } catch (apiErr) {
+    console.warn("Server push endpoint unreachable, falling back to direct Firestore write:", apiErr);
+  }
+
+  // Fallback: direct client-side Firestore doc creation
   try {
     const notificationData: Omit<NotificationItem, "id"> = {
       userId: payload.userId,
@@ -99,7 +138,6 @@ export const sendNotification = async (payload: NotificationPayload): Promise<st
 
     const docRef = await addDoc(collection(db, "notifications"), notificationData);
 
-    // If permission is granted, display a local notification immediately
     if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
       new Notification(payload.title, {
         body: payload.body,
@@ -110,7 +148,7 @@ export const sendNotification = async (payload: NotificationPayload): Promise<st
 
     return docRef.id;
   } catch (err) {
-    console.error("Error sending notification:", err);
+    console.error("Error creating fallback notification:", err);
     throw err;
   }
 };

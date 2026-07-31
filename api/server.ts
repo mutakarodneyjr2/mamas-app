@@ -1,5 +1,7 @@
 import express from 'express';
 import { getApps, initializeApp, cert } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
+import { getMessaging } from 'firebase-admin/messaging';
 
 let firebaseInitError: Error | null = null;
 
@@ -57,9 +59,111 @@ const requireFirebaseAdmin = (req: express.Request, res: express.Response, next:
 // Middleware for JSON parsing on standard endpoint routes
 app.use('/api/relworx/initiate-collection', express.json());
 app.use('/api/relworx/initiate-disbursement', express.json());
+app.use('/api/notifications/send', express.json());
 
 // Webhook route MUST use express.raw({type: 'application/json'}) middleware to preserve raw body for HMAC verification
 app.use('/api/relworx/webhook', express.raw({ type: 'application/json' }));
+
+// 0. POST /api/notifications/send - Send real FCM push notifications & write in-app notification doc
+app.post('/api/notifications/send', requireFirebaseAdmin, async (req, res) => {
+  try {
+    const { userId, title, body, type, targetId, targetUrl } = req.body || {};
+
+    if (!title || !body) {
+      return res.status(400).json({ success: false, message: 'Missing title or body' });
+    }
+
+    const firestore = getFirestore();
+    const messaging = getMessaging();
+
+    // 1. Save in-app notification doc in Firestore
+    const notifRef = await firestore.collection('notifications').add({
+      userId: userId || 'ALL_APPROVED',
+      title,
+      body,
+      type: type || 'notice',
+      targetId: targetId || null,
+      targetUrl: targetUrl || '/',
+      read: false,
+      createdAt: Date.now()
+    });
+
+    // 2. Fetch recipient FCM tokens
+    let tokens: string[] = [];
+
+    if (userId === 'ALL_APPROVED') {
+      const snap = await firestore.collection('users').where('status', '==', 'approved').get();
+      snap.forEach(docSnap => {
+        const uData = docSnap.data();
+        if (Array.isArray(uData.fcmTokens)) {
+          tokens.push(...uData.fcmTokens);
+        }
+      });
+    } else if (Array.isArray(userId)) {
+      for (const uid of userId) {
+        if (!uid) continue;
+        const uDoc = await firestore.collection('users').doc(uid).get();
+        if (uDoc.exists) {
+          const uData = uDoc.data();
+          if (uData && Array.isArray(uData.fcmTokens)) {
+            tokens.push(...uData.fcmTokens);
+          }
+        }
+      }
+    } else if (userId && typeof userId === 'string') {
+      const uDoc = await firestore.collection('users').doc(userId).get();
+      if (uDoc.exists) {
+        const uData = uDoc.data();
+        if (uData && Array.isArray(uData.fcmTokens)) {
+          tokens.push(...uData.fcmTokens);
+        }
+      }
+    }
+
+    // Deduplicate valid tokens
+    tokens = Array.from(new Set(tokens.filter(t => typeof t === 'string' && t.trim().length > 0)));
+
+    let successCount = 0;
+    let failureCount = 0;
+
+    if (tokens.length > 0) {
+      try {
+        const response = await messaging.sendEachForMulticast({
+          tokens,
+          notification: {
+            title,
+            body
+          },
+          data: {
+            title,
+            body,
+            type: type || 'notice',
+            targetId: targetId || '',
+            targetUrl: targetUrl || '/'
+          }
+        });
+        successCount = response.successCount;
+        failureCount = response.failureCount;
+        console.log(`FCM push multicast sent: ${successCount} success, ${failureCount} failure out of ${tokens.length} token(s).`);
+      } catch (fcmErr: any) {
+        console.error('FCM messaging send error:', fcmErr?.message || fcmErr);
+      }
+    } else {
+      console.log('No FCM tokens registered for target recipient(s). In-app notification created.');
+    }
+
+    return res.json({
+      success: true,
+      notificationId: notifRef.id,
+      tokenCount: tokens.length,
+      successCount,
+      failureCount
+    });
+  } catch (error: any) {
+    console.error('Send notification endpoint error:', error);
+    return res.status(500).json({ success: false, message: error?.message || 'Internal server error' });
+  }
+});
 
 // 1. POST /api/relworx/initiate-collection
 app.post('/api/relworx/initiate-collection', requireFirebaseAdmin, async (req, res) => {

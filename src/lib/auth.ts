@@ -111,13 +111,28 @@ export const approveMember = async (targetUid: string) => {
   }).catch(err => console.error("Notification error:", err));
 };
 
-export const rejectMember = async (targetUid: string) => {
-  await updateDoc(doc(db, "users", targetUid), {
+export const rejectMember = async (targetUid: string, reason: string, adminUid?: string) => {
+  const updateData: any = {
     status: "rejected",
+    rejectionReason: reason,
+    rejectedAt: Date.now(),
     updatedAt: Date.now()
-  });
+  };
+  if (adminUid) {
+    updateData.rejectedBy = adminUid;
+  }
+  await updateDoc(doc(db, "users", targetUid), updateData);
   const { logActivity } = await import('./services');
-  await logActivity('REJECT_MEMBER', 'admin', targetUid, 'Rejected member registration');
+  await logActivity('REJECT_MEMBER', adminUid || 'admin', targetUid, `Rejected member registration. Reason: ${reason}`);
+
+  const { notifyUser } = await import('./fcmService');
+  await notifyUser(targetUid, {
+    title: 'Registration Update',
+    body: `Your membership registration was declined. Reason: ${reason}`,
+    type: 'approval',
+    targetId: targetUid,
+    targetUrl: '/'
+  }).catch(err => console.error("Notification error:", err));
 };
 
 export const updateUserRole = async (targetUid: string, newRole: UserRole) => {

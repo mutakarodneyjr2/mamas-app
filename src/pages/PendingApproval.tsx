@@ -34,6 +34,7 @@ export default function PendingApproval() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [supportPhone, setSupportPhone] = useState<string>('');
   const [supportWhatsApp, setSupportWhatsApp] = useState<string>('');
+  const [supportEmail, setSupportEmail] = useState<string>('');
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
   // Fetch support contacts from settings if available
@@ -43,6 +44,7 @@ export default function PendingApproval() {
       if (isMounted) {
         if (settings.supportPhone) setSupportPhone(settings.supportPhone);
         if (settings.supportWhatsApp) setSupportWhatsApp(settings.supportWhatsApp);
+        if (settings.supportEmail) setSupportEmail(settings.supportEmail);
       }
     }).catch(err => console.error("Error loading app settings:", err));
 
@@ -111,7 +113,7 @@ export default function PendingApproval() {
   // Support links
   const defaultWhatsApp = supportWhatsApp || '256700000000'; // fallback WhatsApp number if non-configured
   const whatsappUrl = `https://wa.me/${defaultWhatsApp.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hello MAMAS Support, I need assistance with my account review for ${userProfile?.fullName || userProfile?.email || 'my account'}.`)}`;
-  const mailtoUrl = `mailto:support@mamas.org?subject=${encodeURIComponent(`Account Verification Inquiry - ${userProfile?.fullName || 'Member'}`)}&body=${encodeURIComponent(`Hello Admin Team,\n\nI registered for MAMAS with the email ${userProfile?.email || ''} and phone number ${userProfile?.phoneNumber || ''}.\n\nPlease assist in reviewing my account verification.\n\nThank you!`)}`;
+  const mailtoUrl = `mailto:${supportEmail || 'support@mamas.org'}?subject=${encodeURIComponent(`Account Verification Inquiry - ${userProfile?.fullName || 'Member'}`)}&body=${encodeURIComponent(`Hello Admin Team,\n\nI registered for MAMAS with the email ${userProfile?.email || ''} and phone number ${userProfile?.phoneNumber || ''}.\n\nPlease assist in reviewing my account verification.\n\nThank you!`)}`;
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col justify-between font-sans selection:bg-mamas-accent selection:text-mamas-primary transition-colors duration-200">
@@ -390,26 +392,41 @@ export default function PendingApproval() {
 
             {/* Actions Grid */}
             <div className="space-y-3 pt-2">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="flex flex-col sm:flex-row gap-3">
+                {/* Contact Support via Phone Call */}
+                {supportPhone && (
+                  <a
+                    href={`tel:${supportPhone}`}
+                    className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 text-white font-bold text-sm shadow-md transition-all active:scale-[0.99]"
+                  >
+                    <Phone className="w-4 h-4 text-emerald-400" />
+                    <span>Call Admin</span>
+                  </a>
+                )}
+
                 {/* Contact Support via WhatsApp */}
-                <a
-                  href={whatsappUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-md transition-all active:scale-[0.99]"
-                >
-                  <MessageSquare className="w-4 h-4" />
-                  <span>Contact via WhatsApp</span>
-                </a>
+                {supportWhatsApp && (
+                  <a
+                    href={whatsappUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-md transition-all active:scale-[0.99]"
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                    <span>WhatsApp</span>
+                  </a>
+                )}
 
                 {/* Contact Support via Email */}
-                <a
-                  href={mailtoUrl}
-                  className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-sm border border-slate-200 dark:border-slate-700 transition-all active:scale-[0.99]"
-                >
-                  <Mail className="w-4 h-4 text-mamas-primary dark:text-mamas-accent" />
-                  <span>Email Admin Team</span>
-                </a>
+                {supportEmail && (
+                  <a
+                    href={mailtoUrl}
+                    className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-sm border border-slate-200 dark:border-slate-700 transition-all active:scale-[0.99]"
+                  >
+                    <Mail className="w-4 h-4 text-mamas-primary dark:text-mamas-accent" />
+                    <span>Email Admin</span>
+                  </a>
+                )}
               </div>
 
               {/* Status Action Row */}

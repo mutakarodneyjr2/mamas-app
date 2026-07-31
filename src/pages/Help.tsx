@@ -18,6 +18,7 @@ import {
   HelpCircle, 
   MessageSquare, 
   PhoneCall, 
+  Mail,
   Plus, 
   Trash2, 
   Edit3, 
@@ -51,6 +52,7 @@ export default function Help() {
   // Support Contacts
   const [supportPhone, setSupportPhone] = useState('+256 770 000000');
   const [supportWhatsApp, setSupportWhatsApp] = useState('+256 700 000000');
+  const [supportEmail, setSupportEmail] = useState('support@mamas.org');
 
   // Contact Support Form
   const [subject, setSubject] = useState('');
@@ -84,6 +86,7 @@ export default function Help() {
         const data = snap.data();
         if (data.supportPhone) setSupportPhone(data.supportPhone);
         if (data.supportWhatsApp) setSupportWhatsApp(data.supportWhatsApp);
+        if (data.supportEmail) setSupportEmail(data.supportEmail);
       }
     } catch (err) {
       console.error("Error fetching support settings:", err);
@@ -259,22 +262,35 @@ export default function Help() {
 
           {/* Quick Direct Contacts */}
           <div className="flex flex-col sm:flex-row gap-2.5 w-full sm:w-auto shrink-0">
-            <a
-              href={`tel:${supportPhone}`}
-              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold text-xs transition-all shadow-md hover:shadow-emerald-900/30"
-            >
-              <PhoneCall className="w-4 h-4" />
-              <span>Call Executive</span>
-            </a>
-            <a
-              href={`https://wa.me/${supportWhatsApp.replace(/[^0-9]/g, '')}?text=Hello%20MAMAS%20Executive,%20I%20have%20an%20inquiry%20regarding%20Matuumu%20Alumni%20Association`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-2xl font-bold text-xs transition-all shadow-md hover:shadow-teal-900/30"
-            >
-              <MessageSquare className="w-4 h-4" />
-              <span>WhatsApp Chat</span>
-            </a>
+            {supportPhone && (
+              <a
+                href={`tel:${supportPhone}`}
+                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold text-xs transition-all shadow-md hover:shadow-emerald-900/30"
+              >
+                <PhoneCall className="w-4 h-4" />
+                <span>Call Executive</span>
+              </a>
+            )}
+            {supportWhatsApp && (
+              <a
+                href={`https://wa.me/${supportWhatsApp.replace(/[^0-9]/g, '')}?text=Hello%20MAMAS%20Executive,%20I%20have%20an%20inquiry%20regarding%20Matuumu%20Alumni%20Association`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-2xl font-bold text-xs transition-all shadow-md hover:shadow-teal-900/30"
+              >
+                <MessageSquare className="w-4 h-4" />
+                <span>WhatsApp Chat</span>
+              </a>
+            )}
+            {supportEmail && (
+              <a
+                href={`mailto:${supportEmail}?subject=MAMAS%20Executive%20Inquiry`}
+                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold text-xs transition-all shadow-md hover:shadow-blue-900/30"
+              >
+                <Mail className="w-4 h-4" />
+                <span>Email Support</span>
+              </a>
+            )}
           </div>
         </div>
 
