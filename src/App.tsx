@@ -141,27 +141,27 @@ const AdminLayout = () => {
 
   return (
     <div className="flex flex-col gap-4 pb-20 md:pb-0 w-full max-w-full overflow-x-hidden">
-      <div className="bg-mamas-card p-2 rounded-2xl shadow-sm border border-slate-200 overflow-x-auto no-scrollbar max-w-full">
-        <div className="flex items-center gap-1 min-w-max">
-          {navItems.map((item) => {
-            const isActive = location.pathname === item.path || (item.path !== '/admin' && location.pathname.startsWith(item.path));
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
-                  isActive
-                    ? 'bg-mamas-primary text-white shadow-sm'
-                    : 'text-slate-600 hover:text-mamas-primary hover:bg-slate-100/80'
-                }`}
-              >
-                {item.label}
-              </Link>
-            );
-          })}
-        </div>
+      <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide no-scrollbar w-full px-4">
+        {navItems.map((item) => {
+          const isActive = location.pathname === item.path || (item.path !== '/admin' && location.pathname.startsWith(item.path));
+          return (
+            <Link
+              key={item.path}
+              to={item.path}
+              className={`rounded-full px-4 py-2 text-xs font-semibold whitespace-nowrap transition-colors shadow-sm ${
+                isActive
+                  ? 'bg-slate-900 text-white'
+                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+              }`}
+            >
+              {item.label}
+            </Link>
+          );
+        })}
       </div>
-      <Outlet />
+      <div className="px-4">
+        <Outlet />
+      </div>
     </div>
   );
 };

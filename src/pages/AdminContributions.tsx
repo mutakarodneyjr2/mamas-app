@@ -19,6 +19,7 @@ export default function AdminContributions() {
   const [usersCache, setUsersCache] = useState<Record<string, User>>({});
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
+  const [indexErrorLink, setIndexErrorLink] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
   // Reminders tab state
@@ -108,14 +109,22 @@ export default function AdminContributions() {
     if (!currentUser) return;
     setReminderLoading(true);
     setErrorMsg('');
+    setIndexErrorLink('');
     setSuccessMsg('');
     try {
       const result = await triggerContributionReminders(currentUser.uid);
       setSuccessMsg(`Automated reminder check completed. Sent ${result.remindedCount} push notifications to members who haven't contributed UGX 5,000 in the last 7 days.`);
       setTimeout(() => setSuccessMsg(''), 6000);
     } catch (err: any) {
-      setErrorMsg("Failed to run reminders: " + err.message);
-      setTimeout(() => setErrorMsg(''), 5000);
+      const msg = err.message || '';
+      if (msg.includes('requires an index') || msg.includes('failed-precondition')) {
+        const urlMatch = msg.match(/https:\/\/console\.firebase\.google\.com[^\s]*/);
+        setIndexErrorLink(urlMatch ? urlMatch[0] : '');
+        setErrorMsg('Database Index Required');
+      } else {
+        setErrorMsg("Failed to run reminders: " + msg);
+        setTimeout(() => setErrorMsg(''), 5000);
+      }
     } finally {
       setReminderLoading(false);
     }
@@ -125,14 +134,22 @@ export default function AdminContributions() {
     if (!currentUser) return;
     setReminderLoading(true);
     setErrorMsg('');
+    setIndexErrorLink('');
     setSuccessMsg('');
     try {
       await triggerContributionReminders(currentUser.uid, userId);
       setSuccessMsg(`Contribution reminder push notification successfully sent to ${memberName}.`);
       setTimeout(() => setSuccessMsg(''), 4000);
     } catch (err: any) {
-      setErrorMsg("Failed to send reminder: " + err.message);
-      setTimeout(() => setErrorMsg(''), 5000);
+      const msg = err.message || '';
+      if (msg.includes('requires an index') || msg.includes('failed-precondition')) {
+        const urlMatch = msg.match(/https:\/\/console\.firebase\.google\.com[^\s]*/);
+        setIndexErrorLink(urlMatch ? urlMatch[0] : '');
+        setErrorMsg('Database Index Required');
+      } else {
+        setErrorMsg("Failed to send reminder: " + msg);
+        setTimeout(() => setErrorMsg(''), 5000);
+      }
     } finally {
       setReminderLoading(false);
     }
@@ -225,16 +242,16 @@ export default function AdminContributions() {
           <p className="mt-1 text-sm text-mamas-text-muted">Review, verify, filter, export member payments, and send push notification reminders.</p>
         </div>
 
-        <div className="flex bg-slate-100 p-1 rounded-2xl">
+        <div className="flex gap-3">
           <button
             onClick={() => setActiveTab('verify')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${activeTab === 'verify' ? 'bg-white text-mamas-primary shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+            className={`rounded-full px-4 py-2 text-xs font-semibold transition-all ${activeTab === 'verify' ? 'bg-slate-900 text-white shadow-sm' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 shadow-sm'}`}
           >
             Verify Payments
           </button>
           <button
             onClick={() => setActiveTab('reminders')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${activeTab === 'reminders' ? 'bg-white text-mamas-primary shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+            className={`rounded-full px-4 py-2 text-xs font-semibold transition-all flex items-center gap-1.5 ${activeTab === 'reminders' ? 'bg-slate-900 text-white shadow-sm' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 shadow-sm'}`}
           >
             <Bell className="w-3.5 h-3.5" /> Push Reminders
           </button>
@@ -242,42 +259,55 @@ export default function AdminContributions() {
       </div>
 
       {errorMsg && (
-        <div className="bg-rose-50 border border-rose-200 text-rose-800 p-4 rounded-2xl text-sm font-medium animate-in fade-in">
-          {errorMsg}
+        <div className={`relative p-3 rounded-xl text-xs font-medium border animate-in fade-in flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${indexErrorLink ? 'bg-amber-50 border-amber-200 text-amber-800' : 'bg-rose-50 border-rose-200 text-rose-800'}`}>
+          <div className="flex-1">
+            {indexErrorLink && <strong className="block font-bold mb-0.5">Database Index Required</strong>}
+            <span className="line-clamp-3">{indexErrorLink ? 'This feature needs a Firestore composite index to run. Click the button below to create it automatically.' : errorMsg}</span>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {indexErrorLink && (
+              <a href={indexErrorLink} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-lg font-semibold transition-colors">
+                Create Index in Firebase
+              </a>
+            )}
+            <button onClick={() => { setErrorMsg(''); setIndexErrorLink(''); }} className="p-1 hover:bg-black/5 rounded-full text-current">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       )}
       
       {successMsg && (
-        <div className="bg-teal-50 border border-teal-200 text-teal-800 p-4 rounded-2xl text-sm font-medium animate-in fade-in">
-          {successMsg}
+        <div className="relative p-3 rounded-xl text-xs font-medium bg-teal-50 border border-teal-200 text-teal-800 animate-in fade-in flex items-start sm:items-center justify-between gap-3">
+          <span className="line-clamp-3 flex-1">{successMsg}</span>
+          <button onClick={() => setSuccessMsg('')} className="p-1 hover:bg-black/5 rounded-full text-current flex-shrink-0">
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 
       {activeTab === 'reminders' ? (
         <div className="space-y-6 animate-in fade-in duration-200">
           {/* Automated Scheduler Runner Card */}
-          <div className="bg-gradient-to-br from-teal-900 to-slate-900 text-white p-6 sm:p-8 rounded-3xl shadow-lg relative overflow-hidden">
-            <div className="absolute right-0 top-0 translate-x-8 -translate-y-8 w-64 h-64 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
-            <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-              <div className="space-y-2 max-w-xl">
-                <div className="inline-flex items-center gap-2 bg-teal-500/20 text-teal-300 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
-                  <Sparkles className="w-3.5 h-3.5" /> Automated & Manual Push Reminders
-                </div>
-                <h3 className="text-xl font-display font-bold">Weekly Contribution Reminder Engine</h3>
-                <p className="text-sm text-slate-300 leading-relaxed">
-                  Checks all approved members. Automatically targets members who have not contributed or have contributed less than <span className="text-teal-300 font-bold">UGX 5,000</span> in the last 7 days, sending gentle push notifications respecting user permissions and logging all activity.
-                </p>
+          <div className="bg-gradient-to-r from-slate-900 to-slate-800 text-white p-5 rounded-2xl shadow-sm relative overflow-hidden flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="absolute right-0 top-0 translate-x-12 -translate-y-8 w-40 h-40 bg-teal-500/10 rounded-full blur-2xl pointer-events-none" />
+            <div className="relative z-10 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-teal-500/20 text-teal-300 flex items-center justify-center shrink-0">
+                <Sparkles className="w-4 h-4" />
               </div>
-
-              <button
-                disabled={reminderLoading}
-                onClick={handleRunAutomatedReminders}
-                className="flex items-center gap-2 bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold px-6 py-3.5 rounded-2xl text-sm shadow-md transition-all disabled:opacity-50 flex-shrink-0"
-              >
-                <Bell className={`w-4 h-4 ${reminderLoading ? 'animate-bounce' : ''}`} />
-                {reminderLoading ? 'Processing...' : 'Run Automated Reminder Check'}
-              </button>
+              <div>
+                <h3 className="text-sm font-bold">Auto Reminders</h3>
+                <p className="text-xs text-white/70 mt-0.5">Target members who haven't met weekly dues.</p>
+              </div>
             </div>
+            <button
+              disabled={reminderLoading}
+              onClick={handleRunAutomatedReminders}
+              className="relative z-10 flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-white font-bold px-4 py-2 rounded-full text-xs shadow-sm transition-all disabled:opacity-50 flex-shrink-0"
+            >
+              <Bell className={`w-3.5 h-3.5 ${reminderLoading ? 'animate-bounce' : ''}`} />
+              {reminderLoading ? 'Processing...' : 'Run Check'}
+            </button>
           </div>
 
           {/* Member List & Individual Reminders */}
@@ -287,13 +317,13 @@ export default function AdminContributions() {
                 <Users className="w-4 h-4 text-mamas-primary" /> Approved Members & 7-Day Contribution Status ({approvedMembers.length})
               </h3>
               <div className="relative w-full sm:w-72">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
                   placeholder="Search member name or phone..."
                   value={memberSearch}
                   onChange={(e) => setMemberSearch(e.target.value)}
-                  className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-4 py-2 text-xs font-medium outline-none focus:ring-2 focus:ring-mamas-accent"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-9 pr-4 py-2.5 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-mamas-accent"
                 />
               </div>
             </div>

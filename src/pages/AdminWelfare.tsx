@@ -5,7 +5,7 @@ import { WelfareRequest, User, AppSettings } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { castWelfareVote, markWelfareAsPaid, logActivity, initiateWelfareDisbursement } from '../lib/services';
 import { formatUGX, exportToCSV } from '../lib/utils';
-import { Heart, FileText, CheckCircle, XCircle, Clock, Banknote, Shield, Search, Filter, Download, ChevronDown, Calendar, DollarSign } from 'lucide-react';
+import { Heart, FileText, CheckCircle, XCircle, Clock, Banknote, Shield, Search, Filter, Download, ChevronDown, ChevronUp, Calendar, DollarSign } from 'lucide-react';
 
 export default function AdminWelfare() {
   const { currentUser, userProfile } = useAuth();
@@ -17,6 +17,7 @@ export default function AdminWelfare() {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [expandedRow, setExpandedRow] = useState<string | null>(null);
 
   // Search & Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -181,313 +182,292 @@ export default function AdminWelfare() {
     }
   };
 
+  const toggleExpand = (id: string) => {
+    setExpandedRow(prev => prev === id ? null : id);
+  };
+
+  const renderRequestCard = (request: WelfareRequest) => {
+    const member = usersCache[request.userId];
+    const votes = request.votes || [];
+    const myVote = votes.find(v => v.userId === currentUser.uid);
+    const approveCount = votes.filter(v => v.vote === 'approve').length;
+    const rejectCount = votes.filter(v => v.vote === 'reject').length;
+    const isAccepted = request.status === 'accepted';
+    const isPaid = request.status === 'paid';
+
+    return (
+      <div key={request.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-3.5 flex flex-col transition-all duration-200">
+        <div 
+          className={`flex items-center gap-3 cursor-pointer select-none border-l-4 pl-3 -ml-3.5 rounded-l-md transition-all active:scale-[0.98] ${
+            isPaid ? 'border-l-navy-900' : isAccepted ? 'border-l-emerald-400' : request.status === 'declined' ? 'border-l-rose-400' : 'border-l-amber-400'
+          }`}
+          onClick={() => toggleExpand(request.id!)}
+        >
+          {/* Icon */}
+          <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${
+            isPaid ? 'bg-navy-50 text-navy-600' : isAccepted ? 'bg-emerald-50 text-emerald-600' : request.status === 'declined' ? 'bg-rose-50 text-rose-600' : 'bg-amber-50 text-amber-600'
+          }`}>
+            {isPaid ? <Banknote className="w-4 h-4" /> : isAccepted ? <CheckCircle className="w-4 h-4" /> : request.status === 'declined' ? <XCircle className="w-4 h-4" /> : <Heart className="w-4 h-4" />}
+          </div>
+
+          {/* Text Block */}
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-gray-900 truncate">{request.category}</p>
+            <p className="text-[10px] text-gray-500 truncate">
+              {member?.fullName || 'Unknown'} • {new Date(typeof request.createdAt === 'number' ? request.createdAt : Date.now()).toLocaleString('en-US', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+            </p>
+          </div>
+
+          {/* Right Block */}
+          <div className="shrink-0 text-right">
+            <p className="text-sm font-bold text-gray-900">{formatUGX(request.amountRequested)}</p>
+            <span className={`mt-0.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-bold uppercase border ${
+              isPaid ? 'bg-navy-50 text-navy-700 border-navy-200' : isAccepted ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : request.status === 'declined' ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-amber-50 text-amber-700 border-amber-200'
+            }`}>
+              {request.status}
+            </span>
+          </div>
+
+          {/* Chevron */}
+          <div className="shrink-0 ml-1">
+            {expandedRow === request.id ? (
+              <ChevronUp className="w-4 h-4 text-gray-400" />
+            ) : (
+              <ChevronDown className="w-4 h-4 text-gray-400" />
+            )}
+          </div>
+        </div>
+
+        {/* Expanded Detail (Accordion) */}
+        {expandedRow === request.id && (
+          <div className="border-t border-gray-100 mt-3 pt-3 animate-in slide-in-from-top-2 duration-200">
+            <div className="bg-gray-50/50 rounded-xl p-4">
+              
+              {/* Detail Grid */}
+              <div className="grid grid-cols-2 gap-3 mb-3">
+                <div>
+                  <span className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold block mb-0.5">Relationship</span>
+                  <span className="text-xs font-semibold text-gray-900 capitalize">{request.relationship}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold block mb-0.5">Beneficiary Name</span>
+                  <span className="text-xs font-semibold text-gray-900">{request.personName}</span>
+                </div>
+              </div>
+
+              {/* Description */}
+              <div className="mb-4">
+                <span className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold block mb-0.5">Reason / Description</span>
+                <div className="bg-white rounded-xl border border-gray-100 p-3 text-xs text-gray-700 leading-relaxed">
+                  {request.description}
+                </div>
+              </div>
+
+              {/* Vote Tracking - Compact Bar */}
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-xs font-semibold text-gray-700 shrink-0">
+                  {(approveCount > 0 || rejectCount > 0) ? `${approveCount + rejectCount}/3 votes` : 'Awaiting votes'}
+                </span>
+                <div className="flex-1 mx-3 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                  <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${Math.min(100, (approveCount / 3) * 100)}%` }} />
+                </div>
+                <span className="text-[10px] text-gray-500 shrink-0">
+                  {approveCount} approve • {rejectCount} reject
+                </span>
+              </div>
+
+              {/* Action Buttons */}
+              {request.status === 'pending' && !isAuditor && (
+                request.userId === currentUser.uid ? (
+                  <div className="bg-amber-50 border border-amber-200 rounded-full px-3 py-1.5 text-xs font-semibold text-amber-700 text-center shadow-sm">
+                    Conflict of Interest: You cannot vote on your own request.
+                  </div>
+                ) : myVote ? (
+                  <div className={`rounded-full px-3 py-1.5 text-xs font-bold text-center shadow-sm ${
+                    myVote.vote === 'approve' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'
+                  }`}>
+                    You voted to {myVote.vote}
+                  </div>
+                ) : (
+                  <div className="flex gap-3">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleVote(request.id!, 'approve', request.userId); }}
+                      className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white rounded-full py-2.5 text-xs font-bold shadow-sm transition-colors active:scale-[0.97]"
+                    >
+                      Approve
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleVote(request.id!, 'reject', request.userId); }}
+                      className="flex-1 bg-white border border-rose-200 text-rose-600 hover:bg-rose-50 rounded-full py-2.5 text-xs font-bold transition-colors active:scale-[0.97]"
+                    >
+                      Reject
+                    </button>
+                  </div>
+                )
+              )}
+
+              {/* Payout Button */}
+              {isAccepted && (isTreasurer || isSuperAdmin) && (
+                request.userId === currentUser.uid ? (
+                  <div className="bg-amber-50 border border-amber-200 rounded-full px-3 py-1.5 text-xs font-semibold text-amber-700 text-center mt-3">
+                    Conflict: Another authorized member must issue payout.
+                  </div>
+                ) : (
+                  <div className="mt-3">
+                    {request.disbursementStatus === 'processing' ? (
+                      <div className="text-center py-2">
+                        <div className="w-5 h-5 border-2 border-amber-300 border-t-amber-600 rounded-full animate-spin mx-auto mb-1"></div>
+                        <p className="text-[10px] font-bold text-amber-800">Processing Payment...</p>
+                      </div>
+                    ) : (
+                      <>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handlePay(request.id!); }}
+                          className="w-full bg-slate-900 hover:bg-slate-800 text-white rounded-full py-2.5 text-xs font-bold shadow-sm transition-colors active:scale-[0.97] flex items-center justify-center gap-2"
+                        >
+                          <Banknote className="w-4 h-4" /> Process Payout
+                        </button>
+                        {request.disbursementStatus === 'failed' && (
+                          <p className="text-[10px] font-bold text-rose-600 text-center mt-2">
+                            Previous attempt failed. Try again.
+                          </p>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const activeRequests = statusFilter === 'all' ? filteredRequests.filter(r => r.status !== 'paid') : filteredRequests;
+  const historyRequests = statusFilter === 'all' ? filteredRequests.filter(r => r.status === 'paid') : [];
+
   return (
-    <div className="space-y-6 max-w-5xl mx-auto pb-10">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
+    <div className="space-y-4 max-w-full overflow-x-hidden mx-auto pb-10 px-4">
+      {/* Page Header */}
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-10 h-10 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+          <Heart className="w-5 h-5" />
+        </div>
         <div>
-          <h2 className="text-2xl font-display font-bold text-mamas-text flex items-center gap-2">
-            <Heart className="w-6 h-6 text-mamas-accent" /> Welfare Review & Payouts
-          </h2>
-          <p className="text-mamas-text-muted text-sm mt-1">
-            {isApprover ? "You are a designated Approver (2-out-of-3 required)." : "Viewing welfare requests and payout history."}
+          <h2 className="text-xl font-bold text-gray-900 tracking-tight">Welfare Review</h2>
+          <p className="text-xs text-gray-500">
+            Review requests, cast votes, and manage payouts.
           </p>
         </div>
       </div>
 
       {errorMsg && (
-        <div className="bg-rose-50 border border-rose-200 text-rose-800 p-4 rounded-2xl text-sm font-medium animate-in fade-in">
+        <div className="bg-rose-50 border border-rose-200 text-rose-800 p-3 rounded-xl text-xs font-medium">
           {errorMsg}
         </div>
       )}
       
       {successMsg && (
-        <div className="bg-teal-50 border border-teal-200 text-teal-800 p-4 rounded-2xl text-sm font-medium animate-in fade-in">
+        <div className="bg-teal-50 border border-teal-200 text-teal-800 p-3 rounded-xl text-xs font-medium">
           {successMsg}
         </div>
       )}
 
-      {/* Filter & Search Bar */}
-      <div className="bg-mamas-card p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
-        <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
-          <div className="relative w-full sm:w-80">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder="Search member, category, description..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-mamas-accent font-medium"
-            />
+      {/* Filter Bar */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide no-scrollbar w-full">
+            {[
+              { id: 'all', label: 'All' },
+              { id: 'pending', label: 'Pending' },
+              { id: 'accepted', label: 'Approved' },
+              { id: 'declined', label: 'Rejected' },
+              { id: 'paid', label: 'Paid' }
+            ].map(tab => {
+              const isActive = statusFilter === tab.id;
+              const count = (requests || []).filter(r => tab.id === 'all' ? true : r.status === tab.id).length;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setStatusFilter(tab.id as any)}
+                  className={`flex items-center shrink-0 rounded-full px-3.5 py-1.5 text-xs whitespace-nowrap transition-colors ${
+                    isActive 
+                      ? 'bg-slate-900 text-white font-semibold shadow-sm' 
+                      : 'bg-gray-100 text-gray-500 font-medium hover:bg-gray-200'
+                  }`}
+                >
+                  {tab.label}
+                  {count > 0 && (
+                    <span className={`ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
+                      isActive ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-700'
+                    }`}>
+                      {count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
 
-          <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end flex-wrap">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Status:</span>
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as any)}
-                className="bg-slate-50 border border-slate-200 text-mamas-text text-xs rounded-xl px-3 py-2 outline-none font-bold"
-              >
-                <option value="all">All Status</option>
-                <option value="pending">Pending</option>
-                <option value="accepted">Accepted</option>
-                <option value="declined">Declined</option>
-                <option value="paid">Paid</option>
-              </select>
-            </div>
-
+          {canExport && (
             <button
-              onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition-colors ${
-                showAdvancedFilters ? 'bg-mamas-primary text-white border-mamas-primary' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-              }`}
+              onClick={handleExportCSV}
+              className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-full p-2 shadow-sm shrink-0 mb-2"
+              title="Export CSV"
             >
-              <Filter className="w-3.5 h-3.5" /> Filters <ChevronDown className={`w-3 h-3 transition-transform ${showAdvancedFilters ? 'rotate-180' : ''}`} />
+              <Download className="w-4 h-4" />
             </button>
-
-            {canExport && (
-              <button
-                onClick={handleExportCSV}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-teal-600 hover:bg-teal-700 text-white transition-colors shadow-sm"
-                title="Export filtered welfare requests as CSV"
-              >
-                <Download className="w-3.5 h-3.5" /> Export CSV
-              </button>
-            )}
-          </div>
+          )}
         </div>
 
-        {/* Advanced Filters Drawer */}
-        {showAdvancedFilters && (
-          <div className="pt-3 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-4 gap-3 animate-in fade-in duration-200">
-            <div>
-              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Category</label>
-              <select
-                value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-mamas-text outline-none"
-              >
-                <option value="all">All Categories</option>
-                {activeSettings.welfareCategories.map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Start Date</label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-mamas-text outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">End Date</label>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-mamas-text outline-none"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Min (UGX)</label>
-                <input
-                  type="number"
-                  placeholder="Min"
-                  value={minAmount}
-                  onChange={(e) => setMinAmount(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2 py-2 text-xs font-semibold text-mamas-text outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Max (UGX)</label>
-                <input
-                  type="number"
-                  placeholder="Max"
-                  value={maxAmount}
-                  onChange={(e) => setMaxAmount(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2 py-2 text-xs font-semibold text-mamas-text outline-none"
-                />
-              </div>
-            </div>
-          </div>
-        )}
+        <div className="relative w-full">
+          <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            placeholder="Search requests..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 pl-10 pr-4 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500 transition-all"
+          />
+        </div>
       </div>
 
-      <div className="bg-mamas-card rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-          <h3 className="text-base font-bold text-mamas-text">Welfare Requests ({filteredRequests.length})</h3>
-        </div>
-        
-        <ul className="divide-y divide-slate-100">
+      <div className="space-y-3 mt-5">
           {filteredRequests.length === 0 ? (
-            <li className="px-6 py-12 flex flex-col items-center justify-center text-center">
-              <FileText className="w-12 h-12 text-slate-300 mb-4" />
-              <p className="text-mamas-text font-medium">No welfare requests found</p>
-              <p className="text-sm text-slate-500 mt-1">Try adjusting your search or filters.</p>
-            </li>
+            <div className="bg-gray-50 rounded-2xl py-10 flex flex-col items-center justify-center text-center">
+              <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center mb-3">
+                {searchTerm || statusFilter !== 'all' ? (
+                  <Search className="w-6 h-6 text-gray-400" />
+                ) : (
+                  <Heart className="w-6 h-6 text-gray-400" />
+                )}
+              </div>
+              <p className="text-sm font-semibold text-gray-700">
+                {searchTerm || statusFilter !== 'all' ? "No requests match your search." : "No welfare requests"}
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                {searchTerm || statusFilter !== 'all' ? "Try adjusting your search or filters." : "New applications will appear here for review."}
+              </p>
+            </div>
           ) : (
-            filteredRequests.map(request => {
-              const member = usersCache[request.userId];
-              const votes = request.votes || [];
-              const myVote = votes.find(v => v.userId === currentUser.uid);
-              const approveCount = votes.filter(v => v.vote === 'approve').length;
-              const rejectCount = votes.filter(v => v.vote === 'reject').length;
-              const isAccepted = request.status === 'accepted';
-              const isPaid = request.status === 'paid';
-
-              return (
-                <li key={request.id} className="p-6 md:p-8 hover:bg-slate-50/50 transition-colors">
-                  <div className="flex flex-col lg:flex-row gap-8">
-                    
-                    {/* Details */}
-                    <div className="flex-1 space-y-6">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <div className="flex items-center gap-3 mb-1 flex-wrap">
-                            <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                              isPaid ? 'bg-blue-50 text-blue-700' : isAccepted ? 'bg-teal-50 text-teal-700' : request.status === 'declined' ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700'
-                            }`}>
-                              {request.status}
-                            </span>
-                            <span className="text-xs text-slate-400 font-medium">{new Date(typeof request.createdAt === 'number' ? request.createdAt : Date.now()).toLocaleString()}</span>
-                          </div>
-                          <h4 className="text-xl font-display font-bold text-mamas-text mt-2">{request.category}</h4>
-                          <p className="text-sm font-semibold text-slate-500 mt-1">
-                            Applied by: <span className="text-mamas-text">{member?.fullName || 'Unknown'}</span> ({member?.phoneNumber || ''})
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Requested Amount</p>
-                          <p className="text-2xl font-bold text-mamas-primary">{formatUGX(request.amountRequested)}</p>
-                        </div>
-                      </div>
-
-                      {/* Relationship & Beneficiary info */}
-                      <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Relationship</span>
-                          <span className="font-semibold text-mamas-text capitalize">{request.relationship}</span>
-                        </div>
-                        <div>
-                          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Beneficiary Name</span>
-                          <span className="font-semibold text-mamas-text">{request.personName}</span>
-                        </div>
-                      </div>
-
-                      {/* Description */}
-                      <div>
-                        <h5 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Reason / Description</h5>
-                        <p className="text-sm text-slate-700 bg-white p-4 rounded-2xl border border-slate-200/60 leading-relaxed">
-                          {request.description}
-                        </p>
-                      </div>
-
-                      {/* Voting progress */}
-                      <div className="bg-white p-4 rounded-2xl border border-slate-200/60 space-y-3">
-                        <div className="flex items-center justify-between text-xs font-bold">
-                          <span className="text-slate-600 uppercase tracking-wider">Approver Votes (2 out of 3 Required)</span>
-                          <span className="text-mamas-primary">{approveCount} / 3 Approvals</span>
-                        </div>
-                        <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
-                          <div className="bg-teal-600 h-full transition-all" style={{ width: `${Math.min(100, (approveCount / 3) * 100)}%` }} />
-                        </div>
-                        <div className="flex items-center gap-4 text-xs font-semibold text-slate-500">
-                          <span className="text-teal-700 font-bold">Approve: {approveCount}</span>
-                          <span className="text-rose-700 font-bold">Reject: {rejectCount}</span>
-                        </div>
-                      </div>
-
-                    </div>
-
-                    {/* Action Column */}
-                    <div className="lg:w-80 flex flex-col gap-4 border-t lg:border-t-0 lg:border-l border-slate-100 pt-6 lg:pt-0 lg:pl-8 justify-between">
-                      
-                      {/* Voting section */}
-                      {request.status === 'pending' && !isAuditor && (
-                        request.userId === currentUser.uid ? (
-                          <div className="text-xs font-bold text-center p-3 rounded-xl border bg-amber-50 text-amber-700 border-amber-200">
-                            Conflict of Interest:<br/>You cannot vote on your own request.
-                          </div>
-                        ) : myVote ? (
-                          <div className={`text-sm font-bold text-center p-3 rounded-xl border ${myVote.vote === 'approve' ? 'bg-teal-50 text-teal-700 border-teal-200' : 'bg-rose-50 text-rose-700 border-rose-200'}`}>
-                            You voted to {myVote.vote}
-                          </div>
-                        ) : (
-                          <div className="space-y-2">
-                            <h5 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Cast Your Vote</h5>
-                            <button
-                              onClick={() => handleVote(request.id!, 'approve', request.userId)}
-                              className="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition-colors shadow-sm"
-                            >
-                              Approve Request
-                            </button>
-                            <button
-                              onClick={() => handleVote(request.id!, 'reject', request.userId)}
-                              className="w-full bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold py-2.5 px-4 rounded-xl text-xs transition-colors"
-                            >
-                              Reject Request
-                            </button>
-                          </div>
-                        )
-                      )}
-
-                      {/* Treasurer Payout Box */}
-                      {isAccepted && (isTreasurer || isSuperAdmin) && (
-                        request.userId === currentUser.uid ? (
-                          <div className="bg-amber-50 p-5 rounded-2xl border border-amber-200 shadow-sm mt-auto text-center">
-                            <h5 className="text-sm font-bold text-amber-900 mb-1">Conflict of Interest</h5>
-                            <p className="text-xs font-semibold text-amber-700">You cannot issue payout for your own request. Another authorized member must do it.</p>
-                          </div>
-                        ) : (
-                          <div className="bg-amber-50 p-5 rounded-2xl border border-amber-200 shadow-sm mt-auto">
-                            <h5 className="text-sm font-bold text-amber-900 mb-4 flex items-center gap-2 border-b border-amber-200/50 pb-2">
-                              <Banknote className="w-4 h-4" /> Issue Payout
-                            </h5>
-                            
-                            {request.disbursementStatus === 'processing' ? (
-                              <div className="text-center py-4">
-                                <div className="w-8 h-8 border-4 border-amber-300 border-t-amber-600 rounded-full animate-spin mx-auto mb-2"></div>
-                                <p className="text-sm font-bold text-amber-800">Processing Payment...</p>
-                                <p className="text-xs text-amber-600 mt-1">Waiting for mobile money confirmation</p>
-                              </div>
-                            ) : (
-                              <div className="space-y-3">
-                                <div className="bg-white p-3 rounded-xl border border-amber-100 flex justify-between items-center">
-                                  <div className="text-xs text-slate-500">Pay to</div>
-                                  <div className="font-bold text-slate-800">{request.recipientPhoneNumber}</div>
-                                </div>
-                                <div className="bg-white p-3 rounded-xl border border-amber-100 flex justify-between items-center mb-4">
-                                  <div className="text-xs text-slate-500">Amount</div>
-                                  <div className="font-bold text-mamas-primary">UGX {new Intl.NumberFormat('en-UG').format(request.amountRequested)}</div>
-                                </div>
-                                <button
-                                  onClick={() => handlePay(request.id!)}
-                                  className="w-full mt-2 bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-4 rounded-xl shadow-sm transition-colors text-sm flex items-center justify-center gap-2"
-                                >
-                                  <Banknote className="w-4 h-4" /> Pay with Mobile Money
-                                </button>
-                                {request.disbursementStatus === 'failed' && (
-                                  <p className="text-xs font-bold text-rose-600 text-center mt-2">
-                                    Previous attempt failed. You can try again.
-                                  </p>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        )
-                      )}
-
-                    </div>
+            <>
+              {activeRequests.map(request => renderRequestCard(request))}
+              
+              {historyRequests.length > 0 && (
+                <div className="mt-8 mb-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-1 h-4 bg-navy-900 rounded-full"></div>
+                    <h3 className="text-sm font-bold text-gray-900">Payout History</h3>
+                    <span className="ml-2 bg-gray-100 text-gray-600 text-[10px] font-bold px-2 py-0.5 rounded-full">{historyRequests.length}</span>
                   </div>
-                </li>
-              );
-            })
+                  <div className="space-y-3">
+                    {historyRequests.map(request => renderRequestCard(request))}
+                  </div>
+                </div>
+              )}
+            </>
           )}
-        </ul>
       </div>
     </div>
   );
