@@ -433,8 +433,8 @@ export default function AdminSettings() {
 
   // Reusable Master Save Bar to display on each tab view
   const renderMasterSaveBar = () => (
-    <div className="pt-2">
-      <div className="bg-slate-900 dark:bg-slate-800 text-white p-4 rounded-3xl shadow-lg border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
+    <div className="fixed bottom-24 left-4 right-4 md:left-1/2 md:-translate-x-1/2 md:w-full md:max-w-5xl md:px-6 z-40">
+      <div className="bg-slate-900/95 dark:bg-slate-800/95 backdrop-blur-sm text-white p-4 rounded-3xl shadow-xl border border-slate-700 flex flex-col sm:flex-row items-center justify-between gap-3">
         <div className="text-center sm:text-left min-w-0">
           <h3 className="font-bold text-sm sm:text-base text-amber-400 truncate">Save All Configuration Changes</h3>
           <p className="text-xs text-slate-300 truncate">Applies parameters globally across all member & committee screens.</p>
@@ -461,7 +461,7 @@ export default function AdminSettings() {
   );
 
   return (
-    <div className="space-y-4 max-w-full overflow-x-hidden max-w-5xl mx-auto pb-12 px-2 sm:px-6">
+    <div className="space-y-4 max-w-full overflow-x-hidden max-w-5xl mx-auto pb-32">
       
       {/* Page Header */}
       <div className="flex items-center gap-3 bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-5 border border-slate-100 dark:border-slate-800 shadow-sm mb-4">
@@ -561,7 +561,7 @@ export default function AdminSettings() {
           <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 shadow-sm border border-slate-100 dark:border-slate-800/60 max-w-full">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800/80 mb-3 gap-2">
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-xl bg-slate-900 text-amber-400 flex items-center justify-center shrink-0 font-bold">
+                <div className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
                   <Settings2 className="w-4 h-4" />
                 </div>
                 <div className="min-w-0">
@@ -592,7 +592,7 @@ export default function AdminSettings() {
                     const val = parseInt(e.target.value, 10) || 0;
                     setFormData(prev => prev ? ({ ...prev, minimumWeeklyContribution: val }) : null);
                   }}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-sm font-bold text-slate-900 dark:text-white focus:border-amber-500 focus:bg-white dark:focus:bg-slate-900 outline-none disabled:opacity-60 transition-all" 
+                  className="w-full bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-sm font-semibold text-slate-900 dark:text-white focus:border-amber-500 focus:bg-white dark:focus:bg-slate-900 outline-none disabled:opacity-60 transition-all" 
                 />
               </div>
 
@@ -711,7 +711,7 @@ export default function AdminSettings() {
                         disabled={!canEditWelfare}
                         value={formData.maxAmounts?.[cat] ?? 0}
                         onChange={(e) => handleMaxAmountChange(cat, e.target.value)}
-                        className="w-full sm:w-32 max-w-[140px] rounded-xl bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 px-2.5 py-1 text-right text-xs sm:text-sm font-bold text-slate-900 dark:text-white focus:border-amber-500 outline-none disabled:opacity-60 transition-all"
+                        className="w-full sm:w-32 max-w-[140px] rounded-xl bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 px-2.5 py-1 text-right text-xs sm:text-sm font-semibold text-slate-900 dark:text-white focus:border-amber-500 outline-none disabled:opacity-60 transition-all"
                         placeholder="0"
                       />
                     </div>
@@ -781,7 +781,7 @@ export default function AdminSettings() {
                           onChange={() => toggleApprover(member.uid)} 
                           disabled={!isApprover && formData.welfareApprovers.length >= 3} 
                         />
-                        <div className="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:bg-emerald-500 transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all after:shadow-sm peer-checked:after:translate-x-5"></div>
+                        <div className="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:bg-emerald-600 transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all after:shadow-sm peer-checked:after:translate-x-5"></div>
                       </label>
                     ) : (
                       <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full shrink-0 ${isApprover ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300' : 'text-slate-400'}`}>
@@ -828,7 +828,7 @@ export default function AdminSettings() {
                     onChange={(e) => handleUpdateBoolean('showTotalBalanceToMembers', e.target.checked)} 
                     className="sr-only peer" 
                   />
-                  <div className="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:bg-slate-900 dark:peer-checked:bg-emerald-500 transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all after:shadow-sm peer-checked:after:translate-x-5"></div>
+                  <div className="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:bg-emerald-600 dark:peer-checked:bg-emerald-600 transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all after:shadow-sm peer-checked:after:translate-x-5"></div>
                 </div>
               </label>
 
@@ -845,7 +845,7 @@ export default function AdminSettings() {
                       onChange={(e) => handleUpdateBoolean('showTopContributors', e.target.checked)} 
                       className="sr-only peer" 
                     />
-                    <div className="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:bg-slate-900 dark:peer-checked:bg-emerald-500 transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all after:shadow-sm peer-checked:after:translate-x-5"></div>
+                    <div className="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:bg-emerald-600 dark:peer-checked:bg-emerald-600 transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all after:shadow-sm peer-checked:after:translate-x-5"></div>
                   </div>
                 </label>
               )}
