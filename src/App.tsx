@@ -55,7 +55,7 @@ function Layout() {
           </div>
         </div>
       </header>
-      <main className="flex-1 w-full max-w-7xl mx-auto p-4 sm:px-5 lg:px-8 pb-32 md:pb-8 flex flex-col gap-6">
+      <main className="flex-1 w-full max-w-7xl mx-auto p-3 sm:px-5 lg:px-8 pb-32 md:pb-8 flex flex-col gap-6 overflow-x-hidden">
         <Outlet />
       </main>
       <BottomNav />
@@ -140,8 +140,8 @@ const AdminLayout = () => {
   ].filter(i => i.show);
 
   return (
-    <div className="flex flex-col gap-4 pb-20 md:pb-0">
-      <div className="bg-mamas-card p-2 rounded-2xl shadow-sm border border-slate-200 overflow-x-auto no-scrollbar">
+    <div className="flex flex-col gap-4 pb-20 md:pb-0 w-full max-w-full overflow-x-hidden">
+      <div className="bg-mamas-card p-2 rounded-2xl shadow-sm border border-slate-200 overflow-x-auto no-scrollbar max-w-full">
         <div className="flex items-center gap-1 min-w-max">
           {navItems.map((item) => {
             const isActive = location.pathname === item.path || (item.path !== '/admin' && location.pathname.startsWith(item.path));

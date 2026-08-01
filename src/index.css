@@ -66,6 +66,13 @@
   border-color: #334155 !important;
 }
 
+html, body {
+  max-width: 100%;
+  overflow-x: hidden;
+  margin: 0;
+  padding: 0;
+}
+
 body {
   background-color: var(--color-mamas-bg);
   background-image: linear-gradient(to bottom, #f8fafc, #ffffff);
