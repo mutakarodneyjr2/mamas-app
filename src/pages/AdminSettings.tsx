@@ -110,7 +110,6 @@ export default function AdminSettings() {
       setServerSettings(fullSettings);
       
       setFormData(prevForm => {
-        // If initial load or user has no dirty local edits, sync formData with server
         if (!prevForm || !isDirtyRef.current) {
           return fullSettings;
         }
@@ -120,7 +119,6 @@ export default function AdminSettings() {
       setLoading(false);
     });
 
-    // Fetch committee members for Welfare Approvers selection
     const fetchCommittee = async () => {
       try {
         const q = query(
@@ -146,7 +144,6 @@ export default function AdminSettings() {
   const isTreasurer = userProfile.role === 'treasurer';
   const isOnlyTreasurer = isTreasurer && !isSuperAdmin && !isChairperson && !isViceChairperson;
 
-  // Auto-switch tab if user is only a treasurer and currently on hidden policy/governance tab
   if (isOnlyTreasurer && activeTab !== 'system') {
     setActiveTab('system');
   }
@@ -434,11 +431,40 @@ export default function AdminSettings() {
   const canEditApprovers = isSuperAdmin || isChairperson;
   const canEditBanners = isSuperAdmin || isChairperson || isViceChairperson;
 
+  // Reusable Master Save Bar to display on each tab view
+  const renderMasterSaveBar = () => (
+    <div className="pt-2">
+      <div className="bg-slate-900 dark:bg-slate-800 text-white p-4 rounded-3xl shadow-lg border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="text-center sm:text-left min-w-0">
+          <h3 className="font-bold text-sm sm:text-base text-amber-400 truncate">Save All Configuration Changes</h3>
+          <p className="text-xs text-slate-300 truncate">Applies parameters globally across all member & committee screens.</p>
+        </div>
+        <button
+          onClick={saveAllSettings}
+          disabled={saving}
+          className="w-full sm:w-auto bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-5 py-2.5 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50 shrink-0 text-xs sm:text-sm"
+        >
+          {saving ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin text-slate-950" />
+              <span>Saving Changes...</span>
+            </>
+          ) : (
+            <>
+              <Save className="w-4 h-4 text-slate-950" />
+              <span>Save Configuration</span>
+            </>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+
   return (
-    <div className="space-y-4 max-w-full overflow-x-hidden max-w-5xl mx-auto pb-12 px-3 sm:px-6">
+    <div className="space-y-4 max-w-full overflow-x-hidden max-w-5xl mx-auto pb-12 px-2 sm:px-6">
       
       {/* Page Header */}
-      <div className="flex items-center gap-3 bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-5 border border-slate-100 dark:border-slate-800 shadow-sm">
+      <div className="flex items-center gap-3 bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-5 border border-slate-100 dark:border-slate-800 shadow-sm mb-4">
         <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 border border-amber-200/50 dark:border-amber-900/40">
           <Settings2 className="w-5 h-5 sm:w-6 sm:h-6" />
         </div>
@@ -458,7 +484,7 @@ export default function AdminSettings() {
           <div className="flex items-start sm:items-center gap-2.5">
             <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5 sm:mt-0" />
             <span>
-              Unsaved changes. Click <strong>"Save All Changes"</strong> below to persist.
+              Unsaved changes. Click <strong>"Save Configuration"</strong> below to persist.
             </span>
           </div>
           <button 
@@ -492,48 +518,48 @@ export default function AdminSettings() {
         </div>
       )}
 
-      {/* Horizontal Compact Tab Bar */}
+      {/* Horizontal Tab Bar */}
       {!isOnlyTreasurer && (
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 max-w-full">
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 mb-4 max-w-full no-scrollbar">
           <button
             onClick={() => setActiveTab('policy')}
-            className={`px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition-all whitespace-nowrap shrink-0 ${
+            className={`px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition-all shrink-0 ${
               activeTab === 'policy'
                 ? 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 shadow-sm'
                 : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
             }`}
           >
-            Welfare Policy
+            Policy
           </button>
           <button
             onClick={() => setActiveTab('governance')}
-            className={`px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition-all whitespace-nowrap shrink-0 ${
+            className={`px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition-all shrink-0 ${
               activeTab === 'governance'
                 ? 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 shadow-sm'
                 : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
             }`}
           >
-            Governance & Approvers
+            Governance
           </button>
           <button
             onClick={() => setActiveTab('system')}
-            className={`px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition-all whitespace-nowrap shrink-0 ${
+            className={`px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition-all shrink-0 ${
               activeTab === 'system'
                 ? 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 shadow-sm'
                 : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
             }`}
           >
-            System & Assets
+            System
           </button>
         </div>
       )}
 
-      {/* TAB 1: WELFARE POLICY (Hidden if isOnlyTreasurer) */}
+      {/* TAB 1: POLICY */}
       {(!isOnlyTreasurer && activeTab === 'policy') && (
         <div className="space-y-4 max-w-full">
-          {/* CARD 1: Welfare Categories & Allowed Relationships */}
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-5 shadow-sm border border-slate-100 dark:border-slate-800/60 max-w-full">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800/80 mb-4 gap-2">
+          {/* Card: Welfare Categories & Relationships */}
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 shadow-sm border border-slate-100 dark:border-slate-800/60 max-w-full">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800/80 mb-3 gap-2">
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className="w-8 h-8 rounded-xl bg-slate-900 text-amber-400 flex items-center justify-center shrink-0 font-bold">
                   <Settings2 className="w-4 h-4" />
@@ -552,9 +578,8 @@ export default function AdminSettings() {
               )}
             </div>
           
-            <div className="space-y-4">
-              
-              {/* Section A: Weekly Min Contribution */}
+            <div className="space-y-3">
+              {/* Weekly Min Contribution */}
               <div>
                 <label className="block text-xs font-semibold text-slate-400 uppercase tracking-widest mb-1.5">
                   Weekly Min. Contribution (UGX)
@@ -567,18 +592,18 @@ export default function AdminSettings() {
                     const val = parseInt(e.target.value, 10) || 0;
                     setFormData(prev => prev ? ({ ...prev, minimumWeeklyContribution: val }) : null);
                   }}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-sm sm:text-base font-bold text-slate-900 dark:text-white focus:border-amber-500 focus:bg-white dark:focus:bg-slate-900 outline-none disabled:opacity-60 transition-all" 
+                  className="w-full bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-sm font-bold text-slate-900 dark:text-white focus:border-amber-500 focus:bg-white dark:focus:bg-slate-900 outline-none disabled:opacity-60 transition-all" 
                 />
               </div>
 
-              {/* Section B: Active Categories */}
+              {/* Active Categories */}
               <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80">
                 <label className="block text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2">
                   Active Categories
                 </label>
                 <div className="space-y-2 mb-3">
                   {formData.welfareCategories.map((cat) => (
-                    <div key={cat} className="flex justify-between items-center bg-white dark:bg-slate-800/60 px-3.5 py-2.5 rounded-xl border border-slate-100 dark:border-slate-800 gap-2 min-w-0">
+                    <div key={cat} className="flex items-center justify-between bg-white dark:bg-slate-800/60 px-3 py-2 rounded-xl border border-slate-100 dark:border-slate-800 gap-2 min-w-0">
                       <span className="font-semibold text-xs sm:text-sm text-slate-900 dark:text-white truncate min-w-0">{cat}</span>
                       {canEditWelfare && (
                         <button 
@@ -599,11 +624,11 @@ export default function AdminSettings() {
                       value={newCategory} 
                       onChange={e => setNewCategory(e.target.value)} 
                       placeholder="Add new category name..." 
-                      className="flex-1 bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white outline-none focus:border-amber-500 transition-all placeholder:text-slate-400" 
+                      className="w-full sm:flex-1 bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white outline-none focus:border-amber-500 transition-all placeholder:text-slate-400" 
                     />
                     <button 
                       onClick={addCategory} 
-                      className="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 text-white rounded-xl px-4 py-2 text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-1 active:scale-[0.97] shrink-0"
+                      className="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 text-white rounded-xl px-4 py-2 text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-1 shrink-0"
                     >
                       <Plus className="w-4 h-4" /> Add
                     </button>
@@ -611,12 +636,12 @@ export default function AdminSettings() {
                 )}
               </div>
 
-              {/* Section C: Allowed Beneficiary Relationships */}
-              <div className="pt-3 border-t border-slate-100 dark:border-slate-800/80">
+              {/* Allowed Relationships */}
+              <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80">
                 <label className="block text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2">
                   Allowed Beneficiary Relationships
                 </label>
-                <div className="flex flex-wrap gap-1.5 sm:gap-2 mb-3 max-w-full">
+                <div className="flex flex-wrap gap-2 mb-3 max-w-full">
                   {formData.allowedRelationships.map((rel) => (
                     <span key={rel} className="inline-flex items-center gap-1.5 bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-900/60 rounded-full px-3 py-1 text-xs font-medium">
                       {rel} 
@@ -639,23 +664,22 @@ export default function AdminSettings() {
                       value={newRelationship} 
                       onChange={e => setNewRelationship(e.target.value)} 
                       placeholder="Add relationship (e.g., Parent)..." 
-                      className="flex-1 bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white outline-none focus:border-amber-500 transition-all placeholder:text-slate-400" 
+                      className="w-full sm:flex-1 bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white outline-none focus:border-amber-500 transition-all placeholder:text-slate-400" 
                     />
                     <button 
                       onClick={addRelationship} 
-                      className="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 text-white rounded-xl px-4 py-2 text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-1 active:scale-[0.97] shrink-0"
+                      className="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 text-white rounded-xl px-4 py-2 text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-1 shrink-0"
                     >
                       <Plus className="w-4 h-4" /> Add
                     </button>
                   </div>
                 )}
               </div>
-
             </div>
           </div>
 
-          {/* CARD 2: Maximum Amounts per Category */}
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-5 shadow-sm border border-slate-100 dark:border-slate-800/60 max-w-full">
+          {/* Card: Maximum Amounts per Category */}
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 shadow-sm border border-slate-100 dark:border-slate-800/60 max-w-full">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100 dark:border-slate-800/80 mb-3">
               <div>
                 <h2 className="font-bold text-slate-900 dark:text-white text-sm sm:text-base tracking-tight">
@@ -666,7 +690,7 @@ export default function AdminSettings() {
               {canEditWelfare && (
                 <button 
                   onClick={saveMaxAmounts}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1 shadow-xs active:scale-[0.97] shrink-0 self-start sm:self-auto"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1 shrink-0 self-start sm:self-auto"
                 >
                   <Save className="w-3.5 h-3.5" /> Save Amounts
                 </button>
@@ -680,14 +704,14 @@ export default function AdminSettings() {
                 formData.welfareCategories.map((cat) => (
                   <div key={cat} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-white dark:bg-slate-800/60 p-3 rounded-2xl border border-slate-100 dark:border-slate-800">
                     <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate min-w-0">{cat}</span>
-                    <div className="flex items-center gap-2 self-end sm:self-auto">
+                    <div className="flex items-center gap-2 self-end sm:self-auto w-full sm:w-auto justify-end">
                       <span className="text-xs font-semibold text-slate-400">UGX</span>
                       <input
                         type="number"
                         disabled={!canEditWelfare}
                         value={formData.maxAmounts?.[cat] ?? 0}
                         onChange={(e) => handleMaxAmountChange(cat, e.target.value)}
-                        className="w-32 sm:w-36 rounded-xl bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 px-2.5 py-1 text-right text-xs sm:text-sm font-bold text-slate-900 dark:text-white focus:border-amber-500 outline-none disabled:opacity-60 transition-all"
+                        className="w-full sm:w-32 max-w-[140px] rounded-xl bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 px-2.5 py-1 text-right text-xs sm:text-sm font-bold text-slate-900 dark:text-white focus:border-amber-500 outline-none disabled:opacity-60 transition-all"
                         placeholder="0"
                       />
                     </div>
@@ -696,14 +720,16 @@ export default function AdminSettings() {
               )}
             </div>
           </div>
+
+          {renderMasterSaveBar()}
         </div>
       )}
 
-      {/* TAB 2: GOVERNANCE & APPROVERS (Hidden if isOnlyTreasurer) */}
+      {/* TAB 2: GOVERNANCE */}
       {(!isOnlyTreasurer && activeTab === 'governance') && (
         <div className="space-y-4 max-w-full">
-          {/* CARD 3: Welfare Approvers Selection */}
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-5 shadow-sm border border-slate-100 dark:border-slate-800/60 max-w-full">
+          {/* Card: Welfare Approvers */}
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 shadow-sm border border-slate-100 dark:border-slate-800/60 max-w-full">
             <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100 dark:border-slate-800/80 mb-3">
               <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
                 <Shield className="w-4 h-4" />
@@ -728,7 +754,7 @@ export default function AdminSettings() {
                 return (
                   <div 
                     key={member.uid} 
-                    className={`flex items-center justify-between p-3 rounded-2xl border transition-all gap-2 min-w-0 ${
+                    className={`flex items-center justify-between p-3 rounded-2xl border transition-all gap-3 min-w-0 ${
                       isApprover 
                         ? 'bg-emerald-50/70 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800 border-l-4 border-l-emerald-500' 
                         : 'bg-white dark:bg-slate-800/50 border-slate-100 dark:border-slate-800'
@@ -775,8 +801,8 @@ export default function AdminSettings() {
             </div>
           </div>
 
-          {/* CARD 4: Visibility Controls */}
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-5 shadow-sm border border-slate-100 dark:border-slate-800/60 max-w-full">
+          {/* Card: Visibility Controls */}
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 shadow-sm border border-slate-100 dark:border-slate-800/60 max-w-full">
             <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100 dark:border-slate-800/80 mb-3">
               <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
                 <Eye className="w-4 h-4" />
@@ -790,7 +816,7 @@ export default function AdminSettings() {
             </div>
 
             <div className="space-y-2.5">
-              <label className="flex items-center justify-between cursor-pointer p-3 sm:p-3.5 bg-white dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 rounded-2xl gap-3">
+              <label className="flex items-center justify-between cursor-pointer p-3 bg-white dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 rounded-2xl gap-3">
                 <div className="min-w-0 flex-1">
                   <p className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white truncate">Show Total Balance to Members</p>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">Allow ordinary members to see total fund balance on dashboard.</p>
@@ -807,7 +833,7 @@ export default function AdminSettings() {
               </label>
 
               {canEditWelfare && (
-                <label className="flex items-center justify-between cursor-pointer p-3 sm:p-3.5 bg-white dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 rounded-2xl gap-3">
+                <label className="flex items-center justify-between cursor-pointer p-3 bg-white dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 rounded-2xl gap-3">
                   <div className="min-w-0 flex-1">
                     <p className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white truncate">Show Top Contributors Leaderboard</p>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">Display top contributors on member dashboard.</p>
@@ -825,14 +851,16 @@ export default function AdminSettings() {
               )}
             </div>
           </div>
+
+          {renderMasterSaveBar()}
         </div>
       )}
 
-      {/* TAB 3: SYSTEM & ASSETS (Visible to ALL roles) */}
+      {/* TAB 3: SYSTEM */}
       {(isOnlyTreasurer || activeTab === 'system') && (
         <div className="space-y-4 max-w-full">
-          {/* CARD 5: Executive Support Contacts */}
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-5 shadow-sm border border-slate-100 dark:border-slate-800/60 max-w-full">
+          {/* Card: Executive Support Contacts */}
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 shadow-sm border border-slate-100 dark:border-slate-800/60 max-w-full">
             <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100 dark:border-slate-800/80 mb-3">
               <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
                 <Shield className="w-4 h-4" />
@@ -887,8 +915,8 @@ export default function AdminSettings() {
             </div>
           </div>
 
-          {/* CARD 6: Theme & Appearance Preference */}
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-5 shadow-sm border border-slate-100 dark:border-slate-800/60 max-w-full">
+          {/* Card: Theme & Appearance Preference */}
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 shadow-sm border border-slate-100 dark:border-slate-800/60 max-w-full">
             <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100 dark:border-slate-800/80 mb-3">
               <div className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
                 <SunMedium className="w-4 h-4" />
@@ -907,9 +935,9 @@ export default function AdminSettings() {
             </div>
           </div>
 
-          {/* CARD 7: Landing Page Banners Manager */}
+          {/* Card: Landing Page Banners Manager */}
           {canEditBanners && (
-            <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-5 shadow-sm border border-slate-100 dark:border-slate-800/60 max-w-full">
+            <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 shadow-sm border border-slate-100 dark:border-slate-800/60 max-w-full">
               <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100 dark:border-slate-800/80 mb-3">
                 <div className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
                   <ImageIcon className="w-4 h-4" />
@@ -949,67 +977,57 @@ export default function AdminSettings() {
                 )}
               </div>
 
-              <div className="space-y-2.5 pt-2.5 border-t border-slate-100 dark:border-slate-800/80">
+              <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800/80">
                 <div className="flex flex-col sm:flex-row gap-2">
-                  <input 
-                    type="url" 
-                    value={newBannerUrl} 
-                    onChange={e => setNewBannerUrl(e.target.value)} 
-                    placeholder="Paste banner image URL..." 
-                    className="flex-1 bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white outline-none focus:border-amber-500 transition-all placeholder:text-slate-400" 
+                  <input
+                    type="text"
+                    value={newBannerUrl}
+                    onChange={(e) => setNewBannerUrl(e.target.value)}
+                    placeholder="Paste banner image URL (https://...)"
+                    className="w-full sm:flex-1 bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white outline-none focus:border-amber-500 transition-all placeholder:text-slate-400"
                   />
-                  <button 
-                    onClick={() => addBannerUrl()} 
-                    disabled={!newBannerUrl.trim()}
-                    className="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 text-white rounded-xl px-4 py-2 text-xs sm:text-sm font-bold transition-all disabled:opacity-50 shrink-0"
+                  <button
+                    onClick={() => addBannerUrl()}
+                    className="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 text-white rounded-xl px-4 py-2 text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-1 shrink-0"
                   >
-                    Add URL
+                    <Plus className="w-4 h-4" /> Add URL
                   </button>
                 </div>
 
-                <div className="flex flex-col sm:flex-row sm:items-center gap-2 pt-1">
-                  <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest shrink-0">OR UPLOAD IMAGE FILE:</span>
-                  <input 
-                    type="file" 
-                    accept="image/*"
-                    disabled={uploadingBanner}
-                    onChange={handleBannerFileUpload}
-                    className="text-xs text-slate-500 file:mr-2 file:py-1 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-slate-100 dark:file:bg-slate-800 file:text-slate-700 dark:file:text-slate-300 hover:file:bg-slate-200 max-w-full"
-                  />
-                  {uploadingBanner && <span className="text-xs text-amber-500 font-semibold animate-pulse shrink-0">Uploading...</span>}
+                <div className="relative flex items-center justify-center my-2">
+                  <div className="border-t border-slate-200 dark:border-slate-800 w-full"></div>
+                  <span className="bg-white dark:bg-slate-900 px-3 text-[10px] uppercase tracking-wider font-semibold text-slate-400 shrink-0">OR UPLOAD FILE</span>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <label className="w-full bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700/80 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-3 text-center cursor-pointer transition-all flex items-center justify-center gap-2">
+                    {uploadingBanner ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin text-amber-500" />
+                        <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">Uploading banner image...</span>
+                      </>
+                    ) : (
+                      <>
+                        <ImageIcon className="w-4 h-4 text-amber-500" />
+                        <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">Choose banner file to upload</span>
+                      </>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleBannerFileUpload}
+                      disabled={uploadingBanner}
+                      className="hidden"
+                    />
+                  </label>
                 </div>
               </div>
             </div>
           )}
+
+          {renderMasterSaveBar()}
         </div>
       )}
-
-      {/* Master Save Bar (Bottom of every tab) */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-900 to-slate-800 text-white rounded-3xl p-4 sm:p-5 shadow-xl shadow-slate-900/20 border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mt-6">
-        <div>
-          <h3 className="font-bold text-white text-sm sm:text-base tracking-tight">Save Configuration Changes</h3>
-          <p className="text-xs text-slate-300 mt-0.5">
-            Ensure all changes to categories, relationships, limits, and banners are committed to Firestore.
-          </p>
-        </div>
-        <button
-          onClick={saveAllSettings}
-          disabled={saving}
-          className="w-full sm:w-auto bg-amber-500 hover:bg-amber-400 active:scale-[0.97] text-slate-950 font-bold px-6 py-3 rounded-full shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-sm shrink-0"
-        >
-          {saving ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              <span>Saving...</span>
-            </>
-          ) : (
-            <>
-              <Save className="w-4 h-4" />
-              <span>Save All Changes</span>
-            </>
-          )}
-        </button>
-      </div>
 
     </div>
   );
