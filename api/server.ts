@@ -1,5 +1,17 @@
+/**
+ * REQUIRED ENVIRONMENT VARIABLES:
+ * - RELWORX_API_KEY: Your Relworx API key
+ * - RELWORX_MERCHANT_ID: Your Relworx Merchant ID
+ * - RELWORX_WEBHOOK_SECRET: Your Relworx Webhook Secret for HMAC validation
+ * - RELWORX_COLLECTION_URL: (Optional) Defaults to https://api.relworx.com/v1/collections
+ * - RELWORX_DISBURSEMENT_URL: (Optional) Defaults to https://api.relworx.com/v1/disbursements
+ * - FIREBASE_SERVICE_ACCOUNT_BASE64: Base64-encoded Firebase Service Account JSON
+ */
+
 import express from 'express';
+import cors from 'cors';
 import { getApps, initializeApp, cert } from 'firebase-admin/app';
+
 import { getFirestore } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
 
@@ -41,6 +53,12 @@ import {
 } from '../src/server/relworxService';
 
 const app = express();
+
+app.use(cors({ origin: true, credentials: true }));
+
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: Date.now(), service: 'mamas-api' });
+});
 
 // Middleware to ensure Firebase Admin is initialized
 const requireFirebaseAdmin = (req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -183,6 +201,8 @@ app.post('/api/relworx/initiate-collection', requireFirebaseAdmin, async (req, r
 });
 
 // 2. POST /api/relworx/webhook
+// INSTRUCTION: After deploying to Vercel, the Relworx webhook URL must be set to:
+// https://YOUR-VERCEL-DOMAIN.vercel.app/api/relworx/webhook
 app.post('/api/relworx/webhook', requireFirebaseAdmin, async (req, res) => {
   try {
     const signature = req.headers['x-signature'] as string;

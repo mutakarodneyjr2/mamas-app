@@ -309,6 +309,12 @@ export async function handleDisbursementWebhook(payload: any) {
     const expenseDoc = await expenseRef.get();
     
     if (expenseDoc.exists) {
+      const expenseData = expenseDoc.data();
+      if (expenseData?.status === 'paid' || expenseData?.relworxDisbursementId === disbursementId) {
+        console.log(`[Relworx] Expense ${reference} already paid or processed. Skipping duplicate webhook.`);
+        return { success: true, skipped: true };
+      }
+
       const updateData: any = {
         disbursementStatus: status === 'successful' ? 'paid' : status === 'failed' ? 'failed' : 'processing',
         gatewayResponse: payload,
@@ -365,6 +371,12 @@ export async function handleDisbursementWebhook(payload: any) {
     const welfareDoc = await welfareRef.get();
     
     if (welfareDoc.exists) {
+      const welfareData = welfareDoc.data();
+      if (welfareData?.status === 'paid' || welfareData?.relworxDisbursementId === disbursementId) {
+        console.log(`[Relworx] Welfare request ${reference} already paid or processed. Skipping duplicate webhook.`);
+        return { success: true, skipped: true };
+      }
+
       const updateData: any = {
         disbursementStatus: status === 'successful' ? 'paid' : status === 'failed' ? 'failed' : 'processing',
         gatewayResponse: payload,
