@@ -267,3 +267,4 @@ app.post('/api/relworx/initiate-disbursement', requireFirebaseAdmin, async (req,
 });
 
 export default app;
+// Vercel deployment configurations applied.
