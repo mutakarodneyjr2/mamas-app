@@ -14,6 +14,7 @@ import { getApps, initializeApp, cert } from 'firebase-admin/app';
 
 import { getFirestore } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
+import { getAuth } from 'firebase-admin/auth';
 
 let firebaseInitError: Error | null = null;
 
@@ -186,14 +187,53 @@ app.post('/api/notifications/send', requireFirebaseAdmin, async (req, res) => {
 // 1. POST /api/relworx/initiate-collection
 app.post('/api/relworx/initiate-collection', requireFirebaseAdmin, async (req, res) => {
   try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, message: 'Unauthorized: Missing or invalid token' });
+    }
+
+    const token = authHeader.split('Bearer ')[1];
+    let decodedToken;
+    try {
+      decodedToken = await getAuth().verifyIdToken(token);
+    } catch (authErr: any) {
+      console.error('ID token verification failed:', authErr?.message || authErr);
+      return res.status(401).json({ success: false, message: 'Unauthorized: Invalid token' });
+    }
+
     const { amount, phoneNumber, network, userId, purpose, metadata } = req.body || {};
 
     if (!amount || !phoneNumber || !network || !userId) {
       return res.status(400).json({ success: false, message: 'Missing required parameters' });
     }
 
+    if (decodedToken.uid !== userId) {
+      return res.status(403).json({ success: false, message: 'Forbidden: User ID mismatch' });
+    }
+
     const result = await initiateCollection(amount, phoneNumber, network, userId, metadata || { purpose });
-    return res.json({ success: true, data: result });
+    const relworxReference = result.relworxReference || result.reference || result.data?.reference;
+
+    // Update Firestore contribution document with relworxReference if contributionId exists
+    const contribDocId = metadata?.contributionId || metadata?.reference;
+    if (contribDocId) {
+      try {
+        const firestore = getFirestore();
+        await firestore.collection('contributions').doc(contribDocId).update({
+          relworxReference: relworxReference || null,
+          status: 'pending_payment',
+          updatedAt: Date.now()
+        });
+      } catch (dbErr: any) {
+        console.warn(`Could not update contribution document ${contribDocId} with reference:`, dbErr?.message || dbErr);
+      }
+    }
+
+    return res.json({
+      success: true,
+      relworxReference: relworxReference || null,
+      data: result
+    });
   } catch (error: any) {
     console.error('Initiate collection error:', error);
     return res.status(500).json({ success: false, message: error?.message || 'Internal server error' });

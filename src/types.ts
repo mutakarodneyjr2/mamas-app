@@ -130,6 +130,7 @@ export interface SchoolCampaign {
   targetAmount: number;
   raisedAmount: number;
   imageUrls: string[];
+  imageUrl?: string;
   status: CampaignStatus;
   actionNotes?: string;
   createdBy: string;

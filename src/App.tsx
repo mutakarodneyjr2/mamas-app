@@ -122,7 +122,7 @@ const AdminLayout = () => {
   const canSeeCampaigns = ['super_admin', 'chairperson', 'vice_chairperson'].includes(role);
   const canSeeReports = ['super_admin', 'chairperson', 'vice_chairperson', 'treasurer', 'auditor'].includes(role);
   const canSeeNotices = ['super_admin', 'chairperson', 'vice_chairperson', 'secretary'].includes(role);
-  const canSeeSettings = ['super_admin', 'chairperson', 'vice_chairperson', 'treasurer'].includes(role);
+  const canSeeSettings = ['super_admin', 'chairperson', 'vice_chairperson'].includes(role);
   const canSeeLogs = ['super_admin', 'chairperson', 'vice_chairperson', 'treasurer', 'secretary', 'auditor'].includes(role);
 
   const navItems = [
@@ -204,7 +204,7 @@ export default function App() {
                 <Route path="campaigns" element={<ProtectedRoute requiredRole={["super_admin", "chairperson", "vice_chairperson"]}><AdminCampaigns /></ProtectedRoute>} />
                 <Route path="reports" element={<ProtectedRoute requiredRole={["super_admin", "chairperson", "vice_chairperson", "treasurer", "auditor"]}><AdminReports /></ProtectedRoute>} />
                 <Route path="notices" element={<ProtectedRoute requiredRole={["super_admin", "chairperson", "vice_chairperson", "secretary"]}><AdminNotices /></ProtectedRoute>} />
-                <Route path="settings" element={<ProtectedRoute requiredRole={["super_admin", "chairperson", "vice_chairperson", "treasurer"]}><AdminSettings /></ProtectedRoute>} />
+                <Route path="settings" element={<ProtectedRoute requiredRole={["super_admin", "chairperson", "vice_chairperson"]}><AdminSettings /></ProtectedRoute>} />
                 <Route path="logs" element={<ProtectedRoute requiredRole={["super_admin", "chairperson", "vice_chairperson", "treasurer", "secretary", "auditor"]}><AdminLogs /></ProtectedRoute>} />
                 <Route path="media" element={<ProtectedRoute requiredRole={["super_admin"]}><AdminMedia /></ProtectedRoute>} />
               </Route>

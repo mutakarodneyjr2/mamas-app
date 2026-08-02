@@ -4,7 +4,7 @@ import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 import { SchoolCampaign } from '../types';
 import { createSchoolCampaign, updateCampaignStatus, logActivity, transferCampaignExcessFunds, deleteSchoolCampaign } from '../lib/services';
-import { formatUGX } from '../lib/utils';
+import { formatUGX, DEFAULT_CAMPAIGN_PLACEHOLDER } from '../lib/utils';
 import { Target, Plus, Shield, CheckCircle, ArrowRightLeft, XCircle, Clock, Trash2, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { uploadImage } from '../lib/storage';
 
@@ -265,11 +265,16 @@ export default function AdminCampaigns() {
                     </div>
 
                     <h4 className="font-bold text-mamas-text text-lg mb-1">{camp.title}</h4>
-                    {camp.imageUrls && camp.imageUrls.length > 0 && (
-                      <div className="w-full h-32 rounded-xl overflow-hidden mb-3 bg-slate-100 border border-slate-200">
-                        <img src={camp.imageUrls[0]} alt={camp.title} className="w-full h-full object-cover" />
-                      </div>
-                    )}
+                    <div className="w-full h-36 rounded-2xl overflow-hidden mb-3 bg-slate-100 border border-slate-200/80 relative">
+                      <img 
+                        src={(camp.imageUrls && camp.imageUrls[0]) || camp.imageUrl || DEFAULT_CAMPAIGN_PLACEHOLDER} 
+                        alt={camp.title} 
+                        className="w-full h-full object-cover" 
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = DEFAULT_CAMPAIGN_PLACEHOLDER;
+                        }}
+                      />
+                    </div>
                     <p className="text-xs text-slate-500 line-clamp-3 leading-relaxed">{camp.description}</p>
 
                     {camp.actionNotes && (

@@ -3,7 +3,7 @@ import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestor
 import { db } from '../firebase';
 import { SchoolCampaign } from '../types';
 import { Link } from 'react-router-dom';
-import { formatUGX } from '../lib/utils';
+import { formatUGX, DEFAULT_CAMPAIGN_PLACEHOLDER } from '../lib/utils';
 import { Target } from 'lucide-react';
 
 export default function Campaigns() {
@@ -55,12 +55,17 @@ export default function Campaigns() {
               : 0;
 
             return (
-              <div key={campaign.id} className="bg-mamas-card rounded-lg shadow-sm border border-slate-200 overflow-hidden flex flex-col">
-                {campaign.imageUrls && campaign.imageUrls.length > 0 && (
-                  <div className="w-full h-48 bg-slate-100">
-                    <img src={campaign.imageUrls[0]} alt={campaign.title} className="w-full h-full object-cover" />
-                  </div>
-                )}
+              <div key={campaign.id} className="bg-mamas-card rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
+                <div className="w-full h-48 bg-slate-100 relative">
+                  <img 
+                    src={(campaign.imageUrls && campaign.imageUrls[0]) || campaign.imageUrl || DEFAULT_CAMPAIGN_PLACEHOLDER} 
+                    alt={campaign.title} 
+                    className="w-full h-full object-cover" 
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = DEFAULT_CAMPAIGN_PLACEHOLDER;
+                    }}
+                  />
+                </div>
                 <div className="p-6 flex-1">
                   <div className="flex justify-between items-start mb-2">
                     <h3 className="text-xl font-bold text-mamas-text">{campaign.title}</h3>

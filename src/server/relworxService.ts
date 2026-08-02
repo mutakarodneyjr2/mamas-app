@@ -72,7 +72,11 @@ export async function initiateCollection(
       throw new Error(data?.message || data?.error || `Relworx API error: HTTP ${response.status}`);
     }
 
-    return data;
+    return {
+      reference,
+      relworxReference: reference,
+      ...data
+    };
   } catch (error: any) {
     console.error('Failed to initiate collection with Relworx:', error);
     throw error;
@@ -134,33 +138,49 @@ export async function initiateDisbursement(
  * Processes a collection webhook payload from Relworx.
  */
 export async function handleCollectionWebhook(payload: any) {
-  console.log(`[Relworx Placeholder] Handling collection webhook:`, payload);
+  console.log(`[Relworx Webhook] Processing collection payload:`, payload);
   
   const status = payload.status; // e.g., 'successful', 'failed'
   const reference = payload.reference; 
-  const transactionId = payload.transactionId;
+  const transactionId = payload.transactionId || payload.transaction_id || payload.relworxTransactionId;
   const amount = payload.amount;
   
-  // 1. Log the transaction in the 'transactions' collection for full audit
-  const txRef = getDb().collection('transactions').doc(transactionId || `tx_${Date.now()}`);
+  // Idempotency check: Log transaction and check if already processed
+  const txDocId = transactionId || `tx_${reference || Date.now()}`;
+  const txRef = getDb().collection('transactions').doc(txDocId);
+  const existingTx = await txRef.get();
+  
+  if (existingTx.exists && existingTx.data()?.status === 'successful' && status === 'successful') {
+    console.log(`[Relworx Webhook] Transaction ${txDocId} already processed as successful. Skipping duplicate.`);
+    return { success: true, skipped: true };
+  }
+
   await txRef.set({
     id: txRef.id,
     type: 'collection',
     relatedId: reference,
     amount: amount || 0,
     reference: reference || '',
-    internalReference: payload.internalReference || '',
+    internalReference: payload.internalReference || payload.internal_reference || '',
     status: status || 'unknown',
     gatewayResponse: payload,
     updatedAt: Date.now(),
-    createdAt: Date.now() // Ideally use actual timestamp from payload
+    createdAt: Date.now()
   }, { merge: true });
 
   // 2. Query Firestore for the corresponding contribution
   if (reference) {
     const contributionsRef = getDb().collection('contributions');
-    const q = contributionsRef.where('relworxReference', '==', reference).limit(1);
-    const snapshot = await q.get();
+    // Query by relworxReference first
+    let snapshot = await contributionsRef.where('relworxReference', '==', reference).limit(1).get();
+    
+    // Fallback: Check if document ID matches reference directly
+    if (snapshot.empty) {
+      const directDoc = await contributionsRef.doc(reference).get();
+      if (directDoc.exists) {
+        snapshot = { empty: false, docs: [directDoc] } as any;
+      }
+    }
     
     if (!snapshot.empty) {
       const docSnap = snapshot.docs[0];
@@ -174,13 +194,14 @@ export async function handleCollectionWebhook(payload: any) {
           const contribData = contribDoc.data();
           if (!contribData) return;
           
-          // Only process if it's not already verified
-          if (contribData.status === 'verified') return;
+          // Idempotency guard: Only process if not already verified for this transaction
+          if (contribData.status === 'verified' && status === 'successful') return;
+          if (contribData.relworxTransactionId === transactionId && transactionId) return;
           
           const updateData: any = {
             paymentStatus: status === 'successful' ? 'verified' : status === 'failed' ? 'failed' : 'pending_payment',
             gatewayResponse: payload,
-            relworxTransactionId: transactionId,
+            relworxTransactionId: transactionId || null,
             updatedAt: Date.now()
           };
           
@@ -198,11 +219,14 @@ export async function handleCollectionWebhook(payload: any) {
               if (userDoc.exists) {
                 const userData = userDoc.data();
                 if (userData) {
-                  const newTotalContributed = contribData.type === 'welfare' 
+                  const isWelfare = contribData.purpose === 'welfare' || contribData.type === 'welfare';
+                  const isCampaign = contribData.purpose === 'campaign' || contribData.type === 'school_support' || contribData.type === 'campaign';
+
+                  const newTotalContributed = isWelfare || !isCampaign 
                     ? (userData.totalContributed || 0) + (contribData.amount || 0)
                     : (userData.totalContributed || 0);
 
-                  const newCampaignContributed = contribData.type === 'school_support'
+                  const newCampaignContributed = isCampaign
                     ? (userData.totalCampaignContributed || 0) + (contribData.amount || 0)
                     : (userData.totalCampaignContributed || 0);
 
@@ -218,8 +242,11 @@ export async function handleCollectionWebhook(payload: any) {
             }
             
             // Update campaign stats if applicable
-            if (contribData.type === 'school_support' && contribData.campaignId) {
-              const campaignRef = getDb().collection('schoolCampaigns').doc(contribData.campaignId);
+            const campaignId = contribData.campaignId;
+            const isCampaignType = contribData.type === 'school_support' || contribData.type === 'campaign' || contribData.purpose === 'campaign';
+            
+            if (isCampaignType && campaignId) {
+              const campaignRef = getDb().collection('schoolCampaigns').doc(campaignId);
               const campaignDoc = await transaction.get(campaignRef);
               
               if (campaignDoc.exists) {
@@ -239,6 +266,8 @@ export async function handleCollectionWebhook(payload: any) {
                 }
               }
             }
+          } else if (status === 'failed') {
+            updateData.status = 'failed';
           }
           
           transaction.update(docRef, updateData);
@@ -270,6 +299,8 @@ export async function handleCollectionWebhook(payload: any) {
       } catch (err) {
         console.error("Transaction failed for Relworx collection:", err);
       }
+    } else {
+      console.warn(`[Relworx Webhook] No matching contribution document found for reference: ${reference}`);
     }
   }
 

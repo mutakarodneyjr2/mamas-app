@@ -6,7 +6,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../firebase';
 import { collection, query, where, getDocs, doc, onSnapshot } from 'firebase/firestore';
-import { formatUGX } from '../lib/utils';
+import { formatUGX, DEFAULT_CAMPAIGN_PLACEHOLDER } from '../lib/utils';
 
 export default function Dashboard() {
   const { currentUser, userProfile } = useAuth();
@@ -179,8 +179,8 @@ export default function Dashboard() {
     return 'Good Evening';
   };
 
-  const showBalance = isExecutive || (appSettings?.showTotalBalanceToMembers !== false);
-  const showLeaderboard = isExecutive || (appSettings?.showTopContributors !== false);
+  const showBalance = isExecutive || (appSettings ? appSettings.showTotalBalanceToMembers !== false : false);
+  const showLeaderboard = isExecutive || (appSettings ? appSettings.showTopContributors !== false : false);
 
   if (loading) {
     return (
@@ -370,9 +370,14 @@ export default function Dashboard() {
               return (
                 <div key={camp.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 flex flex-col justify-between hover:border-slate-300 transition-all">
                   <div className="flex gap-3 items-start mb-3">
-                    {imgUrl && (
-                      <img src={imgUrl} alt={camp.title} className="w-16 h-16 rounded-xl object-cover shrink-0 bg-slate-100" />
-                    )}
+                    <img 
+                      src={imgUrl || DEFAULT_CAMPAIGN_PLACEHOLDER} 
+                      alt={camp.title} 
+                      className="w-16 h-16 rounded-xl object-cover shrink-0 bg-slate-100 border border-slate-200" 
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = DEFAULT_CAMPAIGN_PLACEHOLDER;
+                      }}
+                    />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-1">
                         <h4 className="font-bold text-slate-900 text-sm truncate">{camp.title}</h4>

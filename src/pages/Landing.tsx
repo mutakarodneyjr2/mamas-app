@@ -3,7 +3,8 @@ import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Logo } from '../components/Logo';
 import { db } from '../firebase';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, getDoc, doc, query, where } from 'firebase/firestore';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   HeartHandshake, 
   GraduationCap, 
@@ -15,7 +16,10 @@ import {
   ArrowRight,
   ShieldCheck,
   Building2,
-  Heart
+  Heart,
+  ChevronLeft,
+  ChevronRight,
+  ImageIcon
 } from 'lucide-react';
 
 export default function Landing() {
@@ -26,10 +30,25 @@ export default function Landing() {
     grantsCount: '48+'
   });
 
+  const [banners, setBanners] = useState<string[]>([]);
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [slideDirection, setSlideDirection] = useState(1);
+  const [isHovered, setIsHovered] = useState(false);
+
   useEffect(() => {
     let isMounted = true;
-    async function fetchImpactStats() {
+    async function fetchImpactStatsAndSettings() {
       try {
+        // App Settings for Landing Banners
+        const settingsSnap = await getDoc(doc(db, 'appSettings', 'main'));
+        if (settingsSnap.exists() && isMounted) {
+          const data = settingsSnap.data();
+          const list = data.banners || data.landingBanners || [];
+          if (Array.isArray(list) && list.length > 0) {
+            setBanners(list.filter(Boolean));
+          }
+        }
+
         // Members count
         const usersSnap = await getDocs(collection(db, 'users'));
         const activeMembers = usersSnap.docs.filter(d => ['active', 'approved'].includes(d.data().status)).length;
@@ -53,13 +72,42 @@ export default function Landing() {
           });
         }
       } catch (err) {
-        console.warn('Using default impact stats:', err);
+        console.warn('Using default impact stats or banners:', err);
       }
     }
 
-    fetchImpactStats();
+    fetchImpactStatsAndSettings();
     return () => { isMounted = false; };
   }, []);
+
+  useEffect(() => {
+    if (banners.length <= 1 || isHovered) return;
+    const timer = setInterval(() => {
+      setSlideDirection(1);
+      setCurrentSlide(prev => (prev + 1) % banners.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [banners.length, isHovered]);
+
+  const handlePrev = () => {
+    setSlideDirection(-1);
+    setCurrentSlide(prev => (prev - 1 + banners.length) % banners.length);
+  };
+
+  const handleNext = () => {
+    setSlideDirection(1);
+    setCurrentSlide(prev => (prev + 1) % banners.length);
+  };
+
+  const handleImageError = (failedUrl: string) => {
+    setBanners(prev => {
+      const filtered = prev.filter(u => u !== failedUrl);
+      if (currentSlide >= filtered.length && filtered.length > 0) {
+        setCurrentSlide(0);
+      }
+      return filtered;
+    });
+  };
 
   if (currentUser) {
     return <Navigate to="/dashboard" replace />;
@@ -128,54 +176,127 @@ export default function Landing() {
             </div>
           </div>
 
-          {/* Right Icon Illustration Cluster */}
-          <div className="lg:col-span-5 flex justify-center">
-            <div className="relative w-full max-w-md aspect-square rounded-3xl bg-white/5 border border-white/10 backdrop-blur-md p-8 flex items-center justify-center shadow-2xl">
-              
-              {/* Outer Pulsing Rings */}
-              <div className="absolute inset-4 border border-mamas-accent/20 rounded-2xl animate-pulse" />
-              <div className="absolute inset-8 border border-white/10 rounded-2xl" />
+          {/* Right Column: Interactive Banner Slider or Pillar Grid Fallback */}
+          <div className="lg:col-span-5 flex justify-center w-full">
+            {banners.length > 0 ? (
+              <div 
+                className="relative w-full max-w-lg aspect-[16/10] sm:aspect-[16/9] rounded-3xl overflow-hidden bg-slate-900/90 border border-white/20 backdrop-blur-md shadow-2xl group flex items-center justify-center select-none"
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => setIsHovered(false)}
+              >
+                <AnimatePresence initial={false} custom={slideDirection} mode="wait">
+                  <motion.div
+                    key={banners[currentSlide]}
+                    custom={slideDirection}
+                    initial={{ opacity: 0, x: slideDirection > 0 ? 250 : -250 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: slideDirection > 0 ? -250 : 250 }}
+                    transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+                    className="absolute inset-0 w-full h-full"
+                  >
+                    <img
+                      src={banners[currentSlide]}
+                      alt={`Featured Banner ${currentSlide + 1}`}
+                      className="w-full h-full object-cover"
+                      onError={() => handleImageError(banners[currentSlide])}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/10 to-slate-950/20" />
+                  </motion.div>
+                </AnimatePresence>
 
-              {/* Central Pillar Icons Grid */}
-              <div className="grid grid-cols-2 gap-4 w-full relative z-10">
-                {/* Heart / Mutual Aid */}
-                <div className="bg-slate-900/90 border border-rose-500/30 p-5 rounded-2xl flex flex-col items-center text-center shadow-lg hover:border-rose-500/60 transition-all group">
-                  <div className="w-12 h-12 rounded-xl bg-rose-500/20 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                    <Heart className="w-6 h-6 text-rose-400 fill-rose-400/30" />
-                  </div>
-                  <span className="text-xs font-bold text-slate-200">Mutual Aid</span>
-                  <span className="text-[10px] text-slate-400">Welfare Grants</span>
+                {/* Top Badge Overlay */}
+                <div className="absolute top-4 left-4 z-20 flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-950/70 border border-white/20 text-mamas-accent text-xs font-bold backdrop-blur-md shadow-md">
+                  <ImageIcon className="w-3.5 h-3.5" />
+                  <span>Featured Initiative ({currentSlide + 1}/{banners.length})</span>
                 </div>
 
-                {/* School */}
-                <div className="bg-slate-900/90 border border-amber-500/30 p-5 rounded-2xl flex flex-col items-center text-center shadow-lg hover:border-amber-500/60 transition-all group">
-                  <div className="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                    <Building2 className="w-6 h-6 text-amber-400" />
-                  </div>
-                  <span className="text-xs font-bold text-slate-200">Matuumu Alma Mater</span>
-                  <span className="text-[10px] text-slate-400">Development</span>
-                </div>
+                {/* Carousel Controls */}
+                {banners.length > 1 && (
+                  <>
+                    <button
+                      onClick={handlePrev}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 z-30 w-10 h-10 rounded-full bg-slate-950/70 border border-white/20 text-white flex items-center justify-center hover:bg-mamas-accent hover:text-mamas-primary transition-all shadow-lg active:scale-90 opacity-80 hover:opacity-100"
+                      title="Previous Banner"
+                    >
+                      <ChevronLeft className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={handleNext}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 z-30 w-10 h-10 rounded-full bg-slate-950/70 border border-white/20 text-white flex items-center justify-center hover:bg-mamas-accent hover:text-mamas-primary transition-all shadow-lg active:scale-90 opacity-80 hover:opacity-100"
+                      title="Next Banner"
+                    >
+                      <ChevronRight className="w-5 h-5" />
+                    </button>
 
-                {/* Community */}
-                <div className="bg-slate-900/90 border border-blue-500/30 p-5 rounded-2xl flex flex-col items-center text-center shadow-lg hover:border-blue-500/60 transition-all group">
-                  <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                    <Users className="w-6 h-6 text-blue-400" />
-                  </div>
-                  <span className="text-xs font-bold text-slate-200">Alumni Family</span>
-                  <span className="text-[10px] text-slate-400">Strong Network</span>
-                </div>
-
-                {/* Legacy */}
-                <div className="bg-slate-900/90 border border-emerald-500/30 p-5 rounded-2xl flex flex-col items-center text-center shadow-lg hover:border-emerald-500/60 transition-all group">
-                  <div className="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                    <GraduationCap className="w-6 h-6 text-emerald-400" />
-                  </div>
-                  <span className="text-xs font-bold text-slate-200">Future Legacy</span>
-                  <span className="text-[10px] text-slate-400">Next Generation</span>
-                </div>
+                    {/* Indicator Dots */}
+                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-950/70 border border-white/15 backdrop-blur-md">
+                      {banners.map((_, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => {
+                            setSlideDirection(idx > currentSlide ? 1 : -1);
+                            setCurrentSlide(idx);
+                          }}
+                          className={`h-2 rounded-full transition-all duration-300 ${
+                            idx === currentSlide 
+                              ? 'w-6 bg-mamas-accent' 
+                              : 'w-2 bg-white/40 hover:bg-white/70'
+                          }`}
+                          title={`Go to slide ${idx + 1}`}
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
+            ) : (
+              <div className="relative w-full max-w-md aspect-square rounded-3xl bg-white/5 border border-white/10 backdrop-blur-md p-8 flex items-center justify-center shadow-2xl">
+                
+                {/* Outer Pulsing Rings */}
+                <div className="absolute inset-4 border border-mamas-accent/20 rounded-2xl animate-pulse" />
+                <div className="absolute inset-8 border border-white/10 rounded-2xl" />
 
-            </div>
+                {/* Central Pillar Icons Grid */}
+                <div className="grid grid-cols-2 gap-4 w-full relative z-10">
+                  {/* Heart / Mutual Aid */}
+                  <div className="bg-slate-900/90 border border-rose-500/30 p-5 rounded-2xl flex flex-col items-center text-center shadow-lg hover:border-rose-500/60 transition-all group">
+                    <div className="w-12 h-12 rounded-xl bg-rose-500/20 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                      <Heart className="w-6 h-6 text-rose-400 fill-rose-400/30" />
+                    </div>
+                    <span className="text-xs font-bold text-slate-200">Mutual Aid</span>
+                    <span className="text-[10px] text-slate-400">Welfare Grants</span>
+                  </div>
+
+                  {/* School */}
+                  <div className="bg-slate-900/90 border border-amber-500/30 p-5 rounded-2xl flex flex-col items-center text-center shadow-lg hover:border-amber-500/60 transition-all group">
+                    <div className="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                      <Building2 className="w-6 h-6 text-amber-400" />
+                    </div>
+                    <span className="text-xs font-bold text-slate-200">Matuumu Alma Mater</span>
+                    <span className="text-[10px] text-slate-400">Development</span>
+                  </div>
+
+                  {/* Community */}
+                  <div className="bg-slate-900/90 border border-blue-500/30 p-5 rounded-2xl flex flex-col items-center text-center shadow-lg hover:border-blue-500/60 transition-all group">
+                    <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                      <Users className="w-6 h-6 text-blue-400" />
+                    </div>
+                    <span className="text-xs font-bold text-slate-200">Alumni Family</span>
+                    <span className="text-[10px] text-slate-400">Strong Network</span>
+                  </div>
+
+                  {/* Legacy */}
+                  <div className="bg-slate-900/90 border border-emerald-500/30 p-5 rounded-2xl flex flex-col items-center text-center shadow-lg hover:border-emerald-500/60 transition-all group">
+                    <div className="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                      <GraduationCap className="w-6 h-6 text-emerald-400" />
+                    </div>
+                    <span className="text-xs font-bold text-slate-200">Future Legacy</span>
+                    <span className="text-[10px] text-slate-400">Next Generation</span>
+                  </div>
+                </div>
+
+              </div>
+            )}
           </div>
 
         </div>

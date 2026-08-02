@@ -501,7 +501,7 @@ export default function AdminDashboard() {
             </button>
           )}
 
-          {['super_admin', 'chairperson', 'treasurer'].includes(role) && (
+          {['super_admin', 'chairperson'].includes(role) && (
             <button
               onClick={() => navigate('/admin/settings')}
               className="flex items-center gap-2 bg-white border border-gray-200 rounded-full px-4 py-2.5 shadow-sm whitespace-nowrap transition-all active:scale-[0.97] shrink-0"

@@ -13,6 +13,7 @@ import {
   setDoc
 } from 'firebase/firestore';
 import { db } from '../firebase';
+import { deleteImage } from './storage';
 import { notifyAllApprovedMembers, notifyUser } from './fcmService';
 import { 
   Contribution, 
@@ -1091,6 +1092,28 @@ export const transferCampaignExcessFunds = async (campaignId: string, adminId: s
 
 export const deleteSchoolCampaign = async (campaignId: string, adminId: string) => {
   const campaignRef = doc(db, 'schoolCampaigns', campaignId);
+  try {
+    const docSnap = await getDoc(campaignRef);
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      const urlsToDelete: string[] = [];
+      if (Array.isArray(data.imageUrls)) {
+        urlsToDelete.push(...data.imageUrls);
+      }
+      if (typeof data.imageUrl === 'string' && data.imageUrl) {
+        urlsToDelete.push(data.imageUrl);
+      }
+
+      for (const url of urlsToDelete) {
+        if (typeof url === 'string' && (url.includes('firebasestorage.googleapis.com') || url.includes('campaigns/'))) {
+          await deleteImage(url).catch(err => console.warn('Error deleting campaign image from storage:', err));
+        }
+      }
+    }
+  } catch (fetchErr) {
+    console.warn('Could not inspect campaign image URLs prior to deletion:', fetchErr);
+  }
+
   await deleteDoc(campaignRef);
   await logActivity('DELETE_CAMPAIGN', adminId, campaignId, `Deleted campaign`);
 };

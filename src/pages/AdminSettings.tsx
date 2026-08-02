@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { doc, setDoc, collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../firebase';
+import { uploadImage, deleteImage } from '../lib/storage';
 import { AppSettings, User } from '../types';
 import { updateWelfareApprovers, logActivity } from '../lib/services';
 import { Settings2, Plus, X, Shield, Eye, Image as ImageIcon, CheckCircle, AlertCircle, Save, Loader2, SunMedium, RotateCcw } from 'lucide-react';
@@ -142,13 +143,8 @@ export default function AdminSettings() {
   const isChairperson = userProfile.role === 'chairperson';
   const isViceChairperson = userProfile.role === 'vice_chairperson';
   const isTreasurer = userProfile.role === 'treasurer';
-  const isOnlyTreasurer = isTreasurer && !isSuperAdmin && !isChairperson && !isViceChairperson;
-
-  if (isOnlyTreasurer && activeTab !== 'system') {
-    setActiveTab('system');
-  }
-
-  if (!isSuperAdmin && !isChairperson && !isViceChairperson && !isTreasurer) {
+  
+  if (!isSuperAdmin && !isChairperson && !isViceChairperson) {
     return (
       <div className="flex flex-col items-center justify-center p-8 sm:p-12 text-center bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 my-6">
         <div className="w-14 h-14 rounded-2xl bg-rose-50 dark:bg-rose-950/50 flex items-center justify-center mb-4 text-rose-500">
@@ -387,6 +383,7 @@ export default function AdminSettings() {
   const removeBannerUrl = async (index: number) => {
     if (!formData) return;
     const currentList = formData.banners || formData.landingBanners || [];
+    const urlToRemove = currentList[index];
     const updated = currentList.filter((_, i) => i !== index);
 
     setFormData(prev => prev ? ({
@@ -394,6 +391,11 @@ export default function AdminSettings() {
       banners: updated,
       landingBanners: updated
     }) : null);
+
+    // Clean up file from Storage if hosted on Firebase Storage
+    if (urlToRemove && (urlToRemove.includes('firebasestorage.googleapis.com') || urlToRemove.includes('banners/'))) {
+      deleteImage(urlToRemove).catch(err => console.warn('Could not delete banner from storage:', err));
+    }
 
     try {
       await setDoc(doc(db, 'appSettings', 'main'), {
@@ -415,15 +417,15 @@ export default function AdminSettings() {
     setError('');
 
     try {
-      const fileRef = ref(storage, `banners/banner_${Date.now()}_${file.name}`);
-      await uploadBytes(fileRef, file);
-      const url = await getDownloadURL(fileRef);
+      const path = `banners/banner_${Date.now()}_${file.name}`;
+      const url = await uploadImage(file, path);
       await addBannerUrl(url);
     } catch (err: any) {
       console.error(err);
       setError("Failed to upload banner image: " + err.message);
     } finally {
       setUploadingBanner(false);
+      if (e.target) e.target.value = '';
     }
   };
 
@@ -519,8 +521,7 @@ export default function AdminSettings() {
       )}
 
       {/* Horizontal Tab Bar */}
-      {!isOnlyTreasurer && (
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 mb-4 max-w-full no-scrollbar">
+      <div className="flex items-center gap-2 overflow-x-auto pb-2 mb-4 max-w-full no-scrollbar">
           <button
             onClick={() => setActiveTab('policy')}
             className={`px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition-all shrink-0 ${
@@ -552,10 +553,10 @@ export default function AdminSettings() {
             System
           </button>
         </div>
-      )}
+      
 
       {/* TAB 1: POLICY */}
-      {(!isOnlyTreasurer && activeTab === 'policy') && (
+      {activeTab === 'policy' && (
         <div className="space-y-4 max-w-full">
           {/* Card: Welfare Categories & Relationships */}
           <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 shadow-sm border border-slate-100 dark:border-slate-800/60 max-w-full">
@@ -726,7 +727,7 @@ export default function AdminSettings() {
       )}
 
       {/* TAB 2: GOVERNANCE */}
-      {(!isOnlyTreasurer && activeTab === 'governance') && (
+      {activeTab === 'governance' && (
         <div className="space-y-4 max-w-full">
           {/* Card: Welfare Approvers */}
           <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 shadow-sm border border-slate-100 dark:border-slate-800/60 max-w-full">
@@ -857,7 +858,7 @@ export default function AdminSettings() {
       )}
 
       {/* TAB 3: SYSTEM */}
-      {(isOnlyTreasurer || activeTab === 'system') && (
+      {activeTab === 'system' && (
         <div className="space-y-4 max-w-full">
           {/* Card: Executive Support Contacts */}
           <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 shadow-sm border border-slate-100 dark:border-slate-800/60 max-w-full">
