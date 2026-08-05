@@ -290,8 +290,10 @@ export default function Register() {
         district: formData.district,
         placeOfResidence: formData.placeOfResidence,
         occupation: formData.occupation === 'Other' ? formData.otherOccupation : formData.occupation,
-        university: formData.occupation === 'Student' ? formData.university : undefined,
-        course: formData.occupation === 'Student' ? formData.course : undefined,
+        ...(formData.occupation === 'Student' && {
+          university: formData.university,
+          course: formData.course
+        }),
         nextOfKinName: formData.nextOfKinName,
         nextOfKinPhone: formData.nextOfKinPhone,
         profilePictureUrl: finalProfilePicUrl,
