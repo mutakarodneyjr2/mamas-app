@@ -89,6 +89,7 @@ export interface WelfareVote {
   userId: string;
   vote: VoteType;
   votedAt: number;
+  reason?: string;
 }
 
 export interface WelfareRequest {

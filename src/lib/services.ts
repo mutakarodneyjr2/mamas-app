@@ -18,6 +18,7 @@ import { notifyAllApprovedMembers, notifyUser } from './fcmService';
 import { 
   Contribution, 
   WelfareRequest, 
+  WelfareVote,
   SchoolCampaign, 
   Notice, 
   ActivityLog, 
@@ -373,13 +374,13 @@ export const submitWelfareRequest = async (
   return docRef.id;
 };
 
-export const castWelfareVote = async (requestId: string, voterId: string, vote: "approve" | "reject") => {
+export const castWelfareVote = async (requestId: string, voterId: string, vote: "approve" | "reject", reason?: string) => {
   const settings = await getAppSettings();
   if (!settings) throw new Error("Settings not found");
 
   const voterDoc = await getDoc(doc(db, 'users', voterId));
   const voterRole = voterDoc.exists() ? voterDoc.data().role : null;
-  const isEscalatedApprover = voterRole === 'super_admin' || voterRole === 'chairperson' || voterRole === 'vice_chairperson' || voterRole === 'auditor';
+  const isEscalatedApprover = voterRole === 'super_admin' || voterRole === 'chairperson' || voterRole === 'vice_chairperson';
 
   const requestRef = doc(db, 'welfareRequests', requestId);
   let applicantId = "";
@@ -407,12 +408,17 @@ export const castWelfareVote = async (requestId: string, voterId: string, vote: 
       throw new Error("User is not an authorized welfare approver for this request");
     }
 
+    const trimmedReason = reason?.trim() || "";
     const newVotes = requestData.votes.filter(v => v.userId !== voterId);
-    newVotes.push({
+    const voteObj: WelfareVote = {
       userId: voterId,
       vote,
       votedAt: Date.now()
-    });
+    };
+    if (trimmedReason) {
+      voteObj.reason = trimmedReason;
+    }
+    newVotes.push(voteObj);
 
     const updates: any = {
       votes: newVotes,
@@ -424,7 +430,7 @@ export const castWelfareVote = async (requestId: string, voterId: string, vote: 
 
     newVotes.forEach(v => {
       // Valid votes are from eligible approvers or escalated approvers if escalated
-      if (eligibleApprovers.includes(v.userId) || (eligibleApprovers.length < 2 && ['super_admin', 'chairperson', 'vice_chairperson', 'auditor'].includes(voterRole || ''))) {
+      if (eligibleApprovers.includes(v.userId) || (eligibleApprovers.length < 2 && ['super_admin', 'chairperson', 'vice_chairperson'].includes(voterRole || ''))) {
          if (v.vote === 'approve') approveCount++;
          if (v.vote === 'reject') rejectCount++;
       }
@@ -441,13 +447,15 @@ export const castWelfareVote = async (requestId: string, voterId: string, vote: 
     transaction.update(requestRef, updates);
   });
 
-  await logActivity('CAST_WELFARE_VOTE', voterId, requestId, `Voted ${vote} on request`);
+  const logNote = reason?.trim() ? `Voted ${vote} on request: ${reason.trim()}` : `Voted ${vote} on request`;
+  await logActivity('CAST_WELFARE_VOTE', voterId, requestId, logNote);
 
   if (resultingStatus && applicantId) {
     const statusText = resultingStatus === "accepted" ? "Accepted" : "Declined";
+    const feedbackText = reason?.trim() ? ` Feedback note: "${reason.trim()}"` : '';
     await notifyUser(applicantId, {
       title: `Welfare Request ${statusText}`,
-      body: `Your welfare request for ${welfareCategory} has been ${resultingStatus}.`,
+      body: `Your welfare request for ${welfareCategory} has been ${resultingStatus}.${feedbackText}`,
       type: 'welfare',
       targetId: requestId,
       targetUrl: '/welfare'

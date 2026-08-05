@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { 
-  Camera, Mail, MapPin, Briefcase, Phone, User, Shield, ChevronRight, LogOut, SunMoon, Sparkles, Check, Edit3, X, Save, Bell, BellRing
+  Camera, Mail, MapPin, Briefcase, Phone, User, Shield, ChevronRight, LogOut, SunMoon, Sparkles, Check, Edit3, X, Save, Bell, BellRing, GraduationCap
 } from 'lucide-react';
 import { db } from '../firebase';
 import { doc, updateDoc } from 'firebase/firestore';
@@ -251,6 +251,9 @@ export default function Profile() {
             <div className="divide-y divide-slate-100">
               <InfoRow icon={Mail} label="Email" value={userProfile.email} />
               <InfoRow icon={Briefcase} label="Occupation" value={userProfile.occupation} />
+              {userProfile.occupation === 'Student' && (
+                <InfoRow icon={GraduationCap} label="University" value={userProfile.university || 'Not provided'} />
+              )}
               <InfoRow icon={Shield} label="Year Left School" value={userProfile.yearLeftSchool?.toString()} />
               <InfoRow icon={MapPin} label="District" value={userProfile.district} />
             </div>

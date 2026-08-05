@@ -32,6 +32,18 @@ export default function AdminWelfare() {
   // Treasurer specific state
   const [payAmount, setPayAmount] = useState<Record<string, string>>({});
 
+  // Vote Confirmation Modal state
+  const [votingModal, setVotingModal] = useState<{
+    requestId: string;
+    vote: 'approve' | 'reject';
+    requestUserId: string;
+    category: string;
+    personName: string;
+    amountRequested: number;
+  } | null>(null);
+  const [voteReason, setVoteReason] = useState('');
+  const [votingLoading, setVotingLoading] = useState(false);
+
   useEffect(() => {
     if (!currentUser) return;
     const fetchSettings = async () => {
@@ -141,25 +153,38 @@ export default function AdminWelfare() {
     exportToCSV('mamas_welfare_requests', exportData);
   };
 
-  const handleVote = async (requestId: string, vote: 'approve' | 'reject', requestUserId: string) => {
+  const openVoteModal = (requestId: string, vote: 'approve' | 'reject', requestUserId: string, category: string, personName: string, amountRequested: number) => {
     setErrorMsg('');
     setSuccessMsg('');
     const eligibleApprovers = activeSettings.welfareApprovers.filter(id => id !== requestUserId);
-    const isEscalatedEligible = eligibleApprovers.length < 2 && (isSuperAdmin || isChairperson || isViceChairperson || isAuditor);
+    const isEscalatedEligible = eligibleApprovers.length < 2 && (isSuperAdmin || isChairperson || isViceChairperson);
     
     if (!isApprover && !isEscalatedEligible) {
       setErrorMsg("Only designated Welfare Approvers can cast a vote.");
       setTimeout(() => setErrorMsg(''), 5000);
       return;
     }
+
+    setVoteReason('');
+    setVotingModal({ requestId, vote, requestUserId, category, personName, amountRequested });
+  };
+
+  const submitVote = async () => {
+    if (!votingModal) return;
+    setVotingLoading(true);
+    setErrorMsg('');
+    setSuccessMsg('');
     try {
-      await castWelfareVote(requestId, currentUser.uid, vote);
-      await logActivity('VOTE_WELFARE_REQUEST', currentUser.uid, requestId, `Voted ${vote} on welfare request`);
-      setSuccessMsg(`Successfully voted to ${vote}.`);
+      await castWelfareVote(votingModal.requestId, currentUser.uid, votingModal.vote, voteReason);
+      setSuccessMsg(`Successfully voted to ${votingModal.vote}.`);
+      setVotingModal(null);
+      setVoteReason('');
       setTimeout(() => setSuccessMsg(''), 3000);
     } catch (err: any) {
       setErrorMsg(err.message || 'Failed to cast vote.');
       setTimeout(() => setErrorMsg(''), 5000);
+    } finally {
+      setVotingLoading(false);
     }
   };
 
@@ -276,6 +301,31 @@ export default function AdminWelfare() {
                 </span>
               </div>
 
+              {/* Approver Feedback / Notes */}
+              {votes.some(v => v.reason) && (
+                <div className="mb-4">
+                  <span className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold block mb-1.5">Approver Feedback & Notes</span>
+                  <div className="space-y-2">
+                    {votes.filter(v => v.reason).map((v, idx) => {
+                      const voterObj = usersCache[v.userId];
+                      return (
+                        <div key={idx} className="bg-white rounded-xl border border-gray-100 p-3 text-xs text-gray-700 flex flex-col gap-1 shadow-2xs">
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="font-bold text-gray-900">{voterObj?.fullName || 'Approver'}</span>
+                            <span className={`px-2 py-0.5 rounded-full font-bold uppercase text-[9px] border ${
+                              v.vote === 'approve' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'
+                            }`}>
+                              {v.vote}
+                            </span>
+                          </div>
+                          <p className="text-gray-600 italic">"{v.reason}"</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* Action Buttons */}
               {request.status === 'pending' && !isAuditor && (
                 request.userId === currentUser.uid ? (
@@ -291,13 +341,13 @@ export default function AdminWelfare() {
                 ) : (
                   <div className="flex gap-3">
                     <button
-                      onClick={(e) => { e.stopPropagation(); handleVote(request.id!, 'approve', request.userId); }}
+                      onClick={(e) => { e.stopPropagation(); openVoteModal(request.id!, 'approve', request.userId, request.category, request.personName, request.amountRequested); }}
                       className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white rounded-full py-2.5 text-xs font-bold shadow-sm transition-colors active:scale-[0.97]"
                     >
                       Approve
                     </button>
                     <button
-                      onClick={(e) => { e.stopPropagation(); handleVote(request.id!, 'reject', request.userId); }}
+                      onClick={(e) => { e.stopPropagation(); openVoteModal(request.id!, 'reject', request.userId, request.category, request.personName, request.amountRequested); }}
                       className="flex-1 bg-white border border-rose-200 text-rose-600 hover:bg-rose-50 rounded-full py-2.5 text-xs font-bold transition-colors active:scale-[0.97]"
                     >
                       Reject
@@ -469,6 +519,76 @@ export default function AdminWelfare() {
             </>
           )}
       </div>
+
+      {/* Vote Confirmation Modal */}
+      {votingModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => !votingLoading && setVotingModal(null)}>
+          <div 
+            className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-100 flex flex-col gap-4 animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${
+                votingModal.vote === 'approve' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'
+              }`}>
+                {votingModal.vote === 'approve' ? <CheckCircle className="w-5 h-5" /> : <XCircle className="w-5 h-5" />}
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-900 text-base sm:text-lg">
+                  {votingModal.vote === 'approve' ? 'Approve Welfare Request' : 'Reject Welfare Request'}
+                </h3>
+                <p className="text-xs text-gray-500">
+                  {votingModal.category} • {formatUGX(votingModal.amountRequested)}
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-slate-50 rounded-2xl p-3 border border-slate-100 text-xs text-gray-600">
+              Beneficiary: <span className="font-bold text-gray-900">{votingModal.personName}</span>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                Reason / Feedback Note {votingModal.vote === 'reject' ? '(Recommended)' : '(Optional)'}
+              </label>
+              <textarea
+                value={voteReason}
+                onChange={(e) => setVoteReason(e.target.value)}
+                placeholder={votingModal.vote === 'approve' ? "Add feedback or encouraging notes for this member..." : "Provide a reason or explanation for rejecting this request..."}
+                rows={3}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-gray-800 outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500 transition-all resize-none"
+              />
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setVotingModal(null)}
+                disabled={votingLoading}
+                className="flex-1 py-2.5 px-4 rounded-full border border-gray-200 text-xs font-bold text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={submitVote}
+                disabled={votingLoading}
+                className={`flex-1 py-2.5 px-4 rounded-full text-xs font-bold text-white shadow-sm transition-all active:scale-[0.97] flex items-center justify-center gap-2 ${
+                  votingModal.vote === 'approve' 
+                    ? 'bg-emerald-500 hover:bg-emerald-600' 
+                    : 'bg-rose-500 hover:bg-rose-600'
+                } disabled:opacity-50`}
+              >
+                {votingLoading ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  `Confirm ${votingModal.vote === 'approve' ? 'Approval' : 'Rejection'}`
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
