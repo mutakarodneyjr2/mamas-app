@@ -17,7 +17,7 @@ export function OnboardingTour({ userProfile, onComplete }: OnboardingTourProps)
     {
       title: "Welcome to MAMAS! 🎉",
       subtitle: "Your secure alumni community hub",
-      description: "Welcome, " + userProfile.fullName + "! MAMAS connects you with fellow alumni, tracks your welfare fund contributions, manages support requests, and keeps you updated with community notices.",
+      description: "Welcome, " + (userProfile?.fullName || 'User') + "! MAMAS connects you with fellow alumni, tracks your welfare fund contributions, manages support requests, and keeps you updated with community notices.",
       icon: Sparkles,
       color: "bg-teal-500",
       lightColor: "bg-teal-50 text-teal-700 border-teal-200"

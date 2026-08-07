@@ -123,7 +123,7 @@ export default function Profile() {
       <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-mamas-primary rounded-3xl overflow-hidden shadow-xl border border-slate-700/50 mb-8 text-white relative">
         <div className="h-28 bg-amber-500/10 border-b border-white/10 relative">
           <div className="absolute top-4 right-4 bg-white/10 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest text-amber-300 border border-white/10">
-            {userProfile.role.replace('_', ' ')}
+            {userProfile?.role?.replace('_', ' ') || 'Alumni Member'}
           </div>
         </div>
         

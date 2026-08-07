@@ -411,7 +411,7 @@ export default function AdminDashboard() {
           <span className="text-xs text-white/60 font-medium">MAMAS Admin Portal</span>
         </div>
         <h1 className="text-xl font-bold text-white tracking-tight">
-          Welcome, {userProfile.fullName.split(' ')[0]}
+          Welcome, {userProfile?.fullName?.split(' ')[0] || 'Admin'}
         </h1>
         <p className="text-xs text-white/50 leading-relaxed truncate mt-1">
           Management dashboard for quick executive actions.

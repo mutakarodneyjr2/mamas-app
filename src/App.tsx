@@ -23,7 +23,7 @@ function Layout() {
   
   return (
     <div className="min-h-screen bg-mamas-bg flex flex-col font-sans">
-      {userProfile && userProfile.status === 'approved' && userProfile.hasCompletedOnboarding !== true && (
+      {userProfile && userProfile?.status === 'approved' && userProfile?.hasCompletedOnboarding !== true && (
         <OnboardingTour userProfile={userProfile} onComplete={() => {}} />
       )}
       <header className="bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-50 shadow-sm">
@@ -32,7 +32,7 @@ function Layout() {
             <Link to="/dashboard" className="flex items-center">
               <Logo />
             </Link>
-            {userProfile && userProfile.status === 'approved' && (
+            {userProfile && userProfile?.status === 'approved' && (
               <nav className="hidden md:flex gap-6">
                 <Link to="/dashboard" className="text-sm font-medium text-gray-600 hover:text-mamas-primary transition-colors">Dashboard</Link>
                 <Link to="/directory" className="text-sm font-medium text-gray-600 hover:text-mamas-primary transition-colors">Directory</Link>
@@ -48,7 +48,7 @@ function Layout() {
             {userProfile && <NotificationBell />}
             {userProfile && (
               <Link to="/profile" className="text-sm text-gray-600 hover:text-mamas-primary hidden sm:block font-medium">
-                {userProfile.fullName} <span className="opacity-70 text-xs ml-1 bg-amber-50 text-mamas-accent border border-amber-200/50 px-2 py-1 rounded-full uppercase tracking-widest">{userProfile.role.replace('_', ' ')}</span>
+                {userProfile?.fullName || 'User'} <span className="opacity-70 text-xs ml-1 bg-amber-50 text-mamas-accent border border-amber-200/50 px-2 py-1 rounded-full uppercase tracking-widest">{userProfile?.role?.replace('_', ' ') || 'MEMBER'}</span>
               </Link>
             )}
             <button onClick={logout} className="text-sm font-bold text-mamas-accent hover:text-mamas-accent-hover transition-colors px-3 py-1.5 rounded-full hover:bg-amber-50">Log Out</button>
@@ -73,11 +73,11 @@ function ProtectedRoute({ children, requiredRole, allowPending = false }: { chil
   if (!currentUser) return <Navigate to="/login" replace />;
   if (!userProfile) return <Navigate to="/register" replace />;
 
-  if (!allowPending && (userProfile.status === "pending" || userProfile.status === "rejected")) {
+  if (!allowPending && (userProfile?.status === "pending" || userProfile?.status === "rejected")) {
     return <PendingApproval />;
   }
 
-  if (requiredRole && !requiredRole.includes(userProfile.role)) {
+  if (requiredRole && (!userProfile?.role || !requiredRole.includes(userProfile.role))) {
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -114,7 +114,7 @@ const AdminLayout = () => {
   const location = useLocation();
 
   if (!userProfile) return null;
-  const role = userProfile.role;
+  const role = userProfile?.role || 'member';
 
   const canSeeRoles = role === 'super_admin';
   const canSeeContribs = ['super_admin', 'chairperson', 'vice_chairperson', 'treasurer', 'auditor'].includes(role);

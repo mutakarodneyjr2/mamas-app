@@ -766,9 +766,9 @@ export default function AdminSettings() {
                         {initials}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white truncate">{member.fullName}</p>
+                        <p className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white truncate">{member.fullName || 'User'}</p>
                         <p className="text-[11px] text-slate-500 dark:text-slate-400 capitalize truncate">
-                          {member.role.replace('_', ' ')} • {member.phoneNumber}
+                          {member?.role?.replace('_', ' ') || 'Member'} • {member.phoneNumber}
                         </p>
                       </div>
                     </div>

@@ -17,7 +17,7 @@ export default function Directory() {
         if (!response.ok) throw new Error("Failed to fetch directory data");
         const fetchedMembers = await response.json();
         // Sort client-side by full name
-        fetchedMembers.sort((a: User, b: User) => a.fullName.localeCompare(b.fullName));
+        fetchedMembers.sort((a: User, b: User) => (a.fullName || '').localeCompare(b.fullName || ''));
         setMembers(fetchedMembers);
       } catch (err) {
         console.error(err);
@@ -103,10 +103,10 @@ export default function Directory() {
                   <div className="flex items-center gap-4 mb-4">
                     <div className="h-16 w-16 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
                       {member.profilePictureUrl ? (
-                        <img src={member.profilePictureUrl} alt={member.fullName} className="h-full w-full object-cover" />
+                        <img src={member.profilePictureUrl} alt={member.fullName || 'User'} className="h-full w-full object-cover" />
                       ) : (
                         <div className="h-full w-full flex items-center justify-center text-xl font-bold text-mamas-text-muted">
-                          {member.fullName.charAt(0)}
+                          {(member.fullName || 'U').charAt(0)}
                         </div>
                       )}
                     </div>
