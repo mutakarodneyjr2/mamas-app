@@ -179,6 +179,7 @@ export interface AppSettings {
   supportPhone?: string;
   supportWhatsApp?: string;
   supportEmail?: string;
+  whatsappGroupLink?: string;
 }
 
 export interface HelpArticle {

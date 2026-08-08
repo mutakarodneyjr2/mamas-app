@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
-  Wallet, Users, Target, Shield, ArrowRight, Bell, BellOff, ArrowUpRight, TrendingUp, ShieldCheck, Trophy 
+  Wallet, Users, Target, Shield, ArrowRight, Bell, BellOff, ArrowUpRight, TrendingUp, ShieldCheck, Trophy, ChevronRight, MessageCircle
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../firebase';
@@ -243,12 +243,15 @@ export default function Dashboard() {
         )}
 
         {/* Card 2: Verified Alumni */}
-        <div className="bg-gradient-to-br from-emerald-950 via-emerald-900 to-slate-900 rounded-2xl p-3.5 sm:p-4 text-white shadow-sm border border-emerald-900/60 flex flex-col justify-between">
+        <Link to="/directory" className="block text-left bg-gradient-to-br from-emerald-950 via-emerald-900 to-slate-900 rounded-2xl p-3.5 sm:p-4 text-white shadow-sm border border-emerald-900/60 flex flex-col justify-between transition-transform active:scale-[0.98] hover:shadow-md cursor-pointer relative">
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 opacity-50">
+            <ChevronRight className="w-5 h-5 text-emerald-200" />
+          </div>
           <div className="flex items-center justify-between mb-2">
             <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center">
               <Users className="w-4 h-4 text-emerald-300" />
             </div>
-            <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-300 px-1.5 py-0.5 rounded bg-emerald-500/10">
+            <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-300 px-1.5 py-0.5 rounded bg-emerald-500/10 mr-4">
               Active
             </span>
           </div>
@@ -258,7 +261,7 @@ export default function Dashboard() {
             </h3>
             <p className="text-[11px] font-semibold text-emerald-200/80 uppercase tracking-wide">Verified Alumni</p>
           </div>
-        </div>
+        </Link>
 
         {/* Card 3: Active Campaigns */}
         <div className="bg-gradient-to-br from-amber-600 via-amber-700 to-amber-800 rounded-2xl p-3.5 sm:p-4 text-white shadow-sm border border-amber-500/40 flex flex-col justify-between">
@@ -323,6 +326,34 @@ export default function Dashboard() {
           </div>
         </div>
       </section>
+
+      {/* WHATSAPP COMMUNITY CARD */}
+      {appSettings?.whatsappGroupLink && (
+        <section>
+          <div className="bg-emerald-50 dark:bg-emerald-950/20 rounded-2xl p-4 shadow-sm border border-emerald-100 dark:border-emerald-900/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-sm shadow-emerald-500/20">
+                <MessageCircle className="w-5 h-5 fill-current" />
+              </div>
+              <div className="min-w-0">
+                <h2 className="text-sm font-bold text-slate-900 dark:text-emerald-50 tracking-tight">Alumni WhatsApp Group</h2>
+                <p className="text-xs text-slate-500 dark:text-emerald-200/70 mt-0.5 truncate">Join the official MAMAS community</p>
+              </div>
+            </div>
+            
+            <div className="shrink-0">
+              <a 
+                href={appSettings.whatsappGroupLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block w-full sm:w-auto bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2 px-4 rounded-xl text-xs shadow-sm shadow-emerald-500/20 active:scale-95 transition-all text-center"
+              >
+                Join Group
+              </a>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ADMIN PORTAL LINK */}
       {isAdmin && (

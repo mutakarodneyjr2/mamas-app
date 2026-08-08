@@ -1,7 +1,7 @@
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { db, storage } from "../firebase";
+import { db } from "../firebase";
 import { User, UserRole, UserStatus } from "../types";
+import { uploadImage } from "./storage";
 
 const compressImageToBlob = async (file: File, maxWidth = 500, maxHeight = 500, quality = 0.8): Promise<Blob> => {
   return new Promise((resolve, reject) => {
@@ -67,13 +67,12 @@ export const completeProfile = async (
   let profilePictureUrl = "";
   if (profilePicFile) {
     try {
-      const compressedBlob = await compressImageToBlob(profilePicFile);
-      const picRef = ref(storage, `profile_pictures/${uid}_${Date.now()}.jpg`);
-      await uploadBytes(picRef, compressedBlob);
-      profilePictureUrl = await getDownloadURL(picRef);
+      profilePictureUrl = await uploadImage(profilePicFile, `profile_pictures/${uid}_${Date.now()}.jpg`, {
+        timeoutMs: 8000,
+        allowDataUrlFallback: true
+      });
     } catch (e) {
       console.error("Profile picture upload failed during registration:", e);
-      // Still proceed with registration even if picture fails, or could throw. We log it for now.
     }
   }
 

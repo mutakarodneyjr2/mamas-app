@@ -12,7 +12,7 @@ import {
   orderBy,
   setDoc
 } from 'firebase/firestore';
-import { db } from '../firebase';
+import { db, auth } from '../firebase';
 import { deleteImage } from './storage';
 import { notifyAllApprovedMembers, notifyUser } from './fcmService';
 import { 
@@ -135,9 +135,15 @@ export const initiateMobileMoneyContribution = async (
   await logActivity('INITIATE_MM_CONTRIBUTION', userId, docRef.id, `Initiated mobile money payment for UGX ${amount}`);
   
   // Call backend API
+  const idToken = await auth.currentUser?.getIdToken();
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (idToken) {
+    headers['Authorization'] = `Bearer ${idToken}`;
+  }
+
   const response = await fetch('/api/relworx/initiate-collection', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify({
       amount,
       phoneNumber,
@@ -537,19 +543,19 @@ export const initiateWelfareDisbursement = async (
 
   await logActivity('INITIATE_WELFARE_DISBURSEMENT', treasurerId, requestId, `Initiated mobile money disbursement of UGX ${amount}`);
 
+  const currentUser = auth.currentUser;
+  if (!currentUser) {
+    throw new Error("Unauthorized: User is not authenticated.");
+  }
+  const idToken = await currentUser.getIdToken();
+
   const response = await fetch('/api/relworx/initiate-disbursement', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      amount,
-      phoneNumber: requestData.recipientPhoneNumber,
-      network,
-      reference: requestId,
-      metadata: {
-        type: 'welfare',
-        requestId
-      }
-    })
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${idToken}`
+    },
+    body: JSON.stringify({ type: 'welfare', documentId: requestId, note: 'Welfare Payout' })
   });
 
   if (!response.ok) {
@@ -561,7 +567,7 @@ export const initiateWelfareDisbursement = async (
       updatedAt: Date.now()
     });
     
-    throw new Error(errorData.error || "Failed to initiate mobile money disbursement.");
+    throw new Error(errorData.message || errorData.error || "Failed to initiate mobile money disbursement.");
   }
   
   return true;
@@ -800,19 +806,19 @@ export const initiateExpenseDisbursement = async (
 
   await logActivity('INITIATE_EXPENSE_DISBURSEMENT', treasurerId, expenseId, `Initiated mobile money disbursement of UGX ${amount}`);
 
+  const currentUser = auth.currentUser;
+  if (!currentUser) {
+    throw new Error("Unauthorized: User is not authenticated.");
+  }
+  const idToken = await currentUser.getIdToken();
+
   const response = await fetch('/api/relworx/initiate-disbursement', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      amount,
-      phoneNumber: expenseData.recipientPhoneNumber,
-      network,
-      reference: expenseId,
-      metadata: {
-        type: 'expense',
-        expenseId
-      }
-    })
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${idToken}`
+    },
+    body: JSON.stringify({ type: 'expense', documentId: expenseId, note: 'Expense Payout' })
   });
 
   if (!response.ok) {
@@ -824,7 +830,7 @@ export const initiateExpenseDisbursement = async (
       updatedAt: Date.now()
     });
     
-    throw new Error(errorData.error || "Failed to initiate mobile money disbursement.");
+    throw new Error(errorData.message || errorData.error || "Failed to initiate mobile money disbursement.");
   }
   
   return true;

@@ -18,7 +18,14 @@ export function verifyWebhookSignature(signature: string, payload: string, secre
       .update(payload)
       .digest('hex');
       
-    return signature === expectedSignature;
+    const sigBuf = Buffer.from(signature);
+    const expectedBuf = Buffer.from(expectedSignature);
+    
+    if (sigBuf.length !== expectedBuf.length) {
+      return false;
+    }
+    
+    return crypto.timingSafeEqual(sigBuf, expectedBuf);
   } catch (error) {
     console.error('Error verifying signature:', error);
     return false;

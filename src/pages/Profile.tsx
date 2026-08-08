@@ -6,6 +6,7 @@ import {
 import { db } from '../firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import { registerFCMToken } from '../lib/fcmService';
+import { uploadImage } from '../lib/storage';
 
 export default function Profile() {
   const { userProfile, logout } = useAuth();
@@ -22,6 +23,42 @@ export default function Profile() {
   
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !userProfile?.uid) return;
+
+    if (!file.type.startsWith('image/')) {
+      setErrorMsg('Please select a valid image file (JPG, PNG, WebP).');
+      return;
+    }
+
+    setUploadingPhoto(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+
+    try {
+      const path = `profile_pictures/${userProfile.uid}_${Date.now()}.jpg`;
+      const photoUrl = await uploadImage(file, path, { timeoutMs: 10000, allowDataUrlFallback: true });
+
+      await updateDoc(doc(db, 'users', userProfile.uid), {
+        profilePictureUrl: photoUrl,
+        updatedAt: Date.now()
+      });
+
+      setSuccessMsg('Profile picture updated successfully!');
+      setTimeout(() => setSuccessMsg(''), 4000);
+    } catch (err: any) {
+      console.error('Failed to update profile picture:', err);
+      setErrorMsg('Failed to update profile picture: ' + (err.message || 'Unknown error'));
+    } finally {
+      setUploadingPhoto(false);
+      if (e.target) e.target.value = '';
+    }
+  };
 
   const [enablingNotifications, setEnablingNotifications] = useState(false);
   const [notifPermission, setNotifPermission] = useState<NotificationPermission>(
@@ -128,16 +165,38 @@ export default function Profile() {
         </div>
         
         <div className="px-6 pb-6 pt-0 flex flex-col items-center text-center -mt-14 relative z-10">
+          <input
+            type="file"
+            ref={fileInputRef}
+            accept="image/*"
+            onChange={handleImageUpload}
+            className="hidden"
+          />
           <div className="relative mb-3">
-            <div className="w-24 h-24 rounded-full bg-slate-800 border-4 border-slate-900 shadow-2xl overflow-hidden flex items-center justify-center">
+            <div className="w-24 h-24 rounded-full bg-slate-800 border-4 border-slate-900 shadow-2xl overflow-hidden flex items-center justify-center relative">
               {userProfile.profilePictureUrl ? (
                 <img src={userProfile.profilePictureUrl} alt="Profile" className="w-full h-full object-cover" />
               ) : (
                 <User className="w-10 h-10 text-slate-400" />
               )}
+              {uploadingPhoto && (
+                <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center">
+                  <div className="w-6 h-6 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
+                </div>
+              )}
             </div>
-            <button className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-amber-500 border-2 border-slate-900 flex items-center justify-center text-slate-950 shadow-md hover:scale-110 transition-transform">
-              <Camera className="w-4 h-4" />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingPhoto}
+              className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-amber-500 border-2 border-slate-900 flex items-center justify-center text-slate-950 shadow-md hover:scale-110 transition-transform disabled:opacity-50"
+              title="Change profile picture"
+            >
+              {uploadingPhoto ? (
+                <div className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Camera className="w-4 h-4" />
+              )}
             </button>
           </div>
           

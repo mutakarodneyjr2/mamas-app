@@ -3,7 +3,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth, db } from '../firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, updateDoc } from 'firebase/firestore';
+import { uploadImage } from '../lib/storage';
 import { Logo } from '../components/Logo';
 import { 
   Phone, 
@@ -177,14 +178,11 @@ export default function Register() {
 
   const uploadProfilePic = async (uid: string, file: File): Promise<string> => {
     try {
-      const { ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
-      const { storage } = await import('../firebase');
       const ext = file.name.split('.').pop() || 'jpg';
-      const storageRef = ref(storage, `users/${uid}/profile.${ext}`);
-      const snapshot = await uploadBytes(storageRef, file);
-      return await getDownloadURL(snapshot.ref);
+      const path = `users/${uid}/profile_${Date.now()}.${ext}`;
+      return await uploadImage(file, path, { timeoutMs: 8000, allowDataUrlFallback: true });
     } catch (err) {
-      console.error("Failed to upload profile picture:", err);
+      console.warn("Failed to upload profile picture during registration:", err);
       return '';
     }
   };
@@ -241,18 +239,81 @@ export default function Register() {
   const isPasswordMatch = formData.password.length > 0 && formData.password === formData.confirmPassword;
 
   // Step validation helpers
-  const canGoNextFromStep1 = authProvider === 'google' || (isEmailValid && formData.password.length >= 6 && isPasswordMatch);
-  const canGoNextFromStep2 = formData.fullName.trim().length >= 2 && 
-                             formData.phoneNumber.trim().length >= 8 && 
-                             formData.yearLeftSchool !== '' && 
-                             formData.occupation.trim().length > 0 && 
-                             formData.district.trim().length > 0 &&
-                             (formData.occupation !== 'Other' || formData.otherOccupation.trim().length > 0) &&
-                             (formData.occupation !== 'Student' || (formData.university.trim().length > 0 && formData.course.trim().length > 0));
+  const handleNextStep1 = () => {
+    setError('');
+    if (authProvider === 'email') {
+      if (!formData.email.trim()) {
+        setError('Please enter your email address.');
+        return;
+      }
+      if (!isEmailValid) {
+        setError('Please enter a valid email address.');
+        return;
+      }
+      if (formData.password.length < 6) {
+        setError('Password must be at least 6 characters long.');
+        return;
+      }
+      if (formData.password !== formData.confirmPassword) {
+        setError('Passwords do not match.');
+        return;
+      }
+    }
+    setCurrentStep(2);
+  };
+
+  const handleNextStep2 = () => {
+    setError('');
+    if (formData.fullName.trim().length < 2) {
+      setError('Please enter your full name.');
+      return;
+    }
+    if (formData.phoneNumber.trim().length < 8) {
+      setError('Please enter a valid phone number.');
+      return;
+    }
+    if (!formData.yearLeftSchool) {
+      setError('Please select the year you left school.');
+      return;
+    }
+    if (!formData.district) {
+      setError('Please select your district of origin.');
+      return;
+    }
+    if (!formData.occupation) {
+      setError('Please select your occupation.');
+      return;
+    }
+    if (formData.occupation === 'Other' && formData.otherOccupation.trim().length === 0) {
+      setError('Please specify your occupation.');
+      return;
+    }
+    if (formData.occupation === 'Student') {
+      if (formData.university.trim().length === 0) {
+        setError('Please enter your university/institution.');
+        return;
+      }
+      if (formData.course.trim().length === 0) {
+        setError('Please select your course of study.');
+        return;
+      }
+    }
+    setCurrentStep(3);
+  };
 
   const handleSubmitRegistration = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (!formData.nextOfKinName.trim()) {
+      setError('Please enter your Next of Kin name.');
+      return;
+    }
+    
+    if (!formData.nextOfKinPhone.trim()) {
+      setError('Please enter your Next of Kin phone.');
+      return;
+    }
 
     if (!agreedToTerms) {
       setError("You must agree to the Terms of Service to proceed.");
@@ -265,49 +326,64 @@ export default function Register() {
       let uid = googleUid;
       let finalProfilePicUrl = profilePicPreview;
 
-      if (authProvider === 'email') {
-        // 1. Create user in Firebase Auth
-        const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
-        uid = userCredential.user.uid;
-      }
+      const performRegistration = async () => {
+        if (authProvider === 'email') {
+          // 1. Create user in Firebase Auth
+          const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+          uid = userCredential.user.uid;
+        }
 
-      if (!uid) {
-        throw new Error("No valid user ID found.");
-      }
+        if (!uid) {
+          throw new Error("No valid user ID found.");
+        }
 
-      // 2. Upload profile pic if selected
-      if (profilePicFile) {
-        finalProfilePicUrl = await uploadProfilePic(uid, profilePicFile);
-      }
+        // 2. Immediately create profile in Firestore FIRST with initial/preview photo
+        const newProfile: Partial<User> = {
+          uid,
+          email: formData.email,
+          phoneNumber: formData.phoneNumber,
+          fullName: formData.fullName,
+          yearLeftSchool: formData.yearLeftSchool,
+          district: formData.district,
+          placeOfResidence: formData.placeOfResidence,
+          occupation: formData.occupation === 'Other' ? formData.otherOccupation : formData.occupation,
+          ...(formData.occupation === 'Student' && {
+            university: formData.university,
+            course: formData.course
+          }),
+          nextOfKinName: formData.nextOfKinName,
+          nextOfKinPhone: formData.nextOfKinPhone,
+          profilePictureUrl: finalProfilePicUrl || '',
+          privacySettings: {
+            showPhone: formData.showPhone,
+            showEmail: formData.showEmail
+          },
+          status: 'pending', // Requires admin approval
+          role: 'member',
+          createdAt: new Date().toISOString(),
+          authProvider: authProvider
+        };
 
-      // 3. Create profile in Firestore
-      const newProfile: Partial<User> = {
-        uid,
-        email: formData.email,
-        phoneNumber: formData.phoneNumber,
-        fullName: formData.fullName,
-        yearLeftSchool: formData.yearLeftSchool,
-        district: formData.district,
-        placeOfResidence: formData.placeOfResidence,
-        occupation: formData.occupation === 'Other' ? formData.otherOccupation : formData.occupation,
-        ...(formData.occupation === 'Student' && {
-          university: formData.university,
-          course: formData.course
-        }),
-        nextOfKinName: formData.nextOfKinName,
-        nextOfKinPhone: formData.nextOfKinPhone,
-        profilePictureUrl: finalProfilePicUrl,
-        privacySettings: {
-          showPhone: formData.showPhone,
-          showEmail: formData.showEmail
-        },
-        status: 'pending', // Requires admin approval
-        role: 'member',
-        createdAt: new Date().toISOString(),
-        authProvider: authProvider
+        await setDoc(doc(db, 'users', uid), newProfile);
+
+        // 3. Upload profile photo AFTER profile doc exists (non-blocking)
+        if (profilePicFile) {
+          try {
+            const uploadedUrl = await uploadProfilePic(uid, profilePicFile);
+            if (uploadedUrl) {
+              await updateDoc(doc(db, 'users', uid), { profilePictureUrl: uploadedUrl });
+            }
+          } catch (photoErr) {
+            console.warn("Photo upload warning during registration:", photoErr);
+          }
+        }
       };
 
-      await setDoc(doc(db, 'users', uid), newProfile);
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error("Request timed out. Please check your internet connection and try again.")), 20000);
+      });
+
+      await Promise.race([performRegistration(), timeoutPromise]);
       
       setCurrentStep('success');
     } catch (err: any) {
@@ -587,8 +663,7 @@ export default function Register() {
               <div className="pt-4">
                 <button
                   type="button"
-                  onClick={() => setCurrentStep(2)}
-                  disabled={!canGoNextFromStep1}
+                  onClick={handleNextStep1}
                   className="w-full py-3.5 px-6 rounded-full bg-slate-900 dark:bg-amber-500 text-white dark:text-slate-950 font-bold text-sm shadow-xl hover:scale-[1.01] active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <span>Continue to Profile</span>
@@ -800,8 +875,7 @@ export default function Register() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setCurrentStep(3)}
-                  disabled={!canGoNextFromStep2}
+                  onClick={handleNextStep2}
                   className="w-2/3 py-3.5 px-6 rounded-full bg-slate-900 dark:bg-amber-500 text-white dark:text-slate-950 font-bold text-sm shadow-xl hover:scale-[1.01] active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <span>Continue to Final Step</span>
@@ -928,7 +1002,7 @@ export default function Register() {
 
                 <button
                   type="submit"
-                  disabled={loading || !agreedToTerms || !formData.nextOfKinName || !formData.nextOfKinPhone}
+                  disabled={loading}
                   className="w-2/3 py-4 px-6 rounded-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-sm shadow-xl hover:scale-[1.01] active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
                   {loading ? (

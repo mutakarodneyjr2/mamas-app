@@ -53,6 +53,7 @@ export default function Help() {
   const [supportPhone, setSupportPhone] = useState('+256 770 000000');
   const [supportWhatsApp, setSupportWhatsApp] = useState('+256 700 000000');
   const [supportEmail, setSupportEmail] = useState('support@mamas.org');
+  const [whatsappGroupLink, setWhatsappGroupLink] = useState('');
 
   // Contact Support Form
   const [subject, setSubject] = useState('');
@@ -87,6 +88,7 @@ export default function Help() {
         if (data.supportPhone) setSupportPhone(data.supportPhone);
         if (data.supportWhatsApp) setSupportWhatsApp(data.supportWhatsApp);
         if (data.supportEmail) setSupportEmail(data.supportEmail);
+        if (data.whatsappGroupLink) setWhatsappGroupLink(data.whatsappGroupLink);
       }
     } catch (err) {
       console.error("Error fetching support settings:", err);
@@ -289,6 +291,17 @@ export default function Help() {
               >
                 <Mail className="w-4 h-4" />
                 <span>Email Support</span>
+              </a>
+            )}
+            {whatsappGroupLink && (
+              <a
+                href={whatsappGroupLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl font-bold text-xs transition-all shadow-md hover:shadow-emerald-900/30"
+              >
+                <MessageSquare className="w-4 h-4" />
+                <span>Join Alumni Group</span>
               </a>
             )}
           </div>

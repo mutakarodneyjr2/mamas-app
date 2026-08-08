@@ -245,24 +245,28 @@ app.post('/api/relworx/initiate-collection', requireFirebaseAdmin, async (req, r
 // https://YOUR-VERCEL-DOMAIN.vercel.app/api/relworx/webhook
 app.post('/api/relworx/webhook', requireFirebaseAdmin, async (req, res) => {
   try {
+    const secret = process.env.RELWORX_WEBHOOK_SECRET || '';
+    if (!secret) {
+      console.error('Webhook processing failed: RELWORX_WEBHOOK_SECRET is not configured on the server');
+      return res.status(503).json({
+        success: false,
+        message: 'Server misconfiguration: Webhook verification secret is not configured'
+      });
+    }
+
     const signature = req.headers['x-signature'] as string;
+    if (!signature) {
+      return res.status(401).json({ success: false, message: 'Missing signature header' });
+    }
+
     const rawBody = Buffer.isBuffer(req.body)
       ? req.body.toString('utf8')
       : typeof req.body === 'string'
       ? req.body
       : JSON.stringify(req.body);
 
-    if (!signature) {
-      return res.status(401).json({ success: false, message: 'Missing signature header' });
-    }
-
-    const secret = process.env.RELWORX_WEBHOOK_SECRET || '';
-    if (!secret) {
-      console.warn('RELWORX_WEBHOOK_SECRET is not configured');
-    }
-
     const isValid = verifyWebhookSignature(signature, rawBody, secret);
-    if (!isValid && secret) {
+    if (!isValid) {
       return res.status(401).json({ success: false, message: 'Invalid webhook signature' });
     }
 
@@ -292,13 +296,110 @@ app.post('/api/relworx/webhook', requireFirebaseAdmin, async (req, res) => {
 // 3. POST /api/relworx/initiate-disbursement
 app.post('/api/relworx/initiate-disbursement', requireFirebaseAdmin, async (req, res) => {
   try {
-    const { amount, phoneNumber, network, reference, metadata } = req.body || {};
-
-    if (!amount || !phoneNumber || !network || !reference) {
-      return res.status(400).json({ success: false, message: 'Missing required parameters' });
+    const authHeader = req.headers.authorization;
+    if (!authHeader || typeof authHeader !== 'string' || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, message: 'Unauthorized: Missing or invalid token' });
     }
 
-    const result = await initiateDisbursement(amount, phoneNumber, network, reference, metadata || {});
+    const token = authHeader.split('Bearer ')[1];
+    let decodedToken;
+    try {
+      decodedToken = await getAuth().verifyIdToken(token);
+    } catch (authErr: any) {
+      console.error('ID token verification failed for disbursement:', authErr?.message || authErr);
+      return res.status(401).json({ success: false, message: 'Unauthorized: Invalid token' });
+    }
+
+    // Verify caller role from Firestore
+    const firestore = getFirestore();
+    const userDoc = await firestore.collection('users').doc(decodedToken.uid).get();
+
+    if (!userDoc.exists) {
+      return res.status(403).json({ success: false, message: 'Forbidden: User profile not found' });
+    }
+
+    const userData = userDoc.data();
+    const userRole = userData?.role;
+    const allowedRoles = ['super_admin', 'treasurer', 'chairperson', 'vice_chairperson'];
+
+    if (!userRole || !allowedRoles.includes(userRole)) {
+      return res.status(403).json({ success: false, message: 'Forbidden: Insufficient permissions for disbursement' });
+    }
+
+    const { type, documentId, note } = req.body || {};
+
+    if (!type || !documentId) {
+      return res.status(400).json({ success: false, message: 'Missing required parameters: type or documentId' });
+    }
+
+    if (type !== 'welfare' && type !== 'expense') {
+      return res.status(400).json({ success: false, message: 'Invalid type. Must be "welfare" or "expense"' });
+    }
+
+    let amount: number;
+    let phoneNum: string;
+    let network: string;
+    let beneficiaryName: string | undefined;
+
+    if (type === 'welfare') {
+      const docRef = firestore.collection('welfareRequests').doc(documentId);
+      const docSnap = await docRef.get();
+      if (!docSnap.exists) {
+        return res.status(400).json({ success: false, message: 'Welfare request not found' });
+      }
+      const data = docSnap.data();
+      if (data?.status !== 'approved' && data?.status !== 'accepted') {
+        return res.status(409).json({ success: false, message: 'Welfare request is not approved/accepted' });
+      }
+      if (data?.disbursementStatus === 'pending' || data?.disbursementStatus === 'successful' || data?.status === 'paid') {
+         return res.status(409).json({ success: false, message: 'Disbursement already processing, successful or paid' });
+      }
+      if (!data?.amountRequested || !data?.recipientPhoneNumber) {
+        return res.status(400).json({ success: false, message: 'Welfare request missing amount or recipient phone' });
+      }
+      amount = data.amountRequested;
+      phoneNum = data.recipientPhoneNumber;
+      network = data.recipientNetwork || 'MTN';
+      beneficiaryName = data.recipientName || data.personName;
+    } else { // type === 'expense'
+      const docRef = firestore.collection('expenses').doc(documentId);
+      const docSnap = await docRef.get();
+      if (!docSnap.exists) {
+        return res.status(400).json({ success: false, message: 'Expense request not found' });
+      }
+      const data = docSnap.data();
+      if (data?.status !== 'approved' && data?.approvalStatus !== 'approved') {
+         return res.status(409).json({ success: false, message: 'Expense request is not approved' });
+      }
+      if (data?.disbursementStatus === 'pending' || data?.disbursementStatus === 'successful' || data?.status === 'paid') {
+         return res.status(409).json({ success: false, message: 'Disbursement already processing, successful or paid' });
+      }
+      if (!data?.amount || !data?.recipientPhoneNumber) {
+        return res.status(400).json({ success: false, message: 'Expense missing amount or recipient phone' });
+      }
+      amount = data.amount;
+      phoneNum = data.recipientPhoneNumber;
+      network = data.recipientNetwork || 'MTN';
+      beneficiaryName = data.recipientName;
+    }
+
+    const metadata = { type, documentId, note, beneficiaryName };
+    const reference = documentId;
+
+    const result = await initiateDisbursement(amount, phoneNum, network, reference, metadata);
+    
+    // Update the doc to indicate pending
+    const updateData = {
+      disbursementStatus: "pending",
+      relworxDisbursementId: result.reference || result.data?.reference || null,
+      updatedAt: Date.now()
+    };
+    if (type === 'welfare') {
+       await firestore.collection('welfareRequests').doc(documentId).update(updateData);
+    } else {
+       await firestore.collection('expenses').doc(documentId).update(updateData);
+    }
+
     return res.json({ success: true, data: result });
   } catch (error: any) {
     console.error('Initiate disbursement error:', error);

@@ -8,55 +8,20 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;0,800;1,600&display=swap" rel="stylesheet">
-    <script>
-      (function() {
-        function showError(msg, stack) {
-          var div = document.getElementById('script-error-display');
-          if (!div) {
-            div = document.createElement('div');
-            div.id = 'script-error-display';
-            div.style.cssText = 'position:fixed; top:0; left:0; width:100%; background:#dc2626; color:white; padding:20px; z-index:99999; font-size:16px; white-space:pre-wrap; box-sizing:border-box; max-height:100vh; overflow:auto;';
-            if (document.body) {
-              document.body.appendChild(div);
-            } else {
-              window.addEventListener('DOMContentLoaded', function() {
-                document.body.appendChild(div);
-              });
-            }
-          }
-          div.innerHTML += '<strong>Error:</strong> ' + msg + '\\n' + (stack ? stack + '\\n\\n' : '\\n');
-        }
-
-        window.onerror = function(message, source, lineno, colno, error) {
-          var msg = message + ' at ' + source + ':' + lineno + ':' + colno;
-          showError(msg, error && error.stack ? error.stack : '');
-          return false;
-        };
-
-        window.addEventListener('unhandledrejection', function(event) {
-          showError('Unhandled Promise Rejection: ' + (event.reason ? (event.reason.message || event.reason) : 'Unknown'), event.reason && event.reason.stack ? event.reason.stack : '');
-        });
-      })();
-    </script>
   </head>
-  <body>
-    <div id="root"></div>
+  <body class="bg-slate-950">
+    <div id="root">
+      <div style="display:flex;justify-content:center;align-items:center;height:100vh;background-color:#020617;color:white;font-family:system-ui,sans-serif;">
+        <div style="text-align:center;">
+          <div style="width:48px;height:48px;border:3px solid rgba(245, 158, 11, 0.2);border-top-color:#f59e0b;border-radius:50%;animation:mamas-spin 1s linear infinite;margin:0 auto 16px;"></div>
+          <p style="color:#94a3b8;font-size:14px;font-weight:500;letter-spacing:0.5px;">Loading MAMAS...</p>
+        </div>
+      </div>
+      <style>
+        @keyframes mamas-spin { to { transform: rotate(360deg); } }
+      </style>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
-    <script>
-      setTimeout(function() {
-        var root = document.getElementById('root');
-        if (root && root.innerHTML.trim() === '') {
-          var div = document.getElementById('script-error-display');
-          if (!div) {
-            div = document.createElement('div');
-            div.id = 'script-error-display';
-            div.style.cssText = 'position:fixed; top:0; left:0; width:100%; background:#dc2626; color:white; padding:20px; z-index:99999; font-size:16px; white-space:pre-wrap; box-sizing:border-box; max-height:100vh; overflow:auto;';
-            document.body.appendChild(div);
-          }
-          div.innerHTML += '<strong>Error:</strong> React failed to mount. Check console for errors.\\n\\n';
-        }
-      }, 5000);
-    </script>
   </body>
 </html>
 

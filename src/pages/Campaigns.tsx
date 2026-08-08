@@ -4,27 +4,41 @@ import { db } from '../firebase';
 import { SchoolCampaign } from '../types';
 import { Link } from 'react-router-dom';
 import { formatUGX, DEFAULT_CAMPAIGN_PLACEHOLDER } from '../lib/utils';
-import { Target } from 'lucide-react';
+import { Target, AlertCircle, RefreshCw } from 'lucide-react';
 
 export default function Campaigns() {
   const [campaigns, setCampaigns] = useState<SchoolCampaign[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
+    setLoading(true);
+    setError(null);
+
     const q = query(
       collection(db, 'schoolCampaigns'),
       where('status', '==', 'active')
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SchoolCampaign));
-      list.sort((a, b) => b.createdAt - a.createdAt);
-      setCampaigns(list);
-      setLoading(false);
-    });
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SchoolCampaign));
+        list.sort((a, b) => b.createdAt - a.createdAt);
+        setCampaigns(list);
+        setLoading(false);
+        setError(null);
+      },
+      (err) => {
+        console.error('Error loading campaigns:', err);
+        setError('Could not load campaigns. Please try again.');
+        setLoading(false);
+      }
+    );
 
     return () => unsubscribe();
-  }, []);
+  }, [retryKey]);
 
   if (loading) return <div className="text-center py-12 text-mamas-text-muted">Loading campaigns...</div>;
 
@@ -37,7 +51,22 @@ export default function Campaigns() {
         </p>
       </div>
 
-      {campaigns.length === 0 ? (
+      {error ? (
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-8 text-center flex flex-col items-center justify-center">
+          <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-3">
+            <AlertCircle className="w-6 h-6" />
+          </div>
+          <h3 className="text-lg font-semibold text-red-800 mb-1">Unable to Load Campaigns</h3>
+          <p className="text-sm text-red-600 mb-4 max-w-md">{error}</p>
+          <button
+            onClick={() => setRetryKey(prev => prev + 1)}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white font-medium text-sm rounded-lg hover:bg-red-700 transition-colors cursor-pointer"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Retry
+          </button>
+        </div>
+      ) : campaigns.length === 0 ? (
         <div className="bg-mamas-card rounded-3xl shadow-sm border border-slate-100 p-16 flex flex-col items-center justify-center text-center">
           <div className="w-16 h-16 bg-mamas-primary/10 text-mamas-primary rounded-full flex items-center justify-center mb-4">
             <Target className="w-8 h-8" />

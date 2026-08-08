@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '../firebase';
+import { db } from '../firebase';
+import { uploadImage } from '../lib/storage';
 import { submitWelfareRequest } from '../lib/services';
 import { AppSettings } from '../types';
 import { formatUGX } from '../lib/utils';
@@ -114,10 +114,11 @@ export default function ApplyWelfare() {
       if (evidenceFiles) {
         for (let i = 0; i < evidenceFiles.length; i++) {
           const file = evidenceFiles[i];
-          const fileRef = ref(storage, `welfare_evidence/${currentUser.uid}_${Date.now()}_${file.name}`);
-          await uploadBytes(fileRef, file);
-          const url = await getDownloadURL(fileRef);
-          evidenceUrls.push(url);
+          const path = `welfare_evidence/${currentUser.uid}_${Date.now()}_${file.name}`;
+          const url = await uploadImage(file, path, { timeoutMs: 10000, allowDataUrlFallback: true });
+          if (url) {
+            evidenceUrls.push(url);
+          }
         }
       }
 

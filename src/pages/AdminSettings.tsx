@@ -1,8 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { doc, setDoc, collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '../firebase';
+import { db } from '../firebase';
 import { uploadImage, deleteImage } from '../lib/storage';
 import { AppSettings, User } from '../types';
 import { updateWelfareApprovers, logActivity } from '../lib/services';
@@ -16,6 +15,7 @@ const checkIsDirty = (draft: AppSettings | null, server: AppSettings | null): bo
   if ((draft.supportPhone || '') !== (server.supportPhone || '')) return true;
   if ((draft.supportWhatsApp || '') !== (server.supportWhatsApp || '')) return true;
   if ((draft.supportEmail || '') !== (server.supportEmail || '')) return true;
+  if ((draft.whatsappGroupLink || '') !== (server.whatsappGroupLink || '')) return true;
   if (!!draft.showTotalBalanceToMembers !== !!server.showTotalBalanceToMembers) return true;
   if (!!draft.showTopContributors !== !!server.showTopContributors) return true;
   
@@ -88,7 +88,8 @@ export default function AdminSettings() {
           landingBanners: currentBanners,
           supportPhone: data.supportPhone || '+256 770 000000',
           supportWhatsApp: data.supportWhatsApp || '+256 700 000000',
-          supportEmail: data.supportEmail || 'support@mamas.org'
+          supportEmail: data.supportEmail || 'support@mamas.org',
+          whatsappGroupLink: data.whatsappGroupLink || ''
         };
       } else {
         fullSettings = {
@@ -104,7 +105,8 @@ export default function AdminSettings() {
           landingBanners: [],
           supportPhone: '+256 770 000000',
           supportWhatsApp: '+256 700 000000',
-          supportEmail: 'support@mamas.org'
+          supportEmail: 'support@mamas.org',
+          whatsappGroupLink: ''
         };
       }
 
@@ -340,7 +342,8 @@ export default function AdminSettings() {
         landingBanners: formData.banners || [],
         supportPhone: formData.supportPhone || '+256 770 000000',
         supportWhatsApp: formData.supportWhatsApp || '+256 700 000000',
-        supportEmail: formData.supportEmail || 'support@mamas.org'
+        supportEmail: formData.supportEmail || 'support@mamas.org',
+        whatsappGroupLink: formData.whatsappGroupLink || ''
       }, { merge: true });
 
       await logActivity('UPDATE_SETTINGS', currentUser.uid, 'main', 'Saved all system settings');
@@ -910,6 +913,19 @@ export default function AdminSettings() {
                   value={formData.supportEmail || ''}
                   onChange={(e) => setFormData(prev => prev ? ({ ...prev, supportEmail: e.target.value }) : null)}
                   placeholder="support@mamas.org"
+                  className="w-full bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs sm:text-sm font-semibold text-slate-900 dark:text-white focus:border-amber-500 focus:bg-white dark:focus:bg-slate-900 outline-none transition-all placeholder:text-slate-400"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-widest mb-1">
+                  Alumni WhatsApp Group Invite Link
+                </label>
+                <input
+                  type="url"
+                  value={formData.whatsappGroupLink || ''}
+                  onChange={(e) => setFormData(prev => prev ? ({ ...prev, whatsappGroupLink: e.target.value }) : null)}
+                  placeholder="https://chat.whatsapp.com/..."
                   className="w-full bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs sm:text-sm font-semibold text-slate-900 dark:text-white focus:border-amber-500 focus:bg-white dark:focus:bg-slate-900 outline-none transition-all placeholder:text-slate-400"
                 />
               </div>
