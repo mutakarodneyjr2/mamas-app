@@ -11,7 +11,6 @@
 import express from 'express';
 import cors from 'cors';
 import { getApps, initializeApp, cert } from 'firebase-admin/app';
-
 import { getFirestore } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
 import { getAuth } from 'firebase-admin/auth';
@@ -19,26 +18,20 @@ import { getAuth } from 'firebase-admin/auth';
 let firebaseInitError: Error | null = null;
 
 function ensureFirebaseInit() {
-  if (getApps().length) return; // already initialized
-
+  if (getApps().length) return;
   const rawEnv = process.env.FIREBASE_SERVICE_ACCOUNT_BASE64 || process.env.FIREBASE_SERVICE_ACCOUNT;
   if (!rawEnv) {
     firebaseInitError = new Error('FIREBASE_SERVICE_ACCOUNT_BASE64 environment variable is missing on Vercel');
     console.error('Firebase Admin init failed:', firebaseInitError.message);
     throw firebaseInitError;
   }
-
   try {
     let serviceAccountJson = rawEnv.trim();
     if (!serviceAccountJson.startsWith('{')) {
       serviceAccountJson = Buffer.from(serviceAccountJson, 'base64').toString('utf8');
     }
     const serviceAccount = JSON.parse(serviceAccountJson);
-
-    initializeApp({
-      credential: cert(serviceAccount),
-    });
-
+    initializeApp({ credential: cert(serviceAccount) });
     console.log(`Firebase Admin initialized successfully for: ${serviceAccount.client_email}`);
   } catch (error: any) {
     firebaseInitError = new Error(`Failed to initialize Firebase Admin: ${error.message}`);
@@ -47,31 +40,27 @@ function ensureFirebaseInit() {
   }
 }
 
-// Import handlers from relworxService
+// CHANGED: import from './relworxService' instead of '../src/server/relworxService'
 import {
   initiateCollection,
   initiateDisbursement,
   handleCollectionWebhook,
   handleDisbursementWebhook,
   verifyWebhookSignature,
-} from '../src/server/relworxService';
+} from './relworxService';
 
 const app = express();
 
 app.use(cors({ origin: true, credentials: true }));
 
-// Universal JSON middleware with raw body capture for signature verification
 app.use(express.json({
-  verify: (req: any, _res, buf) => {
-    req.rawBody = buf;
-  }
+  verify: (req: any, _res, buf) => { req.rawBody = buf; }
 }));
 
 app.get(['/api/health', '/health'], (req, res) => {
   res.json({ status: 'ok', timestamp: Date.now(), service: 'mamas-api' });
 });
 
-// Middleware to ensure Firebase Admin is initialized
 const requireFirebaseAdmin = (req: express.Request, res: express.Response, next: express.NextFunction) => {
   try {
     ensureFirebaseInit();
@@ -85,19 +74,14 @@ const requireFirebaseAdmin = (req: express.Request, res: express.Response, next:
   }
 };
 
-// 0. POST /api/notifications/send - Send real FCM push notifications & write in-app notification doc
 app.post(['/api/notifications/send', '/notifications/send'], requireFirebaseAdmin, async (req, res) => {
   try {
     const { userId, title, body, type, targetId, targetUrl } = req.body || {};
-
     if (!title || !body) {
       return res.status(400).json({ success: false, message: 'Missing title or body' });
     }
-
     const firestore = getFirestore();
     const messaging = getMessaging();
-
-    // 1. Save in-app notification doc in Firestore
     const notifRef = await firestore.collection('notifications').add({
       userId: userId || 'ALL_APPROVED',
       title,
@@ -108,17 +92,12 @@ app.post(['/api/notifications/send', '/notifications/send'], requireFirebaseAdmi
       read: false,
       createdAt: Date.now()
     });
-
-    // 2. Fetch recipient FCM tokens
     let tokens: string[] = [];
-
     if (userId === 'ALL_APPROVED') {
       const snap = await firestore.collection('users').where('status', '==', 'approved').get();
       snap.forEach(docSnap => {
         const uData = docSnap.data();
-        if (Array.isArray(uData.fcmTokens)) {
-          tokens.push(...uData.fcmTokens);
-        }
+        if (Array.isArray(uData.fcmTokens)) tokens.push(...uData.fcmTokens);
       });
     } else if (Array.isArray(userId)) {
       for (const uid of userId) {
@@ -126,42 +105,25 @@ app.post(['/api/notifications/send', '/notifications/send'], requireFirebaseAdmi
         const uDoc = await firestore.collection('users').doc(uid).get();
         if (uDoc.exists) {
           const uData = uDoc.data();
-          if (uData && Array.isArray(uData.fcmTokens)) {
-            tokens.push(...uData.fcmTokens);
-          }
+          if (uData && Array.isArray(uData.fcmTokens)) tokens.push(...uData.fcmTokens);
         }
       }
     } else if (userId && typeof userId === 'string') {
       const uDoc = await firestore.collection('users').doc(userId).get();
       if (uDoc.exists) {
-        const uData = uDoc.data();
-        if (uData && Array.isArray(uData.fcmTokens)) {
-          tokens.push(...uData.fcmTokens);
-        }
+        const uData = uDoc.get();
+        if (uData && Array.isArray(uData.fcmTokens)) tokens.push(...uData.fcmTokens);
       }
     }
-
-    // Deduplicate valid tokens
     tokens = Array.from(new Set(tokens.filter(t => typeof t === 'string' && t.trim().length > 0)));
-
     let successCount = 0;
     let failureCount = 0;
-
     if (tokens.length > 0) {
       try {
         const response = await messaging.sendEachForMulticast({
           tokens,
-          notification: {
-            title,
-            body
-          },
-          data: {
-            title,
-            body,
-            type: type || 'notice',
-            targetId: targetId || '',
-            targetUrl: targetUrl || '/'
-          }
+          notification: { title, body },
+          data: { title, body, type: type || 'notice', targetId: targetId || '', targetUrl: targetUrl || '/' }
         });
         successCount = response.successCount;
         failureCount = response.failureCount;
@@ -172,7 +134,6 @@ app.post(['/api/notifications/send', '/notifications/send'], requireFirebaseAdmi
     } else {
       console.log('No FCM tokens registered for target recipient(s). In-app notification created.');
     }
-
     return res.json({
       success: true,
       notificationId: notifRef.id,
@@ -186,14 +147,12 @@ app.post(['/api/notifications/send', '/notifications/send'], requireFirebaseAdmi
   }
 });
 
-// 1. POST /api/relworx/initiate-collection
 app.post(['/api/relworx/initiate-collection', '/relworx/initiate-collection'], requireFirebaseAdmin, async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({ success: false, message: 'Unauthorized: Missing or invalid token' });
     }
-
     const token = authHeader.split('Bearer ')[1];
     let decodedToken;
     try {
@@ -202,21 +161,15 @@ app.post(['/api/relworx/initiate-collection', '/relworx/initiate-collection'], r
       console.error('ID token verification failed:', authErr?.message || authErr);
       return res.status(401).json({ success: false, message: 'Unauthorized: Invalid token' });
     }
-
     const { amount, phoneNumber, network, userId, purpose, metadata } = req.body || {};
-
     if (!amount || !phoneNumber || !network || !userId) {
       return res.status(400).json({ success: false, message: 'Missing required parameters' });
     }
-
     if (decodedToken.uid !== userId) {
       return res.status(403).json({ success: false, message: 'Forbidden: User ID mismatch' });
     }
-
     const result = await initiateCollection(amount, phoneNumber, network, userId, metadata || { purpose });
     const relworxReference = result.relworxReference || result.reference || result.data?.reference;
-
-    // Update Firestore contribution document with relworxReference if contributionId exists
     const contribDocId = metadata?.contributionId || metadata?.reference;
     if (contribDocId) {
       try {
@@ -230,19 +183,13 @@ app.post(['/api/relworx/initiate-collection', '/relworx/initiate-collection'], r
         console.warn(`Could not update contribution document ${contribDocId} with reference:`, dbErr?.message || dbErr);
       }
     }
-
-    return res.json({
-      success: true,
-      relworxReference: relworxReference || null,
-      data: result
-    });
+    return res.json({ success: true, relworxReference: relworxReference || null, data: result });
   } catch (error: any) {
     console.error('Initiate collection error:', error);
     return res.status(500).json({ success: false, message: error?.message || 'Internal server error' });
   }
 });
 
-// Webhook supported paths
 const webhookPaths = [
   '/',
   '/api',
@@ -265,18 +212,13 @@ app.get(webhookPaths, (req, res, next) => {
   });
 });
 
-// 2. POST /api/relworx/webhook
-// INSTRUCTION: After deploying to Vercel, the Relworx webhook URL must be set to:
-// https://YOUR-VERCEL-DOMAIN.vercel.app/api/relworx/webhook
 app.post(webhookPaths, async (req, res) => {
   try {
     ensureFirebaseInit();
   } catch (err: any) {
     console.warn('Firebase Admin init warning during webhook:', err?.message);
   }
-
   try {
-    // 1. Parse raw body / payload safely
     let rawBody = '';
     if ((req as any).rawBody && Buffer.isBuffer((req as any).rawBody)) {
       rawBody = (req as any).rawBody.toString('utf8');
@@ -287,17 +229,13 @@ app.post(webhookPaths, async (req, res) => {
     } else if (req.body && typeof req.body === 'object') {
       rawBody = JSON.stringify(req.body);
     }
-
     let payload: any = {};
     try {
       payload = rawBody ? JSON.parse(rawBody) : (req.body || {});
     } catch {
       payload = req.body || {};
     }
-
     console.log('[Relworx Webhook] Incoming payload:', JSON.stringify(payload));
-
-    // 2. Health check / test ping detection (Relworx Dashboard "Send test webhook" button)
     const isTestPing = !payload || 
       Object.keys(payload).length === 0 || 
       payload.test === true || 
@@ -306,7 +244,6 @@ app.post(webhookPaths, async (req, res) => {
       payload.action === 'test' || 
       payload.type === 'test' ||
       (!payload.reference && !payload.transaction_id && !payload.transactionId && !payload.relworxTransactionId && !payload.disbursementId);
-
     if (isTestPing) {
       console.log('[Relworx Webhook] Test webhook or health check ping acknowledged.');
       return res.status(200).json({
@@ -315,11 +252,8 @@ app.post(webhookPaths, async (req, res) => {
         message: 'Relworx webhook endpoint is active, healthy, and operational.'
       });
     }
-
-    // 3. Signature verification for actual live payment webhooks
     const secret = process.env.RELWORX_WEBHOOK_SECRET || '';
     const signature = (req.headers['x-signature'] || req.headers['signature']) as string;
-
     if (secret && signature) {
       const isValid = verifyWebhookSignature(signature, rawBody, secret);
       if (!isValid) {
@@ -328,32 +262,25 @@ app.post(webhookPaths, async (req, res) => {
       }
     } else if (secret && !signature) {
       console.warn('[Relworx Webhook] RELWORX_WEBHOOK_SECRET configured but x-signature header missing.');
-      // For testing flexibility, proceed with processing if payload has valid transaction info
     }
-
-    // 4. Dispatch webhook handler
     if (payload.transaction_type === 'disbursement' || payload.type === 'disbursement' || (payload.reference && payload.reference.startsWith('DISB'))) {
       await handleDisbursementWebhook(payload);
     } else {
       await handleCollectionWebhook(payload);
     }
-
     return res.status(200).json({ success: true, status: 'success', message: 'Webhook processed successfully' });
   } catch (error: any) {
     console.error('Webhook processing error:', error);
-    // Always return HTTP 200 for acknowledged webhooks to prevent retries unless critical
     return res.status(200).json({ success: true, status: 'acknowledged', warning: error?.message || 'Processing completed with warnings' });
   }
 });
 
-// 3. POST /api/relworx/initiate-disbursement
 app.post(['/api/relworx/initiate-disbursement', '/relworx/initiate-disbursement'], requireFirebaseAdmin, async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader || typeof authHeader !== 'string' || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({ success: false, message: 'Unauthorized: Missing or invalid token' });
     }
-
     const token = authHeader.split('Bearer ')[1];
     let decodedToken;
     try {
@@ -362,38 +289,28 @@ app.post(['/api/relworx/initiate-disbursement', '/relworx/initiate-disbursement'
       console.error('ID token verification failed for disbursement:', authErr?.message || authErr);
       return res.status(401).json({ success: false, message: 'Unauthorized: Invalid token' });
     }
-
-    // Verify caller role from Firestore
     const firestore = getFirestore();
     const userDoc = await firestore.collection('users').doc(decodedToken.uid).get();
-
     if (!userDoc.exists) {
       return res.status(403).json({ success: false, message: 'Forbidden: User profile not found' });
     }
-
     const userData = userDoc.data();
     const userRole = userData?.role;
     const allowedRoles = ['super_admin', 'treasurer', 'chairperson', 'vice_chairperson'];
-
     if (!userRole || !allowedRoles.includes(userRole)) {
       return res.status(403).json({ success: false, message: 'Forbidden: Insufficient permissions for disbursement' });
     }
-
     const { type, documentId, note } = req.body || {};
-
     if (!type || !documentId) {
       return res.status(400).json({ success: false, message: 'Missing required parameters: type or documentId' });
     }
-
     if (type !== 'welfare' && type !== 'expense') {
       return res.status(400).json({ success: false, message: 'Invalid type. Must be "welfare" or "expense"' });
     }
-
     let amount: number;
     let phoneNum: string;
     let network: string;
     let beneficiaryName: string | undefined;
-
     if (type === 'welfare') {
       const docRef = firestore.collection('welfareRequests').doc(documentId);
       const docSnap = await docRef.get();
@@ -414,7 +331,7 @@ app.post(['/api/relworx/initiate-disbursement', '/relworx/initiate-disbursement'
       phoneNum = data.recipientPhoneNumber;
       network = data.recipientNetwork || 'MTN';
       beneficiaryName = data.recipientName || data.personName;
-    } else { // type === 'expense'
+    } else {
       const docRef = firestore.collection('expenses').doc(documentId);
       const docSnap = await docRef.get();
       if (!docSnap.exists) {
@@ -435,13 +352,9 @@ app.post(['/api/relworx/initiate-disbursement', '/relworx/initiate-disbursement'
       network = data.recipientNetwork || 'MTN';
       beneficiaryName = data.recipientName;
     }
-
     const metadata = { type, documentId, note, beneficiaryName };
     const reference = documentId;
-
     const result = await initiateDisbursement(amount, phoneNum, network, reference, metadata);
-    
-    // Update the doc to indicate pending
     const updateData = {
       disbursementStatus: "pending",
       relworxDisbursementId: result.reference || result.data?.reference || null,
@@ -452,7 +365,6 @@ app.post(['/api/relworx/initiate-disbursement', '/relworx/initiate-disbursement'
     } else {
        await firestore.collection('expenses').doc(documentId).update(updateData);
     }
-
     return res.json({ success: true, data: result });
   } catch (error: any) {
     console.error('Initiate disbursement error:', error);
@@ -460,7 +372,6 @@ app.post(['/api/relworx/initiate-disbursement', '/relworx/initiate-disbursement'
   }
 });
 
-// Fallback catch-all for any unhandled API endpoints to prevent 500/404 errors during webhook health pings
 app.all('*', (req, res) => {
   console.log(`[API Fallback] Handled request: ${req.method} ${req.path}`);
   return res.status(200).json({
@@ -472,4 +383,3 @@ app.all('*', (req, res) => {
 });
 
 export default app;
-// Vercel deployment configurations applied.
