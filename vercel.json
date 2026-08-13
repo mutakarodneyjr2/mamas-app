@@ -2,7 +2,11 @@
   "version": 2,
   "routes": [
     { "src": "/api/(.*)", "dest": "/api/index.ts" },
+    { "src": "/api", "dest": "/api/index.ts" },
+    { "src": "/webhook(.*)", "dest": "/api/index.ts" },
+    { "src": "/relworx/(.*)", "dest": "/api/index.ts" },
+    { "src": "/", "methods": ["POST"], "dest": "/api/index.ts" },
     { "src": "/assets/(.*)", "dest": "/assets/$1" },
-    { "src": "/[^.]+", "dest": "/index.html" }
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
