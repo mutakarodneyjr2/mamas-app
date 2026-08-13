@@ -111,7 +111,7 @@ app.post(['/api/notifications/send', '/notifications/send'], requireFirebaseAdmi
     } else if (userId && typeof userId === 'string') {
       const uDoc = await firestore.collection('users').doc(userId).get();
       if (uDoc.exists) {
-        const uData = uDoc.get();
+        const uData = uDoc.data();
         if (uData && Array.isArray(uData.fcmTokens)) tokens.push(...uData.fcmTokens);
       }
     }
