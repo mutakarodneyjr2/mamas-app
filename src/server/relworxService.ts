@@ -47,7 +47,8 @@ export async function initiateCollection(
   const url = process.env.RELWORX_COLLECTION_URL || 'https://api.relworx.com/v1/collections';
 
   if (!apiKey || !merchantId) {
-    console.warn('RELWORX_API_KEY or RELWORX_MERCHANT_ID missing. API call may fail if required.');
+    console.error('RELWORX_API_KEY or RELWORX_MERCHANT_ID is missing on Vercel');
+    throw new Error('Server configuration error: RELWORX_API_KEY or RELWORX_MERCHANT_ID is missing in Vercel Environment Variables.');
   }
 
   const reference = metadata?.reference || `REF_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
@@ -105,7 +106,8 @@ export async function initiateDisbursement(
   const url = process.env.RELWORX_DISBURSEMENT_URL || 'https://api.relworx.com/v1/disbursements';
 
   if (!apiKey || !merchantId) {
-    console.warn('RELWORX_API_KEY or RELWORX_MERCHANT_ID missing. API call may fail if required.');
+    console.error('RELWORX_API_KEY or RELWORX_MERCHANT_ID is missing on Vercel');
+    throw new Error('Server configuration error: RELWORX_API_KEY or RELWORX_MERCHANT_ID is missing in Vercel Environment Variables.');
   }
 
   const payload = {

@@ -21,15 +21,18 @@ let firebaseInitError: Error | null = null;
 function ensureFirebaseInit() {
   if (getApps().length) return; // already initialized
 
-  const base64ServiceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_BASE64;
-  if (!base64ServiceAccount) {
-    firebaseInitError = new Error('FIREBASE_SERVICE_ACCOUNT_BASE64 environment variable is required');
+  const rawEnv = process.env.FIREBASE_SERVICE_ACCOUNT_BASE64 || process.env.FIREBASE_SERVICE_ACCOUNT;
+  if (!rawEnv) {
+    firebaseInitError = new Error('FIREBASE_SERVICE_ACCOUNT_BASE64 environment variable is missing on Vercel');
     console.error('Firebase Admin init failed:', firebaseInitError.message);
     throw firebaseInitError;
   }
 
   try {
-    const serviceAccountJson = Buffer.from(base64ServiceAccount, 'base64').toString('utf8');
+    let serviceAccountJson = rawEnv.trim();
+    if (!serviceAccountJson.startsWith('{')) {
+      serviceAccountJson = Buffer.from(serviceAccountJson, 'base64').toString('utf8');
+    }
     const serviceAccount = JSON.parse(serviceAccountJson);
 
     initializeApp({
@@ -57,7 +60,14 @@ const app = express();
 
 app.use(cors({ origin: true, credentials: true }));
 
-app.get('/api/health', (req, res) => {
+// Universal JSON middleware with raw body capture for signature verification
+app.use(express.json({
+  verify: (req: any, _res, buf) => {
+    req.rawBody = buf;
+  }
+}));
+
+app.get(['/api/health', '/health'], (req, res) => {
   res.json({ status: 'ok', timestamp: Date.now(), service: 'mamas-api' });
 });
 
@@ -75,16 +85,8 @@ const requireFirebaseAdmin = (req: express.Request, res: express.Response, next:
   }
 };
 
-// Middleware for JSON parsing on standard endpoint routes
-app.use('/api/relworx/initiate-collection', express.json());
-app.use('/api/relworx/initiate-disbursement', express.json());
-app.use('/api/notifications/send', express.json());
-
-// Webhook route MUST use express.raw({type: 'application/json'}) middleware to preserve raw body for HMAC verification
-app.use('/api/relworx/webhook', express.raw({ type: 'application/json' }));
-
 // 0. POST /api/notifications/send - Send real FCM push notifications & write in-app notification doc
-app.post('/api/notifications/send', requireFirebaseAdmin, async (req, res) => {
+app.post(['/api/notifications/send', '/notifications/send'], requireFirebaseAdmin, async (req, res) => {
   try {
     const { userId, title, body, type, targetId, targetUrl } = req.body || {};
 
@@ -185,7 +187,7 @@ app.post('/api/notifications/send', requireFirebaseAdmin, async (req, res) => {
 });
 
 // 1. POST /api/relworx/initiate-collection
-app.post('/api/relworx/initiate-collection', requireFirebaseAdmin, async (req, res) => {
+app.post(['/api/relworx/initiate-collection', '/relworx/initiate-collection'], requireFirebaseAdmin, async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -243,7 +245,7 @@ app.post('/api/relworx/initiate-collection', requireFirebaseAdmin, async (req, r
 // 2. POST /api/relworx/webhook
 // INSTRUCTION: After deploying to Vercel, the Relworx webhook URL must be set to:
 // https://YOUR-VERCEL-DOMAIN.vercel.app/api/relworx/webhook
-app.post('/api/relworx/webhook', requireFirebaseAdmin, async (req, res) => {
+app.post(['/api/relworx/webhook', '/relworx/webhook'], requireFirebaseAdmin, async (req, res) => {
   try {
     const secret = process.env.RELWORX_WEBHOOK_SECRET || '';
     if (!secret) {
@@ -294,7 +296,7 @@ app.post('/api/relworx/webhook', requireFirebaseAdmin, async (req, res) => {
 });
 
 // 3. POST /api/relworx/initiate-disbursement
-app.post('/api/relworx/initiate-disbursement', requireFirebaseAdmin, async (req, res) => {
+app.post(['/api/relworx/initiate-disbursement', '/relworx/initiate-disbursement'], requireFirebaseAdmin, async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader || typeof authHeader !== 'string' || !authHeader.startsWith('Bearer ')) {
