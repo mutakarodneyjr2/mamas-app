@@ -1,12 +1,10 @@
 {
   "version": 2,
-  "routes": [
-    { "src": "/api/(.*)", "dest": "/api/index.ts" },
-    { "src": "/api", "dest": "/api/index.ts" },
-    { "src": "/webhook(.*)", "dest": "/api/index.ts" },
-    { "src": "/relworx/(.*)", "dest": "/api/index.ts" },
-    { "src": "/", "methods": ["POST"], "dest": "/api/index.ts" },
-    { "src": "/assets/(.*)", "dest": "/assets/$1" },
-    { "src": "/(.*)", "dest": "/index.html" }
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api" },
+    { "source": "/api", "destination": "/api" },
+    { "source": "/webhook(.*)", "destination": "/api" },
+    { "source": "/relworx/(.*)", "destination": "/api" },
+    { "source": "/((?!api/|assets/|favicon.ico).*)", "destination": "/index.html" }
   ]
 }
