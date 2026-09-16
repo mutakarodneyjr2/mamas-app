@@ -146,20 +146,20 @@ export default function Profile() {
       
       {/* SUCCESS / ERROR ALERT */}
       {successMsg && (
-        <div className="mb-4 bg-emerald-50 border border-emerald-200 text-emerald-800 p-4 rounded-2xl text-sm font-bold flex items-center justify-between">
-          <span className="flex items-center gap-2"><Check className="w-4 h-4 text-emerald-600" /> {successMsg}</span>
+        <div className="mb-4 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-emerald-800 dark:text-emerald-300 p-4 rounded-2xl text-sm font-bold flex items-center justify-between">
+          <span className="flex items-center gap-2"><Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> {successMsg}</span>
         </div>
       )}
       {errorMsg && (
-        <div className="mb-4 bg-rose-50 border border-rose-200 text-rose-800 p-4 rounded-2xl text-sm font-bold">
+        <div className="mb-4 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 text-rose-800 dark:text-rose-300 p-4 rounded-2xl text-sm font-bold">
           {errorMsg}
         </div>
       )}
 
-      {/* HERO / NAVY BANNER PROFILE HEADER */}
-      <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-mamas-primary rounded-3xl overflow-hidden shadow-xl border border-slate-700/50 mb-8 text-white relative">
-        <div className="h-28 bg-amber-500/10 border-b border-white/10 relative">
-          <div className="absolute top-4 right-4 bg-white/10 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest text-amber-300 border border-white/10">
+      {/* HERO / BLUE BANNER PROFILE HEADER */}
+      <div className="bg-gradient-to-r from-[#07132c] via-[#0f2756] to-[#1e3a8a] rounded-3xl overflow-hidden shadow-xl border border-blue-900/40 mb-8 text-white relative">
+        <div className="h-28 bg-blue-500/10 border-b border-white/10 relative">
+          <div className="absolute top-4 right-4 bg-white/10 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest text-blue-200 border border-white/15">
             {userProfile?.role?.replace('_', ' ') || 'Alumni Member'}
           </div>
         </div>
@@ -173,15 +173,15 @@ export default function Profile() {
             className="hidden"
           />
           <div className="relative mb-3">
-            <div className="w-24 h-24 rounded-full bg-slate-800 border-4 border-slate-900 shadow-2xl overflow-hidden flex items-center justify-center relative">
+            <div className="w-24 h-24 rounded-2xl bg-blue-950 border-4 border-white dark:border-[#0c1731] shadow-2xl overflow-hidden flex items-center justify-center relative">
               {userProfile.profilePictureUrl ? (
                 <img src={userProfile.profilePictureUrl} alt="Profile" className="w-full h-full object-cover" />
               ) : (
-                <User className="w-10 h-10 text-slate-400" />
+                <User className="w-10 h-10 text-blue-300" />
               )}
               {uploadingPhoto && (
                 <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center">
-                  <div className="w-6 h-6 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
+                  <div className="w-6 h-6 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
                 </div>
               )}
             </div>
@@ -189,34 +189,34 @@ export default function Profile() {
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={uploadingPhoto}
-              className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-amber-500 border-2 border-slate-900 flex items-center justify-center text-slate-950 shadow-md hover:scale-110 transition-transform disabled:opacity-50"
+              className="absolute -bottom-1 -right-1 w-8 h-8 rounded-xl bg-blue-600 border-2 border-white dark:border-[#0c1731] flex items-center justify-center text-white shadow-md hover:bg-blue-500 hover:scale-105 transition-all disabled:opacity-50 cursor-pointer"
               title="Change profile picture"
             >
               {uploadingPhoto ? (
-                <div className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
                 <Camera className="w-4 h-4" />
               )}
             </button>
           </div>
           
-          <h1 className="text-2xl font-bold tracking-tight text-white">{userProfile.fullName}</h1>
-          <p className="text-slate-300 text-xs font-medium mt-1">{userProfile.email}</p>
-          <p className="text-amber-400 text-xs font-bold mt-1">{userProfile.phoneNumber}</p>
+          <h1 className="text-2xl font-extrabold tracking-tight text-white">{userProfile.fullName}</h1>
+          <p className="text-blue-100/80 text-xs font-medium mt-1">{userProfile.email}</p>
+          <p className="text-blue-300 text-xs font-bold mt-1">{userProfile.phoneNumber}</p>
         </div>
       </div>
 
       {isEditing ? (
         /* EDIT PROFILE FORM */
-        <form onSubmit={handleSaveProfile} className="space-y-6 bg-white p-6 rounded-3xl shadow-sm border border-slate-200">
-          <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-            <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-              <Edit3 className="w-4 h-4 text-amber-500" /> Edit Member Details
+        <form onSubmit={handleSaveProfile} className="space-y-6 bg-white dark:bg-[#0c1731] p-6 rounded-3xl shadow-xs border border-slate-200/80 dark:border-slate-800">
+          <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
+            <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <Edit3 className="w-4 h-4 text-blue-600 dark:text-blue-400" /> Edit Member Details
             </h2>
             <button 
               type="button" 
               onClick={() => setIsEditing(false)}
-              className="p-2 rounded-full hover:bg-slate-100 text-slate-400"
+              className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -224,69 +224,69 @@ export default function Profile() {
 
           <div className="space-y-4">
             <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Phone Number</label>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">Phone Number</label>
               <input
                 type="text"
                 required
                 value={phoneNumber}
                 onChange={e => setPhoneNumber(e.target.value)}
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-amber-500"
+                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-2xl text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Occupation</label>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">Occupation</label>
               <input
                 type="text"
                 value={occupation}
                 onChange={e => setOccupation(e.target.value)}
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-amber-500"
+                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-2xl text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">District / Residence</label>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">District / Residence</label>
               <input
                 type="text"
                 value={district}
                 onChange={e => setDistrict(e.target.value)}
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-amber-500"
+                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-2xl text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Next of Kin Name</label>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">Next of Kin Name</label>
               <input
                 type="text"
                 value={nextOfKinName}
                 onChange={e => setNextOfKinName(e.target.value)}
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-amber-500"
+                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-2xl text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Next of Kin Phone</label>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">Next of Kin Phone</label>
               <input
                 type="text"
                 value={nextOfKinPhone}
                 onChange={e => setNextOfKinPhone(e.target.value)}
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-amber-500"
+                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-2xl text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
           </div>
 
-          <div className="flex gap-3 pt-4 border-t border-slate-100">
+          <div className="flex gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
             <button
               type="button"
               onClick={() => setIsEditing(false)}
-              className="flex-1 py-3 bg-slate-100 text-slate-700 font-bold rounded-xl text-sm hover:bg-slate-200 transition-colors"
+              className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold rounded-2xl text-sm hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 py-3 bg-amber-500 text-slate-950 font-bold rounded-xl text-sm shadow-md hover:bg-amber-400 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+              className="flex-1 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-2xl text-sm shadow-md shadow-blue-500/25 transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
             >
               <Save className="w-4 h-4" /> {loading ? 'Saving...' : 'Save Changes'}
             </button>
@@ -297,17 +297,17 @@ export default function Profile() {
         <div className="space-y-6">
           
           {/* PERSONAL DETAILS CARD */}
-          <section className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-              <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Personal Details</h2>
+          <section className="bg-white dark:bg-[#0c1731] rounded-3xl shadow-xs border border-slate-200/80 dark:border-slate-800 overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 flex items-center justify-between">
+              <h2 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Personal Details</h2>
               <button 
                 onClick={() => setIsEditing(true)}
-                className="text-xs font-bold text-amber-600 hover:text-amber-700 flex items-center gap-1"
+                className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-500 flex items-center gap-1 cursor-pointer"
               >
                 <Edit3 className="w-3.5 h-3.5" /> Edit
               </button>
             </div>
-            <div className="divide-y divide-slate-100">
+            <div className="divide-y divide-slate-100 dark:divide-slate-800">
               <InfoRow icon={Mail} label="Email" value={userProfile.email} />
               <InfoRow icon={Briefcase} label="Occupation" value={userProfile.occupation} />
               {userProfile.occupation === 'Student' && (
@@ -319,22 +319,22 @@ export default function Profile() {
           </section>
 
           {/* NEXT OF KIN CARD */}
-          <section className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-              <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Next of Kin</h2>
+          <section className="bg-white dark:bg-[#0c1731] rounded-3xl shadow-xs border border-slate-200/80 dark:border-slate-800 overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40">
+              <h2 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Next of Kin</h2>
             </div>
-            <div className="divide-y divide-slate-100">
+            <div className="divide-y divide-slate-100 dark:divide-slate-800">
               <InfoRow icon={User} label="Name" value={userProfile.nextOfKinName} />
               <InfoRow icon={Phone} label="Phone" value={userProfile.nextOfKinPhone} />
             </div>
           </section>
 
           {/* PRIVACY SETTINGS */}
-          <section className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-              <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Directory Privacy</h2>
+          <section className="bg-white dark:bg-[#0c1731] rounded-3xl shadow-xs border border-slate-200/80 dark:border-slate-800 overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40">
+              <h2 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Directory Privacy</h2>
             </div>
-            <div className="divide-y divide-slate-100">
+            <div className="divide-y divide-slate-100 dark:divide-slate-800">
               <ToggleRow 
                 label="Show Phone in Directory" 
                 checked={showPhone} 
@@ -349,24 +349,24 @@ export default function Profile() {
           </section>
 
           {/* PUSH NOTIFICATIONS */}
-          <section className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-              <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                <Bell className="w-4 h-4 text-amber-500" /> Push Notifications
+          <section className="bg-white dark:bg-[#0c1731] rounded-3xl shadow-xs border border-slate-200/80 dark:border-slate-800 overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 flex items-center justify-between">
+              <h2 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                <Bell className="w-4 h-4 text-blue-600 dark:text-blue-400" /> Push Notifications
               </h2>
               <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border ${
                 hasTokens && notifPermission === 'granted'
-                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
                   : notifPermission === 'denied'
-                  ? 'bg-rose-50 text-rose-700 border-rose-200'
-                  : 'bg-amber-50 text-amber-700 border-amber-200'
+                  ? 'bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-800'
+                  : 'bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800'
               }`}>
                 {hasTokens && notifPermission === 'granted' ? 'Enabled' : notifPermission === 'denied' ? 'Blocked' : 'Not Setup'}
               </span>
             </div>
             
             <div className="p-6 space-y-4">
-              <p className="text-xs text-slate-600 leading-relaxed font-medium">
+              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
                 Receive real-time push alerts for member approvals, welfare request updates, contribution verifications, and urgent announcements on this device.
               </p>
 
@@ -374,14 +374,14 @@ export default function Profile() {
                 type="button"
                 onClick={handleEnableNotifications}
                 disabled={enablingNotifications}
-                className={`w-full py-3.5 px-4 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 border ${
+                className={`w-full py-3.5 px-4 rounded-2xl font-bold text-sm transition-all flex items-center justify-center gap-2 border cursor-pointer ${
                   hasTokens && notifPermission === 'granted'
-                    ? 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                    : 'bg-amber-500 text-slate-950 border-amber-600/20 hover:bg-amber-400 shadow-md active:scale-[0.98]'
+                    ? 'bg-slate-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700/80 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    : 'bg-blue-600 hover:bg-blue-500 text-white border-transparent shadow-md shadow-blue-500/25 active:scale-[0.98]'
                 }`}
               >
                 {enablingNotifications ? (
-                  <div className="w-4 h-4 border-2 border-slate-950/30 border-t-slate-950 rounded-full animate-spin" />
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <BellRing className="w-4 h-4" />
                 )}
@@ -396,13 +396,13 @@ export default function Profile() {
           <section className="pt-4 pb-8 space-y-4">
             <button 
               onClick={() => setIsEditing(true)}
-              className="w-full bg-slate-900 text-white rounded-full py-4 font-bold shadow-lg hover:bg-slate-800 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+              className="w-full bg-blue-600 hover:bg-blue-500 text-white rounded-2xl py-4 font-bold shadow-md shadow-blue-500/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
-              <Edit3 className="w-5 h-5 text-amber-400" /> Edit Profile Details
+              <Edit3 className="w-5 h-5 text-blue-200" /> Edit Profile Details
             </button>
             <button 
               onClick={logout}
-              className="w-full flex items-center justify-center gap-2 text-rose-500 font-bold py-3 hover:bg-rose-50 rounded-full transition-colors text-sm"
+              className="w-full flex items-center justify-center gap-2 text-rose-500 hover:text-rose-600 font-bold py-3 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-2xl transition-colors text-sm cursor-pointer"
             >
               <LogOut className="w-4 h-4" />
               Log Out
@@ -419,10 +419,10 @@ function InfoRow({ icon: Icon, label, value }: { icon: any, label: string, value
   return (
     <div className="px-6 py-4 flex items-center justify-between">
       <div className="flex items-center gap-3">
-        <Icon className="w-5 h-5 text-slate-400" />
-        <span className="text-slate-900 font-medium text-sm">{label}</span>
+        <Icon className="w-5 h-5 text-blue-500 dark:text-blue-400" />
+        <span className="text-slate-900 dark:text-white font-medium text-sm">{label}</span>
       </div>
-      <span className="text-slate-500 text-sm font-medium text-right max-w-[50%] truncate">{value || 'Not provided'}</span>
+      <span className="text-slate-500 dark:text-slate-400 text-sm font-medium text-right max-w-[50%] truncate">{value || 'Not provided'}</span>
     </div>
   );
 }
@@ -430,15 +430,15 @@ function InfoRow({ icon: Icon, label, value }: { icon: any, label: string, value
 function ToggleRow({ label, checked, onChange }: { label: string, checked: boolean, onChange: (val: boolean) => void }) {
   return (
     <div className="px-6 py-4 flex items-center justify-between">
-      <span className="text-slate-900 font-medium text-sm">{label}</span>
+      <span className="text-slate-900 dark:text-white font-medium text-sm">{label}</span>
       <button 
         type="button"
         role="switch"
         aria-checked={checked}
         onClick={() => onChange(!checked)}
-        className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${checked ? 'bg-amber-500' : 'bg-slate-200'}`}
+        className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors cursor-pointer ${checked ? 'bg-blue-600' : 'bg-slate-200 dark:bg-slate-700'}`}
       >
-        <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform shadow-sm ${checked ? 'translate-x-6' : 'translate-x-1'}`} />
+        <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform shadow-xs ${checked ? 'translate-x-6' : 'translate-x-1'}`} />
       </button>
     </div>
   );

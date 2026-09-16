@@ -93,47 +93,52 @@ export default function AdminRoles() {
   if (loading) return <div className="p-8 text-center text-mamas-text-muted font-medium">Loading user roles...</div>;
 
   return (
-    <div className="space-y-6 pb-10 max-w-5xl mx-auto">
+    <div className="space-y-6 pb-16 max-w-5xl mx-auto px-4 font-sans">
       <div>
-        <h2 className="text-2xl font-display font-bold text-mamas-text flex items-center gap-2">
-          <Shield className="w-6 h-6 text-mamas-accent" /> Role & Access Management
+        <div className="flex items-center gap-2 mb-1">
+          <span className="bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400 text-[10px] font-extrabold uppercase tracking-wider rounded-full px-2.5 py-0.5 border border-blue-200 dark:border-blue-900/60">
+            Executive Privileges
+          </span>
+        </div>
+        <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+          <Shield className="w-6 h-6 text-blue-600 dark:text-blue-400" /> Role & Access Governance
         </h2>
-        <p className="text-mamas-text-muted text-sm mt-1">Assign system permissions and executive roles to members.</p>
+        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">Assign system permissions, financial authority, and executive officer appointments.</p>
       </div>
 
       {message && (
-        <div className="bg-teal-50 border border-teal-200 text-teal-800 px-4 py-3 rounded-2xl text-sm font-medium flex items-center gap-2">
-          <CheckCircle2 className="w-5 h-5 text-teal-600 flex-shrink-0" />
+        <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/50 text-emerald-700 dark:text-emerald-300 px-4 py-3.5 rounded-2xl text-xs sm:text-sm font-semibold flex items-center gap-2.5 shadow-xs">
+          <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
           {message}
         </div>
       )}
 
       {error && (
-        <div className="bg-rose-50 border border-rose-200 text-rose-800 px-4 py-3 rounded-2xl text-sm font-medium flex items-center gap-2">
-          <AlertCircle className="w-5 h-5 text-rose-600 flex-shrink-0" />
+        <div className="bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 text-rose-700 dark:text-rose-300 px-4 py-3.5 rounded-2xl text-xs sm:text-sm font-semibold flex items-center gap-2.5 shadow-xs">
+          <AlertCircle className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0" />
           {error}
         </div>
       )}
 
       {/* Filters */}
-      <div className="bg-mamas-card p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-col sm:flex-row gap-3 items-center justify-between">
+      <div className="bg-white dark:bg-[#0c1731] p-4 sm:p-5 rounded-3xl shadow-xs border border-slate-200/80 dark:border-slate-800 flex flex-col sm:flex-row gap-3.5 items-center justify-between">
         <div className="relative w-full sm:w-80">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            placeholder="Search by name, phone, or email..."
+            placeholder="Search member by name, phone, or email..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-4 py-2.5 text-xs outline-none focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-mamas-accent font-medium text-mamas-text dark:text-white"
+            className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl pl-11 pr-4 py-2.5 text-xs sm:text-sm outline-none focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-blue-500 font-medium text-slate-900 dark:text-white placeholder:text-slate-400"
           />
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Filter Role:</span>
+        <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+          <span className="text-xs font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Role Filter:</span>
           <select
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
-            className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-mamas-text dark:text-white text-xs rounded-xl px-3 py-2 outline-none font-bold"
+            className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs rounded-xl px-3 py-2 outline-none font-bold cursor-pointer focus:ring-2 focus:ring-blue-500"
           >
             <option value="all">All Roles</option>
             {ROLES.map(r => (
@@ -143,48 +148,46 @@ export default function AdminRoles() {
         </div>
       </div>
 
-      {/* Mobile-Friendly Card Grid (No horizontal scroll) */}
+      {/* Modern Card Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredUsers.map(user => {
           const isMe = user.uid === currentUser.uid;
           return (
-            <div key={user.uid} className="bg-mamas-card border border-slate-200/90 dark:border-slate-700 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all flex flex-col justify-between gap-3">
+            <div key={user.uid} className="bg-white dark:bg-[#0c1731] border border-slate-200/80 dark:border-slate-800 rounded-3xl p-5 shadow-xs hover:border-blue-500/40 transition-all flex flex-col justify-between gap-4">
               <div>
-                <div className="flex items-start justify-between gap-2 mb-2">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-mamas-primary text-mamas-accent font-bold flex items-center justify-center text-sm shadow-sm flex-shrink-0">
-                      {user.profilePictureUrl ? (
-                        <img src={user.profilePictureUrl} alt="" className="w-full h-full rounded-full object-cover" />
-                      ) : (
-                        user.fullName.charAt(0)
-                      )}
-                    </div>
-                    <div>
-                      <p className="font-bold text-sm text-mamas-text flex items-center gap-1.5">
-                        {user.fullName}
-                        {isMe && <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.2 rounded font-bold">You</span>}
-                      </p>
-                      <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider mt-0.5 ${
-                        user.status === 'approved' ? 'bg-teal-50 text-teal-700 border border-teal-200' :
-                        user.status === 'pending' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
-                        'bg-rose-50 text-rose-700 border border-rose-200'
-                      }`}>
-                        {user.status}
-                      </span>
-                    </div>
+                <div className="flex items-start gap-3.5 mb-3">
+                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#0f2756] to-blue-600 text-white font-extrabold flex items-center justify-center text-sm shadow-xs shrink-0">
+                    {user.profilePictureUrl ? (
+                      <img src={user.profilePictureUrl} alt="" className="w-full h-full rounded-2xl object-cover" />
+                    ) : (
+                      user.fullName.charAt(0).toUpperCase()
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-white flex items-center gap-1.5 truncate">
+                      {user.fullName}
+                      {isMe && <span className="text-[10px] bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full font-extrabold shrink-0">You</span>}
+                    </p>
+                    <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider mt-1 ${
+                      user.status === 'approved' ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800' :
+                      user.status === 'pending' ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800' :
+                      'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-800'
+                    }`}>
+                      {user.status}
+                    </span>
                   </div>
                 </div>
 
-                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">{user.phoneNumber} {user.email ? `• ${user.email}` : ''}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium truncate">{user.phoneNumber} {user.email ? `• ${user.email}` : ''}</p>
               </div>
 
-              <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Role:</span>
+              <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
+                <span className="text-[11px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Role Access:</span>
                 <select
                   value={user.role}
                   disabled={savingUid === user.uid}
                   onChange={(e) => handleRoleUpdate(user.uid, user.fullName, e.target.value as UserRole)}
-                  className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-mamas-text dark:text-white text-xs rounded-xl px-2.5 py-1.5 outline-none font-bold focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-mamas-accent"
+                  className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs rounded-xl px-3 py-1.5 outline-none font-bold focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-blue-500 cursor-pointer disabled:opacity-50"
                 >
                   {ROLES.map(r => (
                     <option key={r.value} value={r.value}>{r.label}</option>
@@ -196,8 +199,9 @@ export default function AdminRoles() {
         })}
 
         {filteredUsers.length === 0 && (
-          <div className="col-span-full bg-mamas-card border border-slate-200 rounded-2xl p-12 text-center text-slate-400">
-            No users matching search criteria.
+          <div className="col-span-full bg-white dark:bg-[#0c1731] border border-slate-200/80 dark:border-slate-800 rounded-3xl p-16 text-center shadow-xs">
+            <Shield className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+            <p className="text-sm font-bold text-slate-700 dark:text-slate-300">No members matching search criteria</p>
           </div>
         )}
       </div>

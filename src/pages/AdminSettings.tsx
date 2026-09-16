@@ -439,24 +439,24 @@ export default function AdminSettings() {
   // Reusable Master Save Bar to display on each tab view
   const renderMasterSaveBar = () => (
     <div className="fixed bottom-24 left-4 right-4 md:left-1/2 md:-translate-x-1/2 md:w-full md:max-w-5xl md:px-6 z-40">
-      <div className="bg-slate-900/95 dark:bg-slate-800/95 backdrop-blur-sm text-white p-4 rounded-3xl shadow-xl border border-slate-700 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div className="bg-slate-900/95 dark:bg-[#0b1329]/95 backdrop-blur-md text-white p-4 sm:p-5 rounded-3xl shadow-xl border border-slate-700/70 dark:border-blue-900/50 flex flex-col sm:flex-row items-center justify-between gap-3 font-sans">
         <div className="text-center sm:text-left min-w-0">
-          <h3 className="font-bold text-sm sm:text-base text-amber-400 truncate">Save All Configuration Changes</h3>
-          <p className="text-xs text-slate-300 truncate">Applies parameters globally across all member & committee screens.</p>
+          <h3 className="font-extrabold text-xs sm:text-sm text-blue-400 dark:text-blue-300 truncate tracking-tight">Save All Configuration Changes</h3>
+          <p className="text-[11px] text-slate-300 dark:text-slate-400 truncate">Applies parameters globally across all member & committee screens.</p>
         </div>
         <button
           onClick={saveAllSettings}
           disabled={saving}
-          className="w-full sm:w-auto bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-5 py-2.5 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50 shrink-0 text-xs sm:text-sm"
+          className="w-full sm:w-auto bg-blue-600 hover:bg-blue-500 text-white font-extrabold px-6 py-3 rounded-2xl transition-all shadow-xs flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50 shrink-0 text-xs uppercase tracking-wider cursor-pointer"
         >
           {saving ? (
             <>
-              <Loader2 className="w-4 h-4 animate-spin text-slate-950" />
+              <Loader2 className="w-4 h-4 animate-spin text-white" />
               <span>Saving Changes...</span>
             </>
           ) : (
             <>
-              <Save className="w-4 h-4 text-slate-950" />
+              <Save className="w-4 h-4 text-white" />
               <span>Save Configuration</span>
             </>
           )}
@@ -466,26 +466,31 @@ export default function AdminSettings() {
   );
 
   return (
-    <div className="space-y-4 max-w-full overflow-x-hidden max-w-5xl mx-auto pb-32">
+    <div className="space-y-6 max-w-full overflow-x-hidden max-w-5xl mx-auto pb-32 px-4 font-sans">
       
       {/* Page Header */}
-      <div className="flex items-center gap-3 bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-5 border border-slate-100 dark:border-slate-800 shadow-sm mb-4">
-        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 border border-amber-200/50 dark:border-amber-900/40">
-          <Settings2 className="w-5 h-5 sm:w-6 sm:h-6" />
+      <div className="flex items-center gap-4 bg-white dark:bg-[#0c1731] rounded-3xl p-5 sm:p-6 border border-slate-200/80 dark:border-slate-800 shadow-xs mb-2">
+        <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-200/50 dark:border-blue-900/60 shadow-xs">
+          <Settings2 className="w-6 h-6" />
         </div>
         <div className="min-w-0 flex-1">
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight truncate">
-            System Settings
+          <div className="flex items-center gap-2 mb-0.5">
+            <span className="bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400 text-[10px] font-extrabold uppercase tracking-wider rounded-full px-2.5 py-0.5 border border-blue-200 dark:border-blue-900/60">
+              System Configuration
+            </span>
+          </div>
+          <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight truncate">
+            Platform Settings
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 truncate mt-0.5">
-            Configure global parameters, welfare limits, and assets.
+            Configure global parameters, welfare limits, governance, and assets.
           </p>
         </div>
       </div>
 
       {/* Unsaved Changes Alert Banner */}
       {isDirty && (
-        <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 p-3.5 sm:p-4 rounded-2xl text-amber-900 dark:text-amber-200 text-xs sm:text-sm font-medium flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 shadow-sm">
+        <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 p-4 rounded-2xl text-amber-900 dark:text-amber-200 text-xs sm:text-sm font-semibold flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
           <div className="flex items-start sm:items-center gap-2.5">
             <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5 sm:mt-0" />
             <span>
@@ -494,7 +499,7 @@ export default function AdminSettings() {
           </div>
           <button 
             onClick={handleDiscardChanges}
-            className="text-xs text-amber-800 dark:text-amber-300 font-semibold px-2.5 py-1 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/60 transition-colors shrink-0 flex items-center gap-1 underline"
+            className="text-xs text-amber-800 dark:text-amber-300 font-extrabold px-3 py-1.5 rounded-xl hover:bg-amber-100 dark:hover:bg-amber-900/60 transition-colors shrink-0 flex items-center gap-1.5 cursor-pointer"
           >
             <RotateCcw className="w-3.5 h-3.5" />
             Discard
@@ -504,7 +509,7 @@ export default function AdminSettings() {
 
       {/* Success Notification Banner */}
       {message && (
-        <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/60 text-emerald-800 dark:text-emerald-200 p-3.5 sm:p-4 rounded-2xl text-xs sm:text-sm font-medium flex items-center gap-2.5 shadow-sm">
+        <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 p-4 rounded-2xl text-xs sm:text-sm font-semibold flex items-center gap-2.5 shadow-xs animate-in fade-in">
           <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
           <span className="min-w-0 flex-1">{message}</span>
         </div>
@@ -512,48 +517,48 @@ export default function AdminSettings() {
 
       {/* Error Notification Banner */}
       {error && (
-        <div className="bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-rose-800 dark:text-rose-200 p-3.5 sm:p-4 rounded-2xl text-xs sm:text-sm font-medium flex items-center justify-between gap-2.5 shadow-sm">
+        <div className="bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-rose-800 dark:text-rose-300 p-4 rounded-2xl text-xs sm:text-sm font-semibold flex items-center justify-between gap-2.5 shadow-xs">
           <div className="flex items-center gap-2.5 min-w-0 flex-1">
             <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-rose-600 dark:text-rose-400 shrink-0" />
             <span className="truncate">{error}</span>
           </div>
-          <button onClick={() => setError('')} className="p-1 hover:bg-rose-100 dark:hover:bg-rose-900/60 rounded-lg transition-colors shrink-0">
+          <button onClick={() => setError('')} className="p-1 hover:bg-rose-100 dark:hover:bg-rose-900/60 rounded-xl transition-colors shrink-0 cursor-pointer">
             <X className="w-4 h-4" />
           </button>
         </div>
       )}
 
       {/* Horizontal Tab Bar */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2 mb-4 max-w-full no-scrollbar">
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 max-w-full no-scrollbar">
           <button
             onClick={() => setActiveTab('policy')}
-            className={`px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition-all shrink-0 ${
+            className={`px-5 py-2.5 rounded-2xl text-xs sm:text-sm font-extrabold transition-all shrink-0 cursor-pointer ${
               activeTab === 'policy'
-                ? 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 shadow-sm'
-                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'bg-white dark:bg-[#0c1731] text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800'
             }`}
           >
-            Policy
+            Policy & Welfare
           </button>
           <button
             onClick={() => setActiveTab('governance')}
-            className={`px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition-all shrink-0 ${
+            className={`px-5 py-2.5 rounded-2xl text-xs sm:text-sm font-extrabold transition-all shrink-0 cursor-pointer ${
               activeTab === 'governance'
-                ? 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 shadow-sm'
-                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'bg-white dark:bg-[#0c1731] text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800'
             }`}
           >
-            Governance
+            Governance & Approvers
           </button>
           <button
             onClick={() => setActiveTab('system')}
-            className={`px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition-all shrink-0 ${
+            className={`px-5 py-2.5 rounded-2xl text-xs sm:text-sm font-extrabold transition-all shrink-0 cursor-pointer ${
               activeTab === 'system'
-                ? 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 shadow-sm'
-                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'bg-white dark:bg-[#0c1731] text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800'
             }`}
           >
-            System
+            System & Media
           </button>
         </div>
       
@@ -562,31 +567,31 @@ export default function AdminSettings() {
       {activeTab === 'policy' && (
         <div className="space-y-4 max-w-full">
           {/* Card: Welfare Categories & Relationships */}
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 shadow-sm border border-slate-100 dark:border-slate-800/60 max-w-full">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800/80 mb-3 gap-2">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
-                  <Settings2 className="w-4 h-4" />
+          <div className="bg-white dark:bg-[#0c1731] rounded-3xl p-6 shadow-xs border border-slate-200/80 dark:border-slate-800 max-w-full">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 mb-4 gap-2">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-200/50 dark:border-blue-900/60">
+                  <Settings2 className="w-5 h-5" />
                 </div>
                 <div className="min-w-0">
-                  <h2 className="font-bold text-slate-900 dark:text-white text-sm sm:text-base tracking-tight truncate">
-                    Welfare Categories & Relationships
+                  <h2 className="font-extrabold text-slate-900 dark:text-white text-sm sm:text-base tracking-tight truncate">
+                    Welfare Categories & Beneficiary Rules
                   </h2>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 truncate">Manage categories and eligible relationships</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 truncate">Manage categories, minimum dues, and eligible relationships</p>
                 </div>
               </div>
               {canEditWelfare && (
-                <span className="bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-900/60 rounded-full px-2 py-0.5 text-xs font-semibold shrink-0">
+                <span className="bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-900/60 rounded-full px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider shrink-0">
                   Editable
                 </span>
               )}
             </div>
           
-            <div className="space-y-3">
+            <div className="space-y-4">
               {/* Weekly Min Contribution */}
               <div>
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-widest mb-1.5">
-                  Weekly Min. Contribution (UGX)
+                <label className="block text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">
+                  Weekly Minimum Dues Requirement (UGX)
                 </label>
                 <input 
                   type="number" 
@@ -596,23 +601,23 @@ export default function AdminSettings() {
                     const val = parseInt(e.target.value, 10) || 0;
                     setFormData(prev => prev ? ({ ...prev, minimumWeeklyContribution: val }) : null);
                   }}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-sm font-semibold text-slate-900 dark:text-white focus:border-amber-500 focus:bg-white dark:focus:bg-slate-900 outline-none disabled:opacity-60 transition-all" 
+                  className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-3 text-xs sm:text-sm font-semibold text-slate-900 dark:text-white focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 outline-none disabled:opacity-60 transition-all" 
                 />
               </div>
 
               {/* Active Categories */}
-              <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80">
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2">
-                  Active Categories
+              <div className="pt-3 border-t border-slate-100 dark:border-slate-800">
+                <label className="block text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2.5">
+                  Active Welfare Categories
                 </label>
                 <div className="space-y-2 mb-3">
                   {formData.welfareCategories.map((cat) => (
-                    <div key={cat} className="flex items-center justify-between bg-white dark:bg-slate-800/60 px-3 py-2 rounded-xl border border-slate-100 dark:border-slate-800 gap-2 min-w-0">
-                      <span className="font-semibold text-xs sm:text-sm text-slate-900 dark:text-white truncate min-w-0">{cat}</span>
+                    <div key={cat} className="flex items-center justify-between bg-slate-50/60 dark:bg-slate-800/40 px-4 py-2.5 rounded-2xl border border-slate-200/70 dark:border-slate-800 gap-2 min-w-0">
+                      <span className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white truncate min-w-0">{cat}</span>
                       {canEditWelfare && (
                         <button 
                           onClick={() => removeCategory(cat)} 
-                          className="w-7 h-7 rounded-lg bg-rose-50 dark:bg-rose-950/50 text-rose-500 hover:bg-rose-100 dark:hover:bg-rose-900/60 flex items-center justify-center shrink-0"
+                          className="w-7 h-7 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/60 flex items-center justify-center shrink-0 border border-rose-200/50 dark:border-rose-900/50 cursor-pointer"
                           title="Remove category"
                         >
                           <X className="w-3.5 h-3.5" />
@@ -628,11 +633,11 @@ export default function AdminSettings() {
                       value={newCategory} 
                       onChange={e => setNewCategory(e.target.value)} 
                       placeholder="Add new category name..." 
-                      className="w-full sm:flex-1 bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white outline-none focus:border-amber-500 transition-all placeholder:text-slate-400" 
+                      className="w-full sm:flex-1 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white outline-none focus:border-blue-500 transition-all placeholder:text-slate-400" 
                     />
                     <button 
                       onClick={addCategory} 
-                      className="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 text-white rounded-xl px-4 py-2 text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-1 shrink-0"
+                      className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white rounded-2xl px-5 py-2.5 text-xs font-extrabold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shrink-0 cursor-pointer shadow-xs active:scale-95"
                     >
                       <Plus className="w-4 h-4" /> Add
                     </button>
@@ -641,18 +646,18 @@ export default function AdminSettings() {
               </div>
 
               {/* Allowed Relationships */}
-              <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80">
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2">
+              <div className="pt-3 border-t border-slate-100 dark:border-slate-800">
+                <label className="block text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2.5">
                   Allowed Beneficiary Relationships
                 </label>
                 <div className="flex flex-wrap gap-2 mb-3 max-w-full">
                   {formData.allowedRelationships.map((rel) => (
-                    <span key={rel} className="inline-flex items-center gap-1.5 bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-900/60 rounded-full px-3 py-1 text-xs font-medium">
+                    <span key={rel} className="inline-flex items-center gap-1.5 bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900/60 rounded-full px-3 py-1 text-xs font-semibold">
                       {rel} 
                       {canEditWelfare && (
                         <button 
                           onClick={() => removeRelationship(rel)} 
-                          className="text-amber-500 hover:text-amber-800 dark:hover:text-amber-100"
+                          className="text-blue-500 hover:text-blue-800 dark:hover:text-blue-200 cursor-pointer"
                           title="Remove relationship"
                         >
                           <X className="w-3 h-3" />
@@ -668,11 +673,11 @@ export default function AdminSettings() {
                       value={newRelationship} 
                       onChange={e => setNewRelationship(e.target.value)} 
                       placeholder="Add relationship (e.g., Parent)..." 
-                      className="w-full sm:flex-1 bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white outline-none focus:border-amber-500 transition-all placeholder:text-slate-400" 
+                      className="w-full sm:flex-1 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white outline-none focus:border-blue-500 transition-all placeholder:text-slate-400" 
                     />
                     <button 
                       onClick={addRelationship} 
-                      className="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 text-white rounded-xl px-4 py-2 text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-1 shrink-0"
+                      className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white rounded-2xl px-5 py-2.5 text-xs font-extrabold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shrink-0 cursor-pointer shadow-xs active:scale-95"
                     >
                       <Plus className="w-4 h-4" /> Add
                     </button>
@@ -683,18 +688,18 @@ export default function AdminSettings() {
           </div>
 
           {/* Card: Maximum Amounts per Category */}
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 shadow-sm border border-slate-100 dark:border-slate-800/60 max-w-full">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100 dark:border-slate-800/80 mb-3">
+          <div className="bg-white dark:bg-[#0c1731] rounded-3xl p-6 shadow-xs border border-slate-200/80 dark:border-slate-800 max-w-full">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-slate-100 dark:border-slate-800 mb-4">
               <div>
-                <h2 className="font-bold text-slate-900 dark:text-white text-sm sm:text-base tracking-tight">
+                <h2 className="font-extrabold text-slate-900 dark:text-white text-sm sm:text-base tracking-tight">
                   Category Maximum Payout Limits (UGX)
                 </h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Enforced on welfare application forms.</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Enforced across all member welfare claim forms.</p>
               </div>
               {canEditWelfare && (
                 <button 
                   onClick={saveMaxAmounts}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1 shrink-0 self-start sm:self-auto"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-2xl text-xs font-extrabold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shrink-0 self-start sm:self-auto cursor-pointer shadow-xs"
                 >
                   <Save className="w-3.5 h-3.5" /> Save Amounts
                 </button>
@@ -706,16 +711,16 @@ export default function AdminSettings() {
                 <p className="text-xs text-slate-400 italic py-1">No categories created yet.</p>
               ) : (
                 formData.welfareCategories.map((cat) => (
-                  <div key={cat} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-white dark:bg-slate-800/60 p-3 rounded-2xl border border-slate-100 dark:border-slate-800">
-                    <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate min-w-0">{cat}</span>
+                  <div key={cat} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-50/60 dark:bg-slate-800/40 p-3.5 rounded-2xl border border-slate-200/70 dark:border-slate-800">
+                    <span className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white truncate min-w-0">{cat}</span>
                     <div className="flex items-center gap-2 self-end sm:self-auto w-full sm:w-auto justify-end">
-                      <span className="text-xs font-semibold text-slate-400">UGX</span>
+                      <span className="text-xs font-extrabold text-slate-400">UGX</span>
                       <input
                         type="number"
                         disabled={!canEditWelfare}
                         value={formData.maxAmounts?.[cat] ?? 0}
                         onChange={(e) => handleMaxAmountChange(cat, e.target.value)}
-                        className="w-full sm:w-32 max-w-[140px] rounded-xl bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 px-2.5 py-1 text-right text-xs sm:text-sm font-semibold text-slate-900 dark:text-white focus:border-amber-500 outline-none disabled:opacity-60 transition-all"
+                        className="w-full sm:w-36 max-w-[150px] rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-right text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white focus:border-blue-500 outline-none disabled:opacity-60 transition-all font-mono"
                         placeholder="0"
                       />
                     </div>
@@ -739,16 +744,16 @@ export default function AdminSettings() {
                 <Shield className="w-4 h-4" />
               </div>
               <div className="min-w-0">
-                <h2 className="font-bold text-slate-900 dark:text-white text-sm sm:text-base tracking-tight truncate">
-                  Welfare Approvers (Exactly 3)
+                <h2 className="font-extrabold text-slate-900 dark:text-white text-sm sm:text-base tracking-tight truncate">
+                  Designated Welfare Approvers (Exactly 3)
                 </h2>
                 <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
-                  Select 3 committee members. Welfare requests require 2-of-3 votes.
+                  Select 3 committee members. Welfare disbursement requests require 2-of-3 concurrent approval votes.
                 </p>
               </div>
             </div>
           
-            <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
+            <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
               {committeeMembers.map(member => {
                 const isApprover = (formData.welfareApprovers || []).includes(member.uid);
                 const initials = member.fullName
@@ -758,18 +763,18 @@ export default function AdminSettings() {
                 return (
                   <div 
                     key={member.uid} 
-                    className={`flex items-center justify-between p-3 rounded-2xl border transition-all gap-3 min-w-0 ${
+                    className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all gap-3 min-w-0 ${
                       isApprover 
-                        ? 'bg-emerald-50/70 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800 border-l-4 border-l-emerald-500' 
-                        : 'bg-white dark:bg-slate-800/50 border-slate-100 dark:border-slate-800'
+                        ? 'bg-blue-50/70 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800' 
+                        : 'bg-slate-50/60 dark:bg-slate-800/40 border-slate-200/70 dark:border-slate-800'
                     }`}
                   >
-                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                      <div className="w-9 h-9 rounded-full bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 flex items-center justify-center font-bold text-xs shrink-0">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="w-9 h-9 rounded-xl bg-blue-900 text-white dark:bg-blue-600 dark:text-white flex items-center justify-center font-extrabold text-xs shrink-0 shadow-xs">
                         {initials}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white truncate">{member.fullName || 'User'}</p>
+                        <p className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white truncate">{member.fullName || 'User'}</p>
                         <p className="text-[11px] text-slate-500 dark:text-slate-400 capitalize truncate">
                           {member?.role?.replace('_', ' ') || 'Member'} • {member.phoneNumber}
                         </p>
@@ -785,10 +790,10 @@ export default function AdminSettings() {
                           onChange={() => toggleApprover(member.uid)} 
                           disabled={!isApprover && formData.welfareApprovers.length >= 3} 
                         />
-                        <div className="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:bg-emerald-600 transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all after:shadow-sm peer-checked:after:translate-x-5"></div>
+                        <div className="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:bg-blue-600 transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all after:shadow-xs peer-checked:after:translate-x-5"></div>
                       </label>
                     ) : (
-                      <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full shrink-0 ${isApprover ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300' : 'text-slate-400'}`}>
+                      <span className={`text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full shrink-0 ${isApprover ? 'bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300' : 'text-slate-400'}`}>
                         {isApprover ? 'Approver' : ''}
                       </span>
                     )}
@@ -797,33 +802,33 @@ export default function AdminSettings() {
               })}
             </div>
 
-            <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800/80 text-xs font-semibold text-slate-500 dark:text-slate-400 flex justify-between items-center">
-              <span>Selected Approvers:</span>
-              <span className={formData.welfareApprovers.length === 3 ? "text-emerald-600 dark:text-emerald-400 font-bold" : "text-amber-600 dark:text-amber-400 font-bold"}>
-                {formData.welfareApprovers.length} / 3 selected
+            <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 text-xs font-semibold text-slate-500 dark:text-slate-400 flex justify-between items-center">
+              <span>Required Quorum:</span>
+              <span className={formData.welfareApprovers.length === 3 ? "text-emerald-600 dark:text-emerald-400 font-extrabold" : "text-amber-600 dark:text-amber-400 font-extrabold"}>
+                {formData.welfareApprovers.length} of 3 selected
               </span>
             </div>
           </div>
 
           {/* Card: Visibility Controls */}
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 shadow-sm border border-slate-100 dark:border-slate-800/60 max-w-full">
-            <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100 dark:border-slate-800/80 mb-3">
-              <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
-                <Eye className="w-4 h-4" />
+          <div className="bg-white dark:bg-[#0c1731] rounded-3xl p-6 shadow-xs border border-slate-200/80 dark:border-slate-800 max-w-full">
+            <div className="flex items-center gap-3 pb-4 border-b border-slate-100 dark:border-slate-800 mb-4">
+              <div className="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-200/50 dark:border-blue-900/60">
+                <Eye className="w-5 h-5" />
               </div>
               <div className="min-w-0">
-                <h2 className="font-bold text-slate-900 dark:text-white text-sm sm:text-base tracking-tight truncate">
-                  Member Visibility Settings
+                <h2 className="font-extrabold text-slate-900 dark:text-white text-sm sm:text-base tracking-tight truncate">
+                  Member Dashboard Privacy & Transparency
                 </h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">Control metric visibility on member dashboards</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">Control metric disclosure levels on standard member feeds</p>
               </div>
             </div>
 
-            <div className="space-y-2.5">
-              <label className="flex items-center justify-between cursor-pointer p-3 bg-white dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 rounded-2xl gap-3">
+            <div className="space-y-3">
+              <label className="flex items-center justify-between cursor-pointer p-4 bg-slate-50/60 dark:bg-slate-800/40 border border-slate-200/70 dark:border-slate-800 rounded-2xl gap-3">
                 <div className="min-w-0 flex-1">
-                  <p className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white truncate">Show Total Balance to Members</p>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">Allow ordinary members to see total fund balance on dashboard.</p>
+                  <p className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white truncate">Public Fund Balance Metric</p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">Permit verified alumni to view cumulative vault balance on their dashboard.</p>
                 </div>
                 <div className="relative shrink-0">
                   <input 
@@ -832,15 +837,15 @@ export default function AdminSettings() {
                     onChange={(e) => handleUpdateBoolean('showTotalBalanceToMembers', e.target.checked)} 
                     className="sr-only peer" 
                   />
-                  <div className="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:bg-emerald-600 dark:peer-checked:bg-emerald-600 transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all after:shadow-sm peer-checked:after:translate-x-5"></div>
+                  <div className="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:bg-blue-600 transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all after:shadow-xs peer-checked:after:translate-x-5"></div>
                 </div>
               </label>
 
               {canEditWelfare && (
-                <label className="flex items-center justify-between cursor-pointer p-3 bg-white dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 rounded-2xl gap-3">
+                <label className="flex items-center justify-between cursor-pointer p-4 bg-slate-50/60 dark:bg-slate-800/40 border border-slate-200/70 dark:border-slate-800 rounded-2xl gap-3">
                   <div className="min-w-0 flex-1">
-                    <p className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white truncate">Show Top Contributors Leaderboard</p>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">Display top contributors on member dashboard.</p>
+                    <p className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white truncate">Honor Roll & Top Contributors Board</p>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">Feature leading contributors on the community leaderboard.</p>
                   </div>
                   <div className="relative shrink-0">
                     <input 
@@ -849,7 +854,7 @@ export default function AdminSettings() {
                       onChange={(e) => handleUpdateBoolean('showTopContributors', e.target.checked)} 
                       className="sr-only peer" 
                     />
-                    <div className="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:bg-emerald-600 dark:peer-checked:bg-emerald-600 transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all after:shadow-sm peer-checked:after:translate-x-5"></div>
+                    <div className="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:bg-blue-600 transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all after:shadow-xs peer-checked:after:translate-x-5"></div>
                   </div>
                 </label>
               )}
@@ -864,148 +869,148 @@ export default function AdminSettings() {
       {activeTab === 'system' && (
         <div className="space-y-4 max-w-full">
           {/* Card: Executive Support Contacts */}
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 shadow-sm border border-slate-100 dark:border-slate-800/60 max-w-full">
-            <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100 dark:border-slate-800/80 mb-3">
-              <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-                <Shield className="w-4 h-4" />
+          <div className="bg-white dark:bg-[#0c1731] rounded-3xl p-6 shadow-xs border border-slate-200/80 dark:border-slate-800 max-w-full">
+            <div className="flex items-center gap-3 pb-4 border-b border-slate-100 dark:border-slate-800 mb-4">
+              <div className="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-200/50 dark:border-blue-900/60">
+                <Shield className="w-5 h-5" />
               </div>
               <div className="min-w-0">
-                <h2 className="font-bold text-slate-900 dark:text-white text-sm sm:text-base tracking-tight truncate">
-                  Executive Support Contacts
+                <h2 className="font-extrabold text-slate-900 dark:text-white text-sm sm:text-base tracking-tight truncate">
+                  Executive Support Desks
                 </h2>
                 <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
-                  Direct contact info shown on Login, Approval & Help screens.
+                  Direct contact endpoints displayed on member Login, Verification, and Help screens.
                 </p>
               </div>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-widest mb-1">
-                  Support Call Phone Number
+                <label className="block text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">
+                  Support Telephone Line
                 </label>
                 <input
                   type="text"
                   value={formData.supportPhone || ''}
                   onChange={(e) => setFormData(prev => prev ? ({ ...prev, supportPhone: e.target.value }) : null)}
                   placeholder="+256 770 000000"
-                  className="w-full bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs sm:text-sm font-semibold text-slate-900 dark:text-white focus:border-amber-500 focus:bg-white dark:focus:bg-slate-900 outline-none transition-all placeholder:text-slate-400"
+                  className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-3 text-xs sm:text-sm font-semibold text-slate-900 dark:text-white focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 outline-none transition-all placeholder:text-slate-400 font-mono"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-widest mb-1">
-                  Support WhatsApp Number
+                <label className="block text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">
+                  Official WhatsApp Assistance Hotline
                 </label>
                 <input
                   type="text"
                   value={formData.supportWhatsApp || ''}
                   onChange={(e) => setFormData(prev => prev ? ({ ...prev, supportWhatsApp: e.target.value }) : null)}
                   placeholder="+256 700 000000"
-                  className="w-full bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs sm:text-sm font-semibold text-slate-900 dark:text-white focus:border-amber-500 focus:bg-white dark:focus:bg-slate-900 outline-none transition-all placeholder:text-slate-400"
+                  className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-3 text-xs sm:text-sm font-semibold text-slate-900 dark:text-white focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 outline-none transition-all placeholder:text-slate-400 font-mono"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-widest mb-1">
-                  Support Email Address
+                <label className="block text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">
+                  Official Inquiries Email Address
                 </label>
                 <input
                   type="email"
                   value={formData.supportEmail || ''}
                   onChange={(e) => setFormData(prev => prev ? ({ ...prev, supportEmail: e.target.value }) : null)}
                   placeholder="support@mamas.org"
-                  className="w-full bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs sm:text-sm font-semibold text-slate-900 dark:text-white focus:border-amber-500 focus:bg-white dark:focus:bg-slate-900 outline-none transition-all placeholder:text-slate-400"
+                  className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-3 text-xs sm:text-sm font-semibold text-slate-900 dark:text-white focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 outline-none transition-all placeholder:text-slate-400"
                 />
               </div>
               
               <div>
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-widest mb-1">
-                  Alumni WhatsApp Group Invite Link
+                <label className="block text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">
+                  Alumni Community WhatsApp Group Invite Link
                 </label>
                 <input
                   type="url"
                   value={formData.whatsappGroupLink || ''}
                   onChange={(e) => setFormData(prev => prev ? ({ ...prev, whatsappGroupLink: e.target.value }) : null)}
                   placeholder="https://chat.whatsapp.com/..."
-                  className="w-full bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs sm:text-sm font-semibold text-slate-900 dark:text-white focus:border-amber-500 focus:bg-white dark:focus:bg-slate-900 outline-none transition-all placeholder:text-slate-400"
+                  className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-3 text-xs sm:text-sm font-semibold text-slate-900 dark:text-white focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 outline-none transition-all placeholder:text-slate-400 font-mono"
                 />
               </div>
             </div>
           </div>
 
           {/* Card: Theme & Appearance Preference */}
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 shadow-sm border border-slate-100 dark:border-slate-800/60 max-w-full">
-            <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100 dark:border-slate-800/80 mb-3">
-              <div className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
-                <SunMedium className="w-4 h-4" />
+          <div className="bg-white dark:bg-[#0c1731] rounded-3xl p-6 shadow-xs border border-slate-200/80 dark:border-slate-800 max-w-full">
+            <div className="flex items-center gap-3 pb-4 border-b border-slate-100 dark:border-slate-800 mb-4">
+              <div className="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-200/50 dark:border-blue-900/60">
+                <SunMedium className="w-5 h-5" />
               </div>
               <div className="min-w-0">
-                <h2 className="font-bold text-slate-900 dark:text-white text-sm sm:text-base tracking-tight truncate">
-                  System Theme & Appearance
+                <h2 className="font-extrabold text-slate-900 dark:text-white text-sm sm:text-base tracking-tight truncate">
+                  System Theme & Color Palette
                 </h2>
                 <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
-                  Select your preferred system theme mode (Light, Dark, or System).
+                  Select your preferred interface display mode (Light, Dark, or System Auto).
                 </p>
               </div>
             </div>
-            <div className="bg-slate-50 dark:bg-slate-800/60 rounded-2xl p-3 sm:p-4 border border-slate-100 dark:border-slate-800">
+            <div className="bg-slate-50/60 dark:bg-slate-800/40 rounded-2xl p-4 border border-slate-200/70 dark:border-slate-800">
               <ThemeToggle />
             </div>
           </div>
 
           {/* Card: Landing Page Banners Manager */}
           {canEditBanners && (
-            <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 shadow-sm border border-slate-100 dark:border-slate-800/60 max-w-full">
-              <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100 dark:border-slate-800/80 mb-3">
-                <div className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
-                  <ImageIcon className="w-4 h-4" />
+            <div className="bg-white dark:bg-[#0c1731] rounded-3xl p-6 shadow-xs border border-slate-200/80 dark:border-slate-800 max-w-full">
+              <div className="flex items-center gap-3 pb-4 border-b border-slate-100 dark:border-slate-800 mb-4">
+                <div className="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-200/50 dark:border-blue-900/60">
+                  <ImageIcon className="w-5 h-5" />
                 </div>
                 <div className="min-w-0">
-                  <h2 className="font-bold text-slate-900 dark:text-white text-sm sm:text-base tracking-tight truncate">
-                    Landing Page Banners
+                  <h2 className="font-extrabold text-slate-900 dark:text-white text-sm sm:text-base tracking-tight truncate">
+                    Landing Page Banners & Visual Hero Carousel
                   </h2>
                   <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
-                    Manage hero carousel images displayed on the public landing page.
+                    Manage high-resolution banners displayed on the public landing page.
                   </p>
                 </div>
               </div>
 
-              <div className="space-y-2.5 mb-3">
+              <div className="space-y-3 mb-4">
                 {(formData.banners || []).map((url, idx) => (
-                  <div key={idx} className="flex items-center gap-3 bg-white dark:bg-slate-800/60 p-2.5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-xs min-w-0">
-                    <img src={url} alt={`Banner ${idx + 1}`} className="w-16 h-11 object-cover rounded-xl bg-slate-200 dark:bg-slate-700 shrink-0 border border-slate-100 dark:border-slate-800" />
+                  <div key={idx} className="flex items-center gap-3 bg-slate-50/60 dark:bg-slate-800/40 p-3 rounded-2xl border border-slate-200/70 dark:border-slate-800 shadow-xs min-w-0">
+                    <img src={url} alt={`Banner ${idx + 1}`} className="w-16 h-12 object-cover rounded-xl bg-slate-200 dark:bg-slate-700 shrink-0 border border-slate-200 dark:border-slate-700" />
                     <span className="text-xs text-slate-500 dark:text-slate-400 truncate flex-1 font-mono min-w-0">{url}</span>
                     <button 
                       onClick={() => removeBannerUrl(idx)} 
-                      className="w-7 h-7 rounded-lg bg-rose-50 dark:bg-rose-950/50 text-rose-500 hover:bg-rose-100 dark:hover:bg-rose-900/60 flex items-center justify-center shrink-0"
+                      className="w-8 h-8 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/60 flex items-center justify-center shrink-0 border border-rose-200/50 dark:border-rose-900/50 cursor-pointer"
                       title="Remove banner"
                     >
-                      <X className="w-3.5 h-3.5" />
+                      <X className="w-4 h-4" />
                     </button>
                   </div>
                 ))}
 
                 {(formData.banners || []).length === 0 && (
-                  <div className="flex flex-col items-center justify-center p-5 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 text-center">
-                    <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center mb-1.5">
-                      <ImageIcon className="w-4.5 h-4.5" />
+                  <div className="flex flex-col items-center justify-center p-6 bg-slate-50/50 dark:bg-slate-800/30 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 text-center">
+                    <div className="w-10 h-10 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center mb-2">
+                      <ImageIcon className="w-5 h-5" />
                     </div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">No custom banners added yet.</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold">No custom banners added yet.</p>
                   </div>
                 )}
               </div>
 
-              <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800/80">
+              <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-slate-800">
                 <div className="flex flex-col sm:flex-row gap-2">
                   <input
                     type="text"
                     value={newBannerUrl}
                     onChange={(e) => setNewBannerUrl(e.target.value)}
                     placeholder="Paste banner image URL (https://...)"
-                    className="w-full sm:flex-1 bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white outline-none focus:border-amber-500 transition-all placeholder:text-slate-400"
+                    className="w-full sm:flex-1 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white outline-none focus:border-blue-500 transition-all placeholder:text-slate-400 font-mono"
                   />
                   <button
                     onClick={() => addBannerUrl()}
-                    className="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 text-white rounded-xl px-4 py-2 text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-1 shrink-0"
+                    className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white rounded-2xl px-5 py-2.5 text-xs font-extrabold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shrink-0 cursor-pointer shadow-xs active:scale-95"
                   >
                     <Plus className="w-4 h-4" /> Add URL
                   </button>
@@ -1013,20 +1018,20 @@ export default function AdminSettings() {
 
                 <div className="relative flex items-center justify-center my-2">
                   <div className="border-t border-slate-200 dark:border-slate-800 w-full"></div>
-                  <span className="bg-white dark:bg-slate-900 px-3 text-[10px] uppercase tracking-wider font-semibold text-slate-400 shrink-0">OR UPLOAD FILE</span>
+                  <span className="bg-white dark:bg-[#0c1731] px-3 text-[10px] uppercase tracking-wider font-extrabold text-slate-400 shrink-0">OR UPLOAD FILE</span>
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label className="w-full bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700/80 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-3 text-center cursor-pointer transition-all flex items-center justify-center gap-2">
+                  <label className="w-full bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-700/80 border border-dashed border-slate-300 dark:border-slate-700 rounded-2xl p-4 text-center cursor-pointer transition-all flex items-center justify-center gap-2">
                     {uploadingBanner ? (
                       <>
-                        <Loader2 className="w-4 h-4 animate-spin text-amber-500" />
-                        <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">Uploading banner image...</span>
+                        <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                        <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">Uploading banner image asset...</span>
                       </>
                     ) : (
                       <>
-                        <ImageIcon className="w-4 h-4 text-amber-500" />
-                        <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">Choose banner file to upload</span>
+                        <ImageIcon className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                        <span className="text-xs font-bold text-slate-700 dark:text-slate-200">Choose banner graphic file to upload</span>
                       </>
                     )}
                     <input

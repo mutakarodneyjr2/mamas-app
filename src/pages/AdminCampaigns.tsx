@@ -5,7 +5,7 @@ import { db } from '../firebase';
 import { SchoolCampaign } from '../types';
 import { createSchoolCampaign, updateCampaignStatus, logActivity, transferCampaignExcessFunds, deleteSchoolCampaign } from '../lib/services';
 import { formatUGX, DEFAULT_CAMPAIGN_PLACEHOLDER } from '../lib/utils';
-import { Target, Plus, Shield, CheckCircle, ArrowRightLeft, XCircle, Clock, Trash2, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { Target, Plus, Shield, CheckCircle, ArrowRightLeft, XCircle, Clock, Trash2, Image as ImageIcon, Loader2, AlertCircle } from 'lucide-react';
 import { uploadImage } from '../lib/storage';
 
 export default function AdminCampaigns() {
@@ -32,8 +32,8 @@ export default function AdminCampaigns() {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setCampaigns(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SchoolCampaign)));
       setLoading(false);
-    }, (error) => {
-      console.error("Error loading campaigns:", error);
+    }, (err) => {
+      console.error("Error loading campaigns:", err);
       setLoading(false);
     });
 
@@ -67,7 +67,6 @@ export default function AdminCampaigns() {
         description,
         targetAmount: amount,
         imageUrls
-
       });
       await logActivity('CREATE_CAMPAIGN', currentUser.uid, 'campaign', `Created campaign: ${title}`);
       setMessage('Campaign created successfully.');
@@ -127,29 +126,54 @@ export default function AdminCampaigns() {
   const isChairperson = userProfile?.role === 'chairperson' || userProfile?.role === 'vice_chairperson' || userProfile?.role === 'super_admin';
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto pb-10">
+    <div className="space-y-6 max-w-5xl mx-auto pb-16 px-4 font-sans">
       
-      <div>
-        <h2 className="text-2xl font-display font-bold text-mamas-text flex items-center gap-2">
-          <Target className="w-6 h-6 text-mamas-accent" /> Campaigns Management
-        </h2>
-        <p className="text-mamas-text-muted text-sm mt-1">Create and manage fundraising initiatives for the school.</p>
+      {/* Header Banner */}
+      <div className="bg-white dark:bg-[#0c1731] rounded-3xl p-6 sm:p-8 shadow-xs border border-slate-200/80 dark:border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-200/50 dark:border-blue-900/60">
+            <Target className="w-6 h-6" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2 mb-0.5">
+              <span className="bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400 text-[10px] font-extrabold uppercase tracking-wider rounded-full px-2.5 py-0.5 border border-blue-200 dark:border-blue-900/60">
+                School Development
+              </span>
+            </div>
+            <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+              School Campaigns Management
+            </h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Launch and administer capital projects, grants, and fundraising drives for St. Aloysius
+            </p>
+          </div>
+        </div>
       </div>
 
-      {error && <div className="bg-rose-50 border border-rose-200 text-rose-700 px-4 py-3 rounded-xl text-sm font-medium">{error}</div>}
-      {message && <div className="bg-teal-50 border border-teal-200 text-teal-700 px-4 py-3 rounded-xl text-sm font-medium">{message}</div>}
+      {error && (
+        <div className="p-4 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-rose-700 dark:text-rose-300 rounded-2xl text-xs sm:text-sm font-semibold flex items-center gap-2.5 shadow-xs">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+      {message && (
+        <div className="p-4 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 rounded-2xl text-xs sm:text-sm font-semibold flex items-center gap-2.5 shadow-xs animate-in fade-in">
+          <CheckCircle className="w-4 h-4 shrink-0" />
+          <span>{message}</span>
+        </div>
+      )}
 
       {/* Form: Launch New Campaign */}
-      <div className="bg-mamas-card rounded-3xl shadow-sm border border-slate-200/90 overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-          <h3 className="text-base font-bold text-mamas-text">Launch New Campaign</h3>
+      <div className="bg-white dark:bg-[#0c1731] rounded-3xl shadow-xs border border-slate-200/80 dark:border-slate-800 overflow-hidden">
+        <div className="px-6 md:px-8 py-5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40">
+          <h3 className="text-base font-extrabold text-slate-900 dark:text-white">Launch New School Initiative</h3>
         </div>
         
-        <div className="p-6">
+        <div className="p-6 md:p-8">
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label htmlFor="title" className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Campaign Title</label>
+                <label htmlFor="title" className="block text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Campaign Title</label>
                 <input
                   type="text"
                   name="title"
@@ -157,13 +181,13 @@ export default function AdminCampaigns() {
                   required
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:bg-white focus:ring-2 focus:ring-mamas-accent outline-none font-medium text-mamas-text"
-                  placeholder="e.g. New Library Books"
+                  className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-3 text-xs sm:text-sm text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-blue-500 outline-none font-medium placeholder:text-slate-400 transition-all"
+                  placeholder="e.g. Science Laboratory Renovation"
                 />
               </div>
 
               <div>
-                <label htmlFor="targetAmount" className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Target Amount (UGX)</label>
+                <label htmlFor="targetAmount" className="block text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Target Goal Amount (UGX)</label>
                 <input
                   type="number"
                   name="targetAmount"
@@ -172,14 +196,14 @@ export default function AdminCampaigns() {
                   min="1000"
                   value={targetAmount}
                   onChange={(e) => setTargetAmount(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:bg-white focus:ring-2 focus:ring-mamas-accent outline-none font-medium text-mamas-text"
+                  className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-3 text-xs sm:text-sm text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-blue-500 outline-none font-bold font-mono placeholder:text-slate-400 transition-all"
                   placeholder="e.g. 5000000"
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="description" className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Description</label>
+              <label htmlFor="description" className="block text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Detailed Narrative & Objectives</label>
               <textarea
                 id="description"
                 name="description"
@@ -187,13 +211,13 @@ export default function AdminCampaigns() {
                 required
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:bg-white focus:ring-2 focus:ring-mamas-accent outline-none font-medium text-mamas-text resize-none"
-                placeholder="Explain the purpose of this campaign..."
+                className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-3 text-xs sm:text-sm text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-blue-500 outline-none font-medium placeholder:text-slate-400 resize-none transition-all"
+                placeholder="Explain the background, budget breakdown, and impact for the students..."
               />
             </div>
 
             <div>
-              <label htmlFor="coverImage" className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Cover Image (Optional)</label>
+              <label htmlFor="coverImage" className="block text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Feature Cover Photo (Optional)</label>
               <div className="flex items-center gap-3">
                 <input
                   type="file"
@@ -203,10 +227,14 @@ export default function AdminCampaigns() {
                     const file = e.target.files?.[0];
                     if (file) setCoverImage(file);
                   }}
-                  className="w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 transition-colors"
+                  className="w-full text-xs text-slate-500 dark:text-slate-400 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-extrabold file:uppercase file:tracking-wider file:bg-blue-50 dark:file:bg-blue-950/60 file:text-blue-700 dark:file:text-blue-300 hover:file:bg-blue-100 transition-colors cursor-pointer"
                 />
                 {coverImage && (
-                  <button type="button" onClick={(e) => { e.preventDefault(); setCoverImage(null); (document.getElementById('coverImage') as HTMLInputElement).value = ''; }} className="text-rose-500 hover:text-rose-600 text-xs font-bold">
+                  <button 
+                    type="button" 
+                    onClick={(e) => { e.preventDefault(); setCoverImage(null); (document.getElementById('coverImage') as HTMLInputElement).value = ''; }} 
+                    className="text-rose-600 dark:text-rose-400 hover:text-rose-700 text-xs font-bold shrink-0 cursor-pointer"
+                  >
                     Clear
                   </button>
                 )}
@@ -216,29 +244,39 @@ export default function AdminCampaigns() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full sm:w-auto bg-mamas-primary hover:bg-mamas-primary-hover text-white font-bold py-3 px-8 rounded-2xl shadow-md transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-3.5 px-8 rounded-2xl shadow-xs transition-all disabled:opacity-50 flex items-center justify-center gap-2 text-xs uppercase tracking-wider cursor-pointer active:scale-95"
               >
-                <Plus className="w-4 h-4" /> {isSubmitting ? 'Launching...' : 'Launch Campaign'}
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Publishing...</span>
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4" />
+                    <span>Launch Campaign</span>
+                  </>
+                )}
               </button>
             </div>
           </form>
         </div>
       </div>
 
-      {/* Mobile-First Card View for Campaigns */}
+      {/* Campaigns Listing */}
       <div className="space-y-4">
-        <h3 className="text-lg font-bold text-mamas-text">Active & Past Campaigns</h3>
+        <h3 className="text-base font-extrabold text-slate-900 dark:text-white">Active & Past Campaigns ({campaigns.length})</h3>
 
         {loading ? (
-          <div className="p-8 text-center text-slate-400 font-medium">Loading campaigns...</div>
+          <div className="p-12 text-center text-slate-400 font-medium">Loading campaigns...</div>
         ) : campaigns.length === 0 ? (
-          <div className="bg-mamas-card border border-slate-100 rounded-3xl p-16 flex flex-col items-center justify-center text-center">
-            <div className="w-16 h-16 bg-slate-50 text-slate-300 rounded-full flex items-center justify-center mb-4">
+          <div className="bg-white dark:bg-[#0c1731] border border-slate-200/80 dark:border-slate-800 rounded-3xl p-16 flex flex-col items-center justify-center text-center">
+            <div className="w-16 h-16 bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 rounded-2xl flex items-center justify-center mb-4 border border-blue-200/50 dark:border-blue-900/60">
               <Target className="w-8 h-8" />
             </div>
-            <h3 className="text-xl font-bold text-mamas-text mb-2">No Campaigns Yet</h3>
-            <p className="text-slate-500 max-w-sm mx-auto text-sm">
-              You haven't created any campaigns. Use the form above to start a new school support initiative.
+            <h3 className="text-lg font-extrabold text-slate-900 dark:text-white mb-1">No Campaigns Yet</h3>
+            <p className="text-slate-500 dark:text-slate-400 max-w-sm mx-auto text-xs">
+              No school campaigns have been launched yet. Use the form above to post your first initiative.
             </p>
           </div>
         ) : (
@@ -249,23 +287,24 @@ export default function AdminCampaigns() {
               const isClosed = camp.status === 'closed';
 
               return (
-                <div key={camp.id} className="bg-mamas-card border border-slate-200 rounded-3xl p-5 shadow-sm flex flex-col justify-between gap-4">
+                <div key={camp.id} className="bg-white dark:bg-[#0c1731] border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 shadow-xs flex flex-col justify-between gap-4 hover:border-blue-500/40 transition-all">
                   <div>
-                    <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="flex items-start justify-between gap-2 mb-3">
                       <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${
-                        camp.status === 'active' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
-                        isFullyFunded ? 'bg-teal-50 text-teal-700 border border-teal-200' :
-                        'bg-slate-100 text-slate-600 border border-slate-200'
+                        camp.status === 'active' ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-900/60' :
+                        isFullyFunded ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/60' :
+                        'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700'
                       }`}>
                         {camp.status.replace('_', ' ')}
                       </span>
-                      <span className="text-[10px] text-slate-400 font-medium">
+                      <span className="text-[11px] font-mono text-slate-400">
                         {new Date(camp.createdAt).toLocaleDateString()}
                       </span>
                     </div>
 
-                    <h4 className="font-bold text-mamas-text text-lg mb-1">{camp.title}</h4>
-                    <div className="w-full h-36 rounded-2xl overflow-hidden mb-3 bg-slate-100 border border-slate-200/80 relative">
+                    <h4 className="font-extrabold text-slate-900 dark:text-white text-base sm:text-lg mb-2">{camp.title}</h4>
+                    
+                    <div className="w-full h-40 rounded-2xl overflow-hidden mb-3 bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 relative">
                       <img 
                         src={(camp.imageUrls && camp.imageUrls[0]) || camp.imageUrl || DEFAULT_CAMPAIGN_PLACEHOLDER} 
                         alt={camp.title} 
@@ -275,10 +314,10 @@ export default function AdminCampaigns() {
                         }}
                       />
                     </div>
-                    <p className="text-xs text-slate-500 line-clamp-3 leading-relaxed">{camp.description}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-3 leading-relaxed">{camp.description}</p>
 
                     {camp.actionNotes && (
-                      <p className="text-xs text-mamas-accent mt-2 bg-amber-50 p-2 rounded-xl border border-amber-200/80">
+                      <p className="text-xs text-amber-800 dark:text-amber-300 mt-2.5 bg-amber-50 dark:bg-amber-950/40 p-3 rounded-2xl border border-amber-200/80 dark:border-amber-900/60 font-medium">
                         Note: {camp.actionNotes}
                       </p>
                     )}
@@ -286,18 +325,18 @@ export default function AdminCampaigns() {
 
                   <div>
                     {/* Progress Bar */}
-                    <div className="space-y-1.5 mb-3 bg-slate-50 p-3 rounded-2xl border border-slate-100">
-                      <div className="flex items-center justify-between text-xs font-bold">
-                        <span className="text-mamas-text">{formatUGX(camp.raisedAmount)}</span>
-                        <span className="text-slate-400">/ {formatUGX(camp.targetAmount)}</span>
+                    <div className="space-y-2 mb-4 bg-slate-50/70 dark:bg-slate-800/40 p-3.5 rounded-2xl border border-slate-100 dark:border-slate-800">
+                      <div className="flex items-center justify-between text-xs font-extrabold">
+                        <span className="text-slate-900 dark:text-white">{formatUGX(camp.raisedAmount)}</span>
+                        <span className="text-slate-400">Target: {formatUGX(camp.targetAmount)}</span>
                       </div>
-                      <div className="w-full bg-slate-200 rounded-full h-2">
+                      <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
                         <div
-                          className={`h-2 rounded-full transition-all ${isFullyFunded || progress >= 100 ? 'bg-teal-500' : 'bg-mamas-accent'}`}
+                          className={`h-2 rounded-full transition-all duration-500 ${isFullyFunded || progress >= 100 ? 'bg-emerald-500' : 'bg-blue-600'}`}
                           style={{ width: `${Math.min(100, progress)}%` }}
                         />
                       </div>
-                      <div className="text-right text-[10px] font-bold text-slate-400">
+                      <div className="text-right text-[10px] font-extrabold text-blue-600 dark:text-blue-400">
                         {progress.toFixed(1)}% funded
                       </div>
                     </div>
@@ -308,7 +347,7 @@ export default function AdminCampaigns() {
                         {!isClosed && isFullyFunded && (
                           <button
                             onClick={() => handleAction(camp.id, 'transfer')}
-                            className="flex-1 inline-flex items-center justify-center gap-1 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 py-2.5 px-3 rounded-xl border border-indigo-200 transition-colors"
+                            className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 py-2.5 px-3 rounded-2xl border border-blue-200 dark:border-blue-900/60 transition-colors cursor-pointer"
                           >
                             <ArrowRightLeft className="w-3.5 h-3.5" /> Transfer
                           </button>
@@ -316,14 +355,14 @@ export default function AdminCampaigns() {
                         {!isClosed && (
                           <button
                             onClick={() => handleAction(camp.id, 'close')}
-                            className="flex-1 inline-flex items-center justify-center gap-1 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 py-2.5 px-3 rounded-xl transition-colors"
+                            className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 py-2.5 px-3 rounded-2xl transition-colors cursor-pointer"
                           >
                             <XCircle className="w-3.5 h-3.5" /> Close
                           </button>
                         )}
                         <button
                           onClick={() => handleDelete(camp.id, camp.title)}
-                          className="inline-flex items-center justify-center p-2.5 text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-xl transition-colors border border-rose-200"
+                          className="inline-flex items-center justify-center p-2.5 text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 rounded-2xl transition-colors border border-rose-200/60 dark:border-rose-900/50 cursor-pointer"
                           title="Delete Campaign"
                         >
                           <Trash2 className="w-4 h-4" />

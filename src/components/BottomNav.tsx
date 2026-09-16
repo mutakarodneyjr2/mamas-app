@@ -20,7 +20,7 @@ export function BottomNav() {
 
   return (
     <div className="md:hidden fixed bottom-4 left-4 right-4 z-40 pb-safe">
-      <div className="bg-white/95 backdrop-blur-lg shadow-xl shadow-slate-900/10 rounded-3xl border border-slate-100 h-16 px-2 flex justify-around items-center">
+      <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-2xl shadow-blue-950/15 dark:shadow-black/50 rounded-3xl border border-slate-200/80 dark:border-slate-800 h-16 px-2 flex justify-around items-center">
         {links.map(({ to, icon: Icon, label }) => {
           const isActive = location.pathname.startsWith(to) && (to !== '/dashboard' || location.pathname === '/dashboard');
           
@@ -28,26 +28,26 @@ export function BottomNav() {
             <Link 
               key={to} 
               to={to} 
-              className="relative flex flex-col items-center justify-center flex-1 h-full py-1"
+              className="relative flex flex-col items-center justify-center flex-1 h-full py-1 group"
             >
               {isActive && (
                 <motion.div 
-                  layoutId="activeGoldDot"
-                  className="absolute top-1.5 w-1 h-1 bg-amber-500 rounded-full"
+                  layoutId="activeNavDot"
+                  className="absolute top-1.5 w-1.5 h-1.5 bg-blue-600 dark:bg-blue-400 rounded-full shadow-sm shadow-blue-500/50"
                   transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                 />
               )}
               
               <Icon 
-                className={`w-6 h-6 transition-colors ${
-                  isActive ? 'text-slate-900' : 'text-slate-400'
+                className={`w-5 h-5 transition-colors ${
+                  isActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-slate-300'
                 }`} 
-                strokeWidth={1.5} 
+                strokeWidth={isActive ? 2.2 : 1.75} 
               />
               
               <span 
-                className={`text-[10px] font-medium tracking-tight mt-0.5 transition-colors ${
-                  isActive ? 'text-slate-900 font-bold' : 'text-slate-400'
+                className={`text-[10px] font-semibold tracking-tight mt-1 transition-colors ${
+                  isActive ? 'text-blue-600 dark:text-blue-400 font-bold' : 'text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-slate-300'
                 }`}
               >
                 {label}

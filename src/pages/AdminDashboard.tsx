@@ -196,7 +196,7 @@ export default function AdminDashboard() {
     title: string;
     value: string | number;
     icon: React.ElementType;
-    color: string;
+    iconBg: string;
     iconColor: string;
     badge?: string;
     path: string;
@@ -211,8 +211,8 @@ export default function AdminDashboard() {
             title: 'Pending Contributions',
             value: pendingContributions,
             icon: FileText,
-            color: 'bg-orange-50/60 border-orange-100 border-l-4 border-l-orange-400',
-            iconColor: 'bg-orange-100 text-orange-600',
+            iconBg: 'bg-amber-50 dark:bg-amber-950/50',
+            iconColor: 'text-amber-600 dark:text-amber-400',
             badge: pendingContributions > 0 ? pendingContributions.toString() : undefined,
             path: '/admin/contributions'
           },
@@ -221,8 +221,8 @@ export default function AdminDashboard() {
             title: 'Welfare Fund',
             value: formatUGX(netWelfareBalance),
             icon: Wallet,
-            color: 'bg-emerald-50/60 border-emerald-100 border-l-4 border-l-emerald-400',
-            iconColor: 'bg-emerald-100 text-emerald-600',
+            iconBg: 'bg-emerald-50 dark:bg-emerald-950/50',
+            iconColor: 'text-emerald-600 dark:text-emerald-400',
             path: '/admin/reports'
           },
           {
@@ -230,8 +230,8 @@ export default function AdminDashboard() {
             title: 'Pending Payouts',
             value: pendingPayouts,
             icon: ShieldAlert,
-            color: 'bg-rose-50/60 border-rose-100 border-l-4 border-l-rose-400',
-            iconColor: 'bg-rose-100 text-rose-600',
+            iconBg: 'bg-rose-50 dark:bg-rose-950/50',
+            iconColor: 'text-rose-600 dark:text-rose-400',
             badge: pendingPayouts > 0 ? pendingPayouts.toString() : undefined,
             path: '/admin/welfare'
           },
@@ -240,8 +240,8 @@ export default function AdminDashboard() {
             title: 'Active Campaigns',
             value: activeCampaigns,
             icon: Target,
-            color: 'bg-purple-50/60 border-purple-100 border-l-4 border-l-purple-400',
-            iconColor: 'bg-purple-100 text-purple-600',
+            iconBg: 'bg-blue-50 dark:bg-blue-950/50',
+            iconColor: 'text-blue-600 dark:text-blue-400',
             path: '/admin/campaigns'
           }
         ];
@@ -253,8 +253,8 @@ export default function AdminDashboard() {
             title: 'Pending Approvals',
             value: pendingApprovals,
             icon: CheckCircle2,
-            color: 'bg-amber-50/60 border-amber-100 border-l-4 border-l-amber-400',
-            iconColor: 'bg-amber-100 text-amber-600',
+            iconBg: 'bg-amber-50 dark:bg-amber-950/50',
+            iconColor: 'text-amber-600 dark:text-amber-400',
             badge: pendingApprovals > 0 ? pendingApprovals.toString() : undefined,
             path: '/admin/users'
           },
@@ -263,8 +263,8 @@ export default function AdminDashboard() {
             title: 'Total Members',
             value: totalMembers,
             icon: Users,
-            color: 'bg-blue-50/60 border-blue-100 border-l-4 border-l-blue-400',
-            iconColor: 'bg-blue-100 text-blue-600',
+            iconBg: 'bg-blue-50 dark:bg-blue-950/50',
+            iconColor: 'text-blue-600 dark:text-blue-400',
             path: '/admin/users'
           },
           {
@@ -272,8 +272,8 @@ export default function AdminDashboard() {
             title: 'Notices Broadcast',
             value: recentNoticesCount,
             icon: Megaphone,
-            color: 'bg-cyan-50/60 border-cyan-100 border-l-4 border-l-cyan-400',
-            iconColor: 'bg-cyan-100 text-cyan-600',
+            iconBg: 'bg-indigo-50 dark:bg-indigo-950/50',
+            iconColor: 'text-indigo-600 dark:text-indigo-400',
             path: '/admin/notices'
           },
           {
@@ -281,8 +281,8 @@ export default function AdminDashboard() {
             title: 'Active Campaigns',
             value: activeCampaigns,
             icon: Target,
-            color: 'bg-purple-50/60 border-purple-100 border-l-4 border-l-purple-400',
-            iconColor: 'bg-purple-100 text-purple-600',
+            iconBg: 'bg-purple-50 dark:bg-purple-950/50',
+            iconColor: 'text-purple-600 dark:text-purple-400',
             path: '/admin/campaigns'
           }
         ];
@@ -294,8 +294,8 @@ export default function AdminDashboard() {
             title: 'Welfare Fund',
             value: formatUGX(netWelfareBalance),
             icon: Wallet,
-            color: 'bg-emerald-50/60 border-emerald-100 border-l-4 border-l-emerald-400',
-            iconColor: 'bg-emerald-100 text-emerald-600',
+            iconBg: 'bg-emerald-50 dark:bg-emerald-950/50',
+            iconColor: 'text-emerald-600 dark:text-emerald-400',
             path: '/admin/reports'
           },
           {
@@ -303,8 +303,8 @@ export default function AdminDashboard() {
             title: 'Total Paid Out',
             value: formatUGX(totalPaidOut),
             icon: FileText,
-            color: 'bg-amber-50/60 border-amber-100 border-l-4 border-l-amber-400',
-            iconColor: 'bg-amber-100 text-amber-600',
+            iconBg: 'bg-amber-50 dark:bg-amber-950/50',
+            iconColor: 'text-amber-600 dark:text-amber-400',
             path: '/admin/reports'
           },
           {
@@ -312,8 +312,8 @@ export default function AdminDashboard() {
             title: 'Total Members',
             value: totalMembers,
             icon: Users,
-            color: 'bg-blue-50/60 border-blue-100 border-l-4 border-l-blue-400',
-            iconColor: 'bg-blue-100 text-blue-600',
+            iconBg: 'bg-blue-50 dark:bg-blue-950/50',
+            iconColor: 'text-blue-600 dark:text-blue-400',
             path: '/admin/users'
           },
           {
@@ -321,8 +321,8 @@ export default function AdminDashboard() {
             title: 'Active Campaigns',
             value: activeCampaigns,
             icon: Target,
-            color: 'bg-purple-50/60 border-purple-100 border-l-4 border-l-purple-400',
-            iconColor: 'bg-purple-100 text-purple-600',
+            iconBg: 'bg-purple-50 dark:bg-purple-950/50',
+            iconColor: 'text-purple-600 dark:text-purple-400',
             path: '/admin/campaigns'
           }
         ];
@@ -335,8 +335,8 @@ export default function AdminDashboard() {
             title: 'Total Members',
             value: totalMembers,
             icon: Users,
-            color: 'bg-blue-50/60 border-blue-100 border-l-4 border-l-blue-400',
-            iconColor: 'bg-blue-100 text-blue-600',
+            iconBg: 'bg-blue-50 dark:bg-blue-950/50',
+            iconColor: 'text-blue-600 dark:text-blue-400',
             path: '/admin/users'
           },
           {
@@ -344,8 +344,8 @@ export default function AdminDashboard() {
             title: 'Pending Approvals',
             value: pendingApprovals,
             icon: CheckCircle2,
-            color: 'bg-amber-50/60 border-amber-100 border-l-4 border-l-amber-400',
-            iconColor: 'bg-amber-100 text-amber-600',
+            iconBg: 'bg-amber-50 dark:bg-amber-950/50',
+            iconColor: 'text-amber-600 dark:text-amber-400',
             badge: pendingApprovals > 0 ? pendingApprovals.toString() : undefined,
             path: '/admin/users'
           },
@@ -354,8 +354,8 @@ export default function AdminDashboard() {
             title: 'Welfare Fund',
             value: formatUGX(netWelfareBalance),
             icon: Wallet,
-            color: 'bg-emerald-50/60 border-emerald-100 border-l-4 border-l-emerald-400',
-            iconColor: 'bg-emerald-100 text-emerald-600',
+            iconBg: 'bg-emerald-50 dark:bg-emerald-950/50',
+            iconColor: 'text-emerald-600 dark:text-emerald-400',
             path: '/admin/reports'
           },
           {
@@ -363,8 +363,8 @@ export default function AdminDashboard() {
             title: 'Welfare Requests',
             value: pendingWelfareRequests,
             icon: ShieldAlert,
-            color: 'bg-rose-50/60 border-rose-100 border-l-4 border-l-rose-400',
-            iconColor: 'bg-rose-100 text-rose-600',
+            iconBg: 'bg-rose-50 dark:bg-rose-950/50',
+            iconColor: 'text-rose-600 dark:text-rose-400',
             badge: pendingWelfareRequests > 0 ? pendingWelfareRequests.toString() : undefined,
             path: '/admin/welfare'
           },
@@ -373,8 +373,8 @@ export default function AdminDashboard() {
             title: 'Active Campaigns',
             value: activeCampaigns,
             icon: Target,
-            color: 'bg-purple-50/60 border-purple-100 border-l-4 border-l-purple-400',
-            iconColor: 'bg-purple-100 text-purple-600',
+            iconBg: 'bg-purple-50 dark:bg-purple-950/50',
+            iconColor: 'text-purple-600 dark:text-purple-400',
             path: '/admin/campaigns'
           },
           {
@@ -382,8 +382,8 @@ export default function AdminDashboard() {
             title: 'Pending Verifications',
             value: pendingContributions,
             icon: FileText,
-            color: 'bg-orange-50/60 border-orange-100 border-l-4 border-l-orange-400',
-            iconColor: 'bg-orange-100 text-orange-600',
+            iconBg: 'bg-amber-50 dark:bg-amber-950/50',
+            iconColor: 'text-amber-600 dark:text-amber-400',
             badge: pendingContributions > 0 ? pendingContributions.toString() : undefined,
             path: '/admin/contributions'
           }
@@ -400,58 +400,70 @@ export default function AdminDashboard() {
   const maxCollection = Math.max(...collectionsLast6Months.map(c => c.amount), 1);
 
   return (
-    <div className="space-y-5 max-w-full overflow-x-hidden mx-auto pb-10">
+    <div className="space-y-6 max-w-full overflow-x-hidden mx-auto pb-16 font-sans">
       
-      {/* Header Banner */}
-      <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl p-5 shadow-sm max-w-full">
-        <div className="flex flex-wrap items-center gap-2 mb-2">
-          <span className="bg-amber-400 text-slate-900 text-[10px] font-bold uppercase tracking-wider rounded-full px-2.5 py-1">
-            {roleLabel}
-          </span>
-          <span className="text-xs text-white/60 font-medium">MAMAS Admin Portal</span>
+      {/* Header Banner - School Royal Blue Gradient */}
+      <div className="relative overflow-hidden rounded-3xl p-6 sm:p-8 shadow-xl bg-gradient-to-br from-[#0a1936] via-[#0f2756] to-[#1e3a8a] text-white border border-blue-400/20">
+        <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 rounded-full bg-blue-500/10 blur-3xl pointer-events-none" />
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="bg-amber-400 text-slate-900 text-[10px] font-extrabold uppercase tracking-wider rounded-full px-3 py-1 shadow-xs">
+                {roleLabel}
+              </span>
+              <span className="text-xs text-blue-200 font-semibold">MAMAS Executive Portal</span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+              Welcome, {userProfile?.fullName?.split(' ')[0] || 'Executive'}
+            </h1>
+            <p className="text-xs sm:text-sm text-blue-100/70 mt-1 max-w-xl">
+              High-level administrative oversight, financial governance, approvals, and member operations.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-white/10 backdrop-blur-md text-xs font-semibold text-blue-100 border border-white/10">
+              <Shield className="w-3.5 h-3.5 text-amber-400" /> Authorized Role
+            </span>
+          </div>
         </div>
-        <h1 className="text-xl font-bold text-white tracking-tight">
-          Welcome, {userProfile?.fullName?.split(' ')[0] || 'Admin'}
-        </h1>
-        <p className="text-xs text-white/50 leading-relaxed truncate mt-1">
-          Management dashboard for quick executive actions.
-        </p>
       </div>
 
-      {/* 1. SUMMARY CARDS (2-Column Grid) */}
+      {/* 1. SUMMARY CARDS */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-bold text-gray-900 flex items-center gap-2">
-            <BarChart3 className="w-4 h-4 text-emerald-500" /> Key Metrics & Overview
+          <h2 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+            <BarChart3 className="w-4 h-4 text-blue-600 dark:text-blue-400" /> Key Metrics & Governance
           </h2>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 max-w-full">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 max-w-full">
           {cards.map(card => {
             const IconComponent = card.icon;
             return (
               <div
                 key={card.id}
                 onClick={() => navigate(card.path)}
-                className={`rounded-2xl p-4 border shadow-sm flex flex-col justify-between min-w-0 cursor-pointer transition-all active:scale-[0.98] ${card.color}`}
+                className="bg-white dark:bg-[#0c1731] rounded-3xl p-4 sm:p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs hover:border-blue-500/40 dark:hover:border-blue-500/40 flex flex-col justify-between min-w-0 cursor-pointer transition-all active:scale-[0.98] group"
               >
-                <div className="flex items-center gap-2 mb-2">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${card.iconColor}`}>
-                    <IconComponent className="w-4 h-4" />
+                <div className="flex items-center justify-between gap-2 mb-3">
+                  <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${card.iconBg} ${card.iconColor} border border-slate-200/40 dark:border-slate-700/40 group-hover:scale-105 transition-transform`}>
+                    <IconComponent className="w-5 h-5" />
                   </div>
                   {card.badge && (
-                    <span className="bg-amber-500 text-white rounded-full px-1.5 py-0.5 text-[10px] font-bold shrink-0">
-                      {card.badge}
+                    <span className="bg-amber-500 text-white rounded-full px-2 py-0.5 text-[10px] font-extrabold shrink-0 shadow-xs">
+                      {card.badge} Action
                     </span>
                   )}
                 </div>
                 
-                <p className="text-[10px] uppercase tracking-widest font-bold mt-2 truncate text-current opacity-70">
-                  {card.title}
-                </p>
-                <p className="text-xl font-bold text-gray-900 mt-1 truncate">
-                  {loading ? '...' : card.value}
-                </p>
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider font-bold text-slate-400 dark:text-slate-500 truncate">
+                    {card.title}
+                  </p>
+                  <p className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white mt-1 truncate tracking-tight">
+                    {loading ? '...' : card.value}
+                  </p>
+                </div>
               </div>
             );
           })}
@@ -459,117 +471,116 @@ export default function AdminDashboard() {
       </div>
 
       {/* 2. COMPACT QUICK ACTIONS */}
-      <div className="mt-5">
-        <h2 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
-          <PlusCircle className="w-4 h-4 text-emerald-500" /> Quick Actions
+      <div>
+        <h2 className="text-sm font-extrabold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
+          <PlusCircle className="w-4 h-4 text-blue-600 dark:text-blue-400" /> Quick Actions
         </h2>
 
         <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide no-scrollbar">
           {['super_admin', 'chairperson', 'secretary'].includes(role) && (
             <button
               onClick={() => navigate('/admin/notices')}
-              className="flex items-center gap-2 bg-white border border-gray-200 rounded-full px-4 py-2.5 shadow-sm whitespace-nowrap transition-all active:scale-[0.97] shrink-0"
+              className="flex items-center gap-2 bg-white dark:bg-[#0c1731] border border-slate-200/80 dark:border-slate-800 rounded-2xl px-4 py-2.5 shadow-xs hover:border-blue-500/40 whitespace-nowrap transition-all active:scale-[0.97] shrink-0 cursor-pointer"
             >
-              <div className="w-5 h-5 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+              <div className="w-6 h-6 rounded-xl bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
                 <Megaphone className="w-3.5 h-3.5" />
               </div>
-              <span className="text-xs font-semibold text-gray-800">Post Notice</span>
+              <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Post Notice</span>
             </button>
           )}
 
           {['super_admin', 'chairperson'].includes(role) && (
             <button
               onClick={() => navigate('/admin/campaigns')}
-              className="flex items-center gap-2 bg-white border border-gray-200 rounded-full px-4 py-2.5 shadow-sm whitespace-nowrap transition-all active:scale-[0.97] shrink-0"
+              className="flex items-center gap-2 bg-white dark:bg-[#0c1731] border border-slate-200/80 dark:border-slate-800 rounded-2xl px-4 py-2.5 shadow-xs hover:border-blue-500/40 whitespace-nowrap transition-all active:scale-[0.97] shrink-0 cursor-pointer"
             >
-              <div className="w-5 h-5 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+              <div className="w-6 h-6 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
                 <Target className="w-3.5 h-3.5" />
               </div>
-              <span className="text-xs font-semibold text-gray-800">Add Campaign</span>
+              <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Add Campaign</span>
             </button>
           )}
 
           {['super_admin', 'chairperson', 'treasurer', 'auditor'].includes(role) && (
             <button
               onClick={() => navigate('/admin/reports')}
-              className="flex items-center gap-2 bg-white border border-gray-200 rounded-full px-4 py-2.5 shadow-sm whitespace-nowrap transition-all active:scale-[0.97] shrink-0"
+              className="flex items-center gap-2 bg-white dark:bg-[#0c1731] border border-slate-200/80 dark:border-slate-800 rounded-2xl px-4 py-2.5 shadow-xs hover:border-blue-500/40 whitespace-nowrap transition-all active:scale-[0.97] shrink-0 cursor-pointer"
             >
-              <div className="w-5 h-5 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+              <div className="w-6 h-6 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
                 <BarChart3 className="w-3.5 h-3.5" />
               </div>
-              <span className="text-xs font-semibold text-gray-800">Financial Reports</span>
+              <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Financial Reports</span>
             </button>
           )}
 
           {['super_admin', 'chairperson'].includes(role) && (
             <button
               onClick={() => navigate('/admin/settings')}
-              className="flex items-center gap-2 bg-white border border-gray-200 rounded-full px-4 py-2.5 shadow-sm whitespace-nowrap transition-all active:scale-[0.97] shrink-0"
+              className="flex items-center gap-2 bg-white dark:bg-[#0c1731] border border-slate-200/80 dark:border-slate-800 rounded-2xl px-4 py-2.5 shadow-xs hover:border-blue-500/40 whitespace-nowrap transition-all active:scale-[0.97] shrink-0 cursor-pointer"
             >
-              <div className="w-5 h-5 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center shrink-0">
+              <div className="w-6 h-6 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 flex items-center justify-center shrink-0">
                 <Settings className="w-3.5 h-3.5" />
               </div>
-              <span className="text-xs font-semibold text-gray-800">System Settings</span>
+              <span className="text-xs font-bold text-slate-800 dark:text-slate-200">System Settings</span>
             </button>
           )}
 
           {role === 'super_admin' && (
             <button
               onClick={() => navigate('/admin/roles')}
-              className="flex items-center gap-2 bg-white border border-gray-200 rounded-full px-4 py-2.5 shadow-sm whitespace-nowrap transition-all active:scale-[0.97] shrink-0"
+              className="flex items-center gap-2 bg-white dark:bg-[#0c1731] border border-slate-200/80 dark:border-slate-800 rounded-2xl px-4 py-2.5 shadow-xs hover:border-blue-500/40 whitespace-nowrap transition-all active:scale-[0.97] shrink-0 cursor-pointer"
             >
-              <div className="w-5 h-5 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+              <div className="w-6 h-6 rounded-xl bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
                 <Shield className="w-3.5 h-3.5" />
               </div>
-              <span className="text-xs font-semibold text-gray-800">Manage Roles</span>
+              <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Manage Roles</span>
             </button>
           )}
         </div>
       </div>
 
-      {/* 3. CHARTS / TRENDS SECTION (Fits mobile without scroll) */}
+      {/* 3. CHARTS / TRENDS SECTION */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         
         {/* Collections Trend Mini-Chart */}
-        <div className="md:col-span-2 bg-white rounded-3xl border border-gray-100 shadow-sm p-5 mt-5">
+        <div className="md:col-span-2 bg-white dark:bg-[#0c1731] rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs p-6">
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-full bg-slate-900 text-white flex items-center justify-center">
-                <BarChart3 className="w-3.5 h-3.5" />
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                <BarChart3 className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-gray-900 leading-none">Collections</h3>
-                <p className="text-[10px] text-gray-400 mt-0.5">Last 6 months</p>
+                <h3 className="text-sm font-extrabold text-slate-900 dark:text-white leading-none">Collections Velocity</h3>
+                <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">Verified inflows over last 6 months</p>
               </div>
             </div>
-            <span className="bg-gray-100 text-gray-600 rounded-full px-2 py-1 text-[10px] font-semibold">
+            <span className="bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900/60 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">
               Verified
             </span>
           </div>
 
-          <div className="h-28 flex items-end justify-between gap-2">
+          <div className="h-36 flex items-end justify-between gap-2.5 pt-4">
             {collectionsLast6Months.length === 0 ? (
                <div className="w-full h-full flex items-center justify-center">
-                 <div className="w-full h-[10%] bg-gray-100 rounded-t-xl" />
-                 <span className="absolute text-xs text-gray-400">No data</span>
+                 <span className="text-xs text-slate-400">No collections data recorded</span>
                </div>
             ) : collectionsLast6Months.map((item, idx) => {
               const heightPercent = maxCollection > 0 ? (item.amount / maxCollection) * 100 : 0;
               const isHighest = item.amount === maxCollection && item.amount > 0;
               return (
-                <div key={idx} className="flex-1 flex flex-col items-center gap-1 h-full justify-end relative">
-                  <div className="w-full h-full bg-gray-100 rounded-t-xl relative overflow-hidden">
+                <div key={idx} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end relative">
+                  <div className="w-full h-full bg-slate-100 dark:bg-slate-800/60 rounded-t-xl relative overflow-hidden">
                     <div 
-                      className={`absolute bottom-0 w-full rounded-t-xl transition-all ${isHighest ? 'bg-amber-500' : 'bg-slate-900'}`}
+                      className={`absolute bottom-0 w-full rounded-t-xl transition-all ${isHighest ? 'bg-amber-400' : 'bg-blue-600 dark:bg-blue-500'}`}
                       style={{ height: `${Math.max(8, heightPercent)}%` }}
                     />
                   </div>
                   {item.amount > 0 && (
-                    <span className="text-[10px] font-bold text-gray-700 absolute -top-4">
+                    <span className="text-[10px] font-extrabold text-slate-700 dark:text-slate-300 absolute -top-5">
                       {Math.round(item.amount / 1000)}k
                     </span>
                   )}
-                  <span className="text-[10px] text-gray-400 font-medium">{item.month}</span>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold">{item.month}</span>
                 </div>
               );
             })}
@@ -577,83 +588,88 @@ export default function AdminDashboard() {
         </div>
 
         {/* Member Activity Mini Breakdown */}
-        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 mt-5">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-6 h-6 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">
-              <Activity className="w-3.5 h-3.5" />
+        <div className="bg-white dark:bg-[#0c1731] rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs p-6 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center gap-2.5 mb-4">
+              <div className="w-8 h-8 rounded-xl bg-teal-50 dark:bg-teal-950/60 text-teal-600 dark:text-teal-400 flex items-center justify-center">
+                <Activity className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-sm font-extrabold text-slate-900 dark:text-white leading-none">Member Health</h3>
+                <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">Contribution status spread</p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-sm font-bold text-gray-900 leading-none">Member Activity</h3>
-              <p className="text-[10px] text-gray-400 mt-0.5">Registration spread</p>
+
+            <div className="space-y-3.5 pt-2">
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 w-20 truncate">Active</span>
+                <div className="flex-1 h-2.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                  <div className="bg-teal-500 h-full rounded-full transition-all" style={{ width: `${totalMembers > 0 ? (memberActivityStats.active / totalMembers) * 100 : 0}%` }} />
+                </div>
+                <span className="text-xs font-extrabold text-slate-900 dark:text-white shrink-0 w-8 text-right">{memberActivityStats.active}</span>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 w-20 truncate">Inactive</span>
+                <div className="flex-1 h-2.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                  <div className="bg-slate-300 dark:bg-slate-600 h-full rounded-full transition-all" style={{ width: `${totalMembers > 0 ? (memberActivityStats.inactive / totalMembers) * 100 : 0}%` }} />
+                </div>
+                <span className="text-xs font-extrabold text-slate-900 dark:text-white shrink-0 w-8 text-right">{memberActivityStats.inactive}</span>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 w-20 truncate">Pending</span>
+                <div className="flex-1 h-2.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                  <div className="bg-amber-400 h-full rounded-full transition-all" style={{ width: `${(memberActivityStats.pending / Math.max(1, totalMembers + memberActivityStats.pending)) * 100}%` }} />
+                </div>
+                <span className="text-xs font-extrabold text-slate-900 dark:text-white shrink-0 w-8 text-right">{memberActivityStats.pending}</span>
+              </div>
             </div>
           </div>
 
-          <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <span className="text-xs font-semibold text-gray-700 w-24 truncate">Active</span>
-              <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-                <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${totalMembers > 0 ? (memberActivityStats.active / totalMembers) * 100 : 0}%` }} />
-              </div>
-              <span className="text-xs font-bold text-gray-900 shrink-0 w-6 text-right">{memberActivityStats.active}</span>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <span className="text-xs font-semibold text-gray-700 w-24 truncate">Inactive</span>
-              <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-                <div className="bg-gray-300 h-full rounded-full" style={{ width: `${totalMembers > 0 ? (memberActivityStats.inactive / totalMembers) * 100 : 0}%` }} />
-              </div>
-              <span className="text-xs font-bold text-gray-900 shrink-0 w-6 text-right">{memberActivityStats.inactive}</span>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <span className="text-xs font-semibold text-gray-700 w-24 truncate">Pending</span>
-              <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-                <div className="bg-amber-400 h-full rounded-full" style={{ width: `${(memberActivityStats.pending / Math.max(1, totalMembers + memberActivityStats.pending)) * 100}%` }} />
-              </div>
-              <span className="text-xs font-bold text-gray-900 shrink-0 w-6 text-right">{memberActivityStats.pending}</span>
-            </div>
-          </div>
-
-          <p className="text-[10px] text-gray-400 text-center mt-4 pt-3 border-t border-gray-100">
-            {totalMembers + memberActivityStats.pending} total registered
+          <p className="text-[11px] text-slate-400 dark:text-slate-500 text-center pt-4 border-t border-slate-100 dark:border-slate-800 font-medium">
+            {totalMembers + memberActivityStats.pending} total alumni accounts
           </p>
         </div>
 
       </div>
 
       {/* 4. LATEST ACTIVITY FEED */}
-      <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 mt-5">
+      <div className="bg-white dark:bg-[#0c1731] rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs p-6">
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center">
-              <Clock className="w-3.5 h-3.5" />
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+              <Clock className="w-4 h-4" />
             </div>
-            <h3 className="text-sm font-bold text-gray-900">Recent Activity</h3>
+            <div>
+              <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">Audit & Activity Feed</h3>
+              <p className="text-[11px] text-slate-400 dark:text-slate-500">Real-time executive actions</p>
+            </div>
           </div>
-          <button onClick={() => navigate('/admin/logs')} className="text-xs font-semibold text-amber-600 hover:text-amber-700 transition-colors">
-            View All →
+          <button onClick={() => navigate('/admin/logs')} className="text-xs font-extrabold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 cursor-pointer">
+            View All <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
 
-        <div className="space-y-0">
+        <div className="space-y-0 divide-y divide-slate-100 dark:divide-slate-800/80">
           {recentActivities.length === 0 ? (
-            <div className="bg-gray-50 rounded-2xl py-8 text-center flex flex-col items-center justify-center">
-              <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center mb-2">
-                <Clock className="w-4 h-4 text-gray-400" />
+            <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl py-8 text-center flex flex-col items-center justify-center">
+              <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-2">
+                <Clock className="w-4 h-4 text-slate-400" />
               </div>
-              <p className="text-xs text-gray-500">No recent activity</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">No recent activity logged</p>
             </div>
           ) : (
-            recentActivities.slice(0, 3).map((log, idx) => (
-              <div key={log.id} className="flex items-start gap-3 py-2.5 border-b border-gray-50 last:border-0">
-                <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center shrink-0 mt-0.5">
-                  <Clock className="w-3 h-3 text-gray-400" />
+            recentActivities.slice(0, 4).map((log) => (
+              <div key={log.id} className="flex items-start gap-3 py-3 first:pt-0 last:pb-0">
+                <div className="w-7 h-7 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center shrink-0 mt-0.5">
+                  <Clock className="w-3.5 h-3.5" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-gray-900 truncate">{log.details || log.action}</p>
-                  <p className="text-[10px] text-gray-400 uppercase tracking-wider mt-0.5 truncate">{log.action}</p>
+                  <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{log.details || log.action}</p>
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-wider mt-0.5 truncate">{log.action}</p>
                 </div>
-                <span className="text-[10px] text-gray-400 shrink-0 w-12 text-right">
+                <span className="text-[11px] text-slate-400 dark:text-slate-500 shrink-0 font-medium">
                   {(() => {
                     const ts = (log as any).createdAt || (log as any).timestamp;
                     if (!ts) return '';
@@ -669,16 +685,6 @@ export default function AdminDashboard() {
             ))
           )}
         </div>
-        {recentActivities.length > 0 && (
-          <div className="flex justify-center mt-3 pt-2">
-            <button 
-              onClick={() => navigate('/admin/logs')}
-              className="text-xs font-semibold text-slate-900 bg-gray-50 rounded-full px-4 py-2 hover:bg-gray-100 transition-colors"
-            >
-              View All Activity
-            </button>
-          </div>
-        )}
       </div>
 
     </div>

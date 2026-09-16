@@ -130,13 +130,13 @@ export const NotificationBell: React.FC = () => {
       {/* Bell Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 rounded-xl text-slate-300 hover:text-white hover:bg-mamas-primary-hover transition-colors focus:outline-none"
+        className="relative p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-800 transition-colors focus:outline-none cursor-pointer"
         title="Notifications"
         aria-label="Notifications"
       >
         <Bell className="w-5 h-5" />
         {unreadCount > 0 && (
-          <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-mamas-accent text-[10px] font-bold text-mamas-primary animate-pulse">
+          <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white shadow-sm shadow-blue-500/30">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
@@ -144,13 +144,13 @@ export const NotificationBell: React.FC = () => {
 
       {/* Popover Dropdown */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-mamas-card border border-slate-200 rounded-2xl shadow-xl z-50 overflow-hidden text-mamas-text animate-in fade-in zoom-in-95 duration-150">
+        <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl shadow-2xl z-50 overflow-hidden text-slate-900 dark:text-slate-100 animate-in fade-in zoom-in-95 duration-150">
           {/* Header */}
-          <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+          <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/70 dark:bg-slate-800/50">
             <div className="flex items-center gap-2">
-              <h3 className="font-bold text-sm text-mamas-text">Notifications</h3>
+              <h3 className="font-bold text-sm text-slate-900 dark:text-white">Notifications</h3>
               {unreadCount > 0 && (
-                <span className="bg-mamas-accent/20 text-mamas-primary text-xs font-bold px-2 py-0.5 rounded-full">
+                <span className="bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 text-[11px] font-bold px-2 py-0.5 rounded-full">
                   {unreadCount} new
                 </span>
               )}
@@ -159,14 +159,14 @@ export const NotificationBell: React.FC = () => {
               {unreadCount > 0 && (
                 <button
                   onClick={handleMarkAllRead}
-                  className="text-xs text-mamas-primary font-medium hover:underline flex items-center gap-1"
+                  className="text-xs text-blue-600 dark:text-blue-400 font-semibold hover:underline flex items-center gap-1 cursor-pointer"
                 >
                   <CheckCheck className="w-3.5 h-3.5" /> Mark all read
                 </button>
               )}
               <button
                 onClick={() => setIsOpen(false)}
-                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg"
+                className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -174,10 +174,10 @@ export const NotificationBell: React.FC = () => {
           </div>
 
           {/* List */}
-          <div className="max-h-96 overflow-y-auto divide-y divide-slate-100">
+          <div className="max-h-96 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/80">
             {notifications.length === 0 ? (
-              <div className="p-8 text-center text-slate-400 text-sm">
-                <Bell className="w-8 h-8 mx-auto mb-2 opacity-40 text-slate-300" />
+              <div className="p-8 text-center text-slate-400 dark:text-slate-500 text-sm">
+                <Bell className="w-8 h-8 mx-auto mb-2 opacity-40 text-slate-300 dark:text-slate-600" />
                 <p>No notifications yet</p>
               </div>
             ) : (
@@ -185,28 +185,28 @@ export const NotificationBell: React.FC = () => {
                 <div
                   key={item.id}
                   onClick={() => handleNotificationClick(item)}
-                  className={`p-3.5 flex items-start gap-3 cursor-pointer transition-colors hover:bg-slate-50 ${
-                    !item.read ? 'bg-amber-50/40 border-l-4 border-l-mamas-accent' : ''
+                  className={`p-3.5 flex items-start gap-3 cursor-pointer transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/60 ${
+                    !item.read ? 'bg-blue-50/40 dark:bg-blue-950/20' : ''
                   }`}
                 >
-                  <div className="p-2 rounded-xl bg-slate-100/80 shrink-0 mt-0.5">
+                  <div className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 shrink-0 mt-0.5">
                     {getIcon(item.type)}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
-                      <p className={`text-xs font-semibold truncate ${!item.read ? 'text-mamas-text font-bold' : 'text-slate-700'}`}>
+                      <p className={`text-xs font-semibold truncate ${!item.read ? 'text-slate-900 dark:text-white font-bold' : 'text-slate-700 dark:text-slate-300'}`}>
                         {item.title}
                       </p>
-                      <span className="text-[10px] text-slate-400 whitespace-nowrap shrink-0">
+                      <span className="text-[10px] text-slate-400 dark:text-slate-500 whitespace-nowrap shrink-0">
                         {formatTime(item.createdAt)}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-500 mt-0.5 line-clamp-2 leading-snug">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-2 leading-snug">
                       {item.body}
                     </p>
                   </div>
                   {!item.read && (
-                    <span className="w-2 h-2 rounded-full bg-mamas-accent shrink-0 mt-2" />
+                    <span className="w-2 h-2 rounded-full bg-blue-600 dark:bg-blue-400 shrink-0 mt-2" />
                   )}
                 </div>
               ))

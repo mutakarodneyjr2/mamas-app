@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Logo } from '../components/Logo';
+import { ThemeIconButton } from '../components/ThemeToggle';
 import { db } from '../firebase';
 import { collection, getDocs, getDoc, doc, query, where } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'motion/react';
@@ -114,21 +115,22 @@ export default function Landing() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans text-slate-800 dark:text-slate-100 flex flex-col selection:bg-mamas-accent selection:text-mamas-primary transition-colors duration-200">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#060d1f] font-sans text-slate-900 dark:text-slate-100 flex flex-col selection:bg-blue-600 selection:text-white transition-colors duration-200">
       
       {/* Top Navigation Header */}
-      <header className="w-full bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-6 sm:px-12 py-4 flex items-center justify-between sticky top-0 z-50">
+      <header className="w-full bg-[#07132c]/95 dark:bg-[#07132c]/95 backdrop-blur-md border-b border-blue-900/40 px-6 sm:px-12 py-3.5 flex items-center justify-between sticky top-0 z-50 shadow-md">
         <Logo />
         <div className="flex items-center gap-3 sm:gap-4">
+          <ThemeIconButton className="text-white hover:bg-white/10" />
           <Link 
             to="/login" 
-            className="text-xs sm:text-sm font-semibold text-slate-200 hover:text-white px-3 sm:px-4 py-2 rounded-full hover:bg-white/10 transition-all"
+            className="text-xs sm:text-sm font-bold text-slate-200 hover:text-white px-3 sm:px-4 py-2 rounded-2xl hover:bg-white/10 transition-all cursor-pointer"
           >
             Member Login
           </Link>
           <Link 
             to="/register" 
-            className="text-xs sm:text-sm font-bold bg-mamas-accent text-mamas-primary px-5 py-2.5 rounded-full shadow-lg hover:bg-mamas-accent-hover active:scale-95 transition-all"
+            className="text-xs sm:text-sm font-extrabold bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-2xl shadow-md shadow-blue-500/25 active:scale-95 transition-all cursor-pointer"
           >
             Join MAMAS
           </Link>
@@ -136,40 +138,40 @@ export default function Landing() {
       </header>
 
       {/* 1. HERO SECTION */}
-      <section className="relative bg-gradient-to-br from-slate-950 via-mamas-primary to-slate-900 text-white overflow-hidden py-16 sm:py-24 lg:py-32 px-6 sm:px-12">
+      <section className="relative bg-gradient-to-r from-[#07132c] via-[#0f2756] to-[#1e3a8a] text-white overflow-hidden py-16 sm:py-24 lg:py-32 px-6 sm:px-12 border-b border-blue-900/30">
         {/* Glowing Background Orbs */}
-        <div className="absolute top-1/4 -left-20 w-96 h-96 bg-mamas-accent/15 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-10 -right-20 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-1/4 -left-20 w-96 h-96 bg-blue-400/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-10 -right-20 w-96 h-96 bg-blue-500/15 rounded-full blur-3xl pointer-events-none" />
 
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center relative z-10">
           
           {/* Left Text Column */}
           <div className="lg:col-span-7 text-center lg:text-left space-y-6">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 border border-white/15 text-mamas-accent text-xs font-bold tracking-wide uppercase">
-              <ShieldCheck className="w-4 h-4 text-mamas-accent" />
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 border border-white/15 text-blue-200 text-xs font-bold tracking-wide uppercase backdrop-blur-md">
+              <ShieldCheck className="w-4 h-4 text-blue-300" />
               <span>Official Matuumu Alumni Association</span>
             </div>
 
             <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.15] text-white">
               Together for Each Other. <br className="hidden sm:inline"/>
-              <span className="text-mamas-accent">Together for Matuumu.</span>
+              <span className="text-blue-300">Together for Matuumu.</span>
             </h1>
 
-            <p className="text-base sm:text-lg text-slate-300 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
+            <p className="text-base sm:text-lg text-blue-100/90 max-w-2xl mx-auto lg:mx-0 leading-relaxed font-medium">
               The Matuumu Alumni Mutual Aid Association — where alumni support one another in times of need, and give back to the school that made us.
             </p>
 
             <div className="pt-4 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
               <Link 
                 to="/register" 
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-4 rounded-full bg-mamas-accent text-mamas-primary font-extrabold text-base shadow-xl hover:bg-mamas-accent-hover hover:scale-105 active:scale-95 transition-all"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-4 rounded-2xl bg-white hover:bg-blue-50 text-blue-900 font-extrabold text-base shadow-xl active:scale-95 transition-all cursor-pointer"
               >
                 <span>Join MAMAS</span>
                 <ArrowRight className="w-5 h-5" />
               </Link>
               <Link 
                 to="/login" 
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full border-2 border-white/30 hover:border-white text-white font-bold text-base hover:bg-white/10 transition-all"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl border-2 border-white/30 hover:border-white text-white font-bold text-base hover:bg-white/10 transition-all cursor-pointer"
               >
                 Member Login
               </Link>
@@ -205,7 +207,7 @@ export default function Landing() {
                 </AnimatePresence>
 
                 {/* Top Badge Overlay */}
-                <div className="absolute top-4 left-4 z-20 flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-950/70 border border-white/20 text-mamas-accent text-xs font-bold backdrop-blur-md shadow-md">
+                <div className="absolute top-4 left-4 z-20 flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-950/80 border border-white/20 text-blue-200 text-xs font-bold backdrop-blur-md shadow-md">
                   <ImageIcon className="w-3.5 h-3.5" />
                   <span>Featured Initiative ({currentSlide + 1}/{banners.length})</span>
                 </div>
@@ -215,14 +217,14 @@ export default function Landing() {
                   <>
                     <button
                       onClick={handlePrev}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 z-30 w-10 h-10 rounded-full bg-slate-950/70 border border-white/20 text-white flex items-center justify-center hover:bg-mamas-accent hover:text-mamas-primary transition-all shadow-lg active:scale-90 opacity-80 hover:opacity-100"
+                      className="absolute left-3 top-1/2 -translate-y-1/2 z-30 w-10 h-10 rounded-full bg-slate-950/70 border border-white/20 text-white flex items-center justify-center hover:bg-blue-600 transition-all shadow-lg active:scale-90 opacity-80 hover:opacity-100 cursor-pointer"
                       title="Previous Banner"
                     >
                       <ChevronLeft className="w-5 h-5" />
                     </button>
                     <button
                       onClick={handleNext}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 z-30 w-10 h-10 rounded-full bg-slate-950/70 border border-white/20 text-white flex items-center justify-center hover:bg-mamas-accent hover:text-mamas-primary transition-all shadow-lg active:scale-90 opacity-80 hover:opacity-100"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 z-30 w-10 h-10 rounded-full bg-slate-950/70 border border-white/20 text-white flex items-center justify-center hover:bg-blue-600 transition-all shadow-lg active:scale-90 opacity-80 hover:opacity-100 cursor-pointer"
                       title="Next Banner"
                     >
                       <ChevronRight className="w-5 h-5" />
@@ -237,9 +239,9 @@ export default function Landing() {
                             setSlideDirection(idx > currentSlide ? 1 : -1);
                             setCurrentSlide(idx);
                           }}
-                          className={`h-2 rounded-full transition-all duration-300 ${
+                          className={`h-2 rounded-full transition-all duration-300 cursor-pointer ${
                             idx === currentSlide 
-                              ? 'w-6 bg-mamas-accent' 
+                              ? 'w-6 bg-blue-400' 
                               : 'w-2 bg-white/40 hover:bg-white/70'
                           }`}
                           title={`Go to slide ${idx + 1}`}
@@ -253,13 +255,13 @@ export default function Landing() {
               <div className="relative w-full max-w-md aspect-square rounded-3xl bg-white/5 border border-white/10 backdrop-blur-md p-8 flex items-center justify-center shadow-2xl">
                 
                 {/* Outer Pulsing Rings */}
-                <div className="absolute inset-4 border border-mamas-accent/20 rounded-2xl animate-pulse" />
+                <div className="absolute inset-4 border border-blue-400/20 rounded-2xl animate-pulse" />
                 <div className="absolute inset-8 border border-white/10 rounded-2xl" />
 
                 {/* Central Pillar Icons Grid */}
                 <div className="grid grid-cols-2 gap-4 w-full relative z-10">
                   {/* Heart / Mutual Aid */}
-                  <div className="bg-slate-900/90 border border-rose-500/30 p-5 rounded-2xl flex flex-col items-center text-center shadow-lg hover:border-rose-500/60 transition-all group">
+                  <div className="bg-[#0c1731]/90 border border-rose-500/30 p-5 rounded-2xl flex flex-col items-center text-center shadow-lg hover:border-rose-500/60 transition-all group">
                     <div className="w-12 h-12 rounded-xl bg-rose-500/20 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                       <Heart className="w-6 h-6 text-rose-400 fill-rose-400/30" />
                     </div>
@@ -268,25 +270,25 @@ export default function Landing() {
                   </div>
 
                   {/* School */}
-                  <div className="bg-slate-900/90 border border-amber-500/30 p-5 rounded-2xl flex flex-col items-center text-center shadow-lg hover:border-amber-500/60 transition-all group">
-                    <div className="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                      <Building2 className="w-6 h-6 text-amber-400" />
+                  <div className="bg-[#0c1731]/90 border border-blue-500/30 p-5 rounded-2xl flex flex-col items-center text-center shadow-lg hover:border-blue-500/60 transition-all group">
+                    <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                      <Building2 className="w-6 h-6 text-blue-400" />
                     </div>
                     <span className="text-xs font-bold text-slate-200">Matuumu Alma Mater</span>
                     <span className="text-[10px] text-slate-400">Development</span>
                   </div>
 
                   {/* Community */}
-                  <div className="bg-slate-900/90 border border-blue-500/30 p-5 rounded-2xl flex flex-col items-center text-center shadow-lg hover:border-blue-500/60 transition-all group">
-                    <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                      <Users className="w-6 h-6 text-blue-400" />
+                  <div className="bg-[#0c1731]/90 border border-indigo-500/30 p-5 rounded-2xl flex flex-col items-center text-center shadow-lg hover:border-indigo-500/60 transition-all group">
+                    <div className="w-12 h-12 rounded-xl bg-indigo-500/20 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                      <Users className="w-6 h-6 text-indigo-400" />
                     </div>
                     <span className="text-xs font-bold text-slate-200">Alumni Family</span>
                     <span className="text-[10px] text-slate-400">Strong Network</span>
                   </div>
 
                   {/* Legacy */}
-                  <div className="bg-slate-900/90 border border-emerald-500/30 p-5 rounded-2xl flex flex-col items-center text-center shadow-lg hover:border-emerald-500/60 transition-all group">
+                  <div className="bg-[#0c1731]/90 border border-emerald-500/30 p-5 rounded-2xl flex flex-col items-center text-center shadow-lg hover:border-emerald-500/60 transition-all group">
                     <div className="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                       <GraduationCap className="w-6 h-6 text-emerald-400" />
                     </div>
@@ -303,32 +305,32 @@ export default function Landing() {
       </section>
 
       {/* 4. IMPACT BAR */}
-      <section className="bg-slate-900 border-y border-slate-800 text-white py-10 px-6 sm:px-12">
-        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 text-center divide-y md:divide-y-0 md:divide-x divide-slate-800">
+      <section className="bg-[#07132c] border-y border-blue-900/40 text-white py-10 px-6 sm:px-12">
+        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 text-center divide-y md:divide-y-0 md:divide-x divide-blue-900/50">
           
           <div className="pt-4 md:pt-0">
-            <div className="text-3xl sm:text-4xl font-extrabold text-mamas-accent tracking-tight">
+            <div className="text-3xl sm:text-4xl font-extrabold text-blue-300 tracking-tight">
               UGX {stats.totalContributions}
             </div>
-            <p className="text-xs sm:text-sm font-bold text-slate-400 uppercase tracking-wider mt-1">
+            <p className="text-xs sm:text-sm font-bold text-blue-200/80 uppercase tracking-wider mt-1">
               Contributed
             </p>
           </div>
 
           <div className="pt-4 md:pt-0">
-            <div className="text-3xl sm:text-4xl font-extrabold text-mamas-accent tracking-tight">
+            <div className="text-3xl sm:text-4xl font-extrabold text-blue-300 tracking-tight">
               {stats.membersCount}
             </div>
-            <p className="text-xs sm:text-sm font-bold text-slate-400 uppercase tracking-wider mt-1">
+            <p className="text-xs sm:text-sm font-bold text-blue-200/80 uppercase tracking-wider mt-1">
               Active Members
             </p>
           </div>
 
           <div className="pt-4 md:pt-0">
-            <div className="text-3xl sm:text-4xl font-extrabold text-mamas-accent tracking-tight">
+            <div className="text-3xl sm:text-4xl font-extrabold text-blue-300 tracking-tight">
               {stats.grantsCount}
             </div>
-            <p className="text-xs sm:text-sm font-bold text-slate-400 uppercase tracking-wider mt-1">
+            <p className="text-xs sm:text-sm font-bold text-blue-200/80 uppercase tracking-wider mt-1">
               Welfare Grants Given
             </p>
           </div>
@@ -339,7 +341,7 @@ export default function Landing() {
       {/* 2. THREE PILLARS SECTION */}
       <section className="py-16 sm:py-24 px-6 sm:px-12 max-w-7xl mx-auto w-full">
         <div className="text-center max-w-2xl mx-auto mb-12 sm:mb-16">
-          <span className="text-xs font-extrabold uppercase tracking-widest text-mamas-primary dark:text-mamas-accent bg-amber-500/10 dark:bg-amber-500/20 px-3.5 py-1.5 rounded-full border border-mamas-accent/30 inline-block mb-3">
+          <span className="text-xs font-extrabold uppercase tracking-widest text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 px-3.5 py-1.5 rounded-full border border-blue-200 dark:border-blue-900/60 inline-block mb-3">
             Our Core Pillars
           </span>
           <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
@@ -353,10 +355,10 @@ export default function Landing() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           
           {/* Card 1: Support Each Other */}
-          <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group">
+          <div className="bg-white dark:bg-[#0c1731] p-8 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group">
             <div>
-              <div className="w-14 h-14 rounded-2xl bg-amber-500/10 dark:bg-amber-500/20 border border-mamas-accent/40 flex items-center justify-center text-mamas-accent mb-6 group-hover:scale-110 transition-transform">
-                <HeartHandshake className="w-7 h-7 text-mamas-accent" />
+              <div className="w-14 h-14 rounded-2xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-900/60 flex items-center justify-center text-blue-600 dark:text-blue-400 mb-6 group-hover:scale-110 transition-transform">
+                <HeartHandshake className="w-7 h-7" />
               </div>
               <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3">
                 Support Each Other
@@ -365,16 +367,16 @@ export default function Landing() {
                 Life is unpredictable. When a fellow alumnus faces hardship, we rally together. Apply for welfare grants or contribute to help a brother or sister in need.
               </p>
             </div>
-            <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 text-xs font-bold text-mamas-primary dark:text-mamas-accent flex items-center gap-1">
+            <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 text-xs font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1">
               <span>Welfare & Emergency Relief</span>
             </div>
           </div>
 
           {/* Card 2: Support Our School */}
-          <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group">
+          <div className="bg-white dark:bg-[#0c1731] p-8 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group">
             <div>
-              <div className="w-14 h-14 rounded-2xl bg-amber-500/10 dark:bg-amber-500/20 border border-mamas-accent/40 flex items-center justify-center text-mamas-accent mb-6 group-hover:scale-110 transition-transform">
-                <GraduationCap className="w-7 h-7 text-mamas-accent" />
+              <div className="w-14 h-14 rounded-2xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-900/60 flex items-center justify-center text-blue-600 dark:text-blue-400 mb-6 group-hover:scale-110 transition-transform">
+                <GraduationCap className="w-7 h-7" />
               </div>
               <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3">
                 Support Our School
@@ -383,16 +385,16 @@ export default function Landing() {
                 Matuumu shaped us. Now we shape its future. Fund school development campaigns — classrooms, libraries, and facilities for the next generation.
               </p>
             </div>
-            <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 text-xs font-bold text-mamas-primary dark:text-mamas-accent flex items-center gap-1">
+            <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 text-xs font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1">
               <span>School Development Projects</span>
             </div>
           </div>
 
           {/* Card 3: Grow Together */}
-          <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group">
+          <div className="bg-white dark:bg-[#0c1731] p-8 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group">
             <div>
-              <div className="w-14 h-14 rounded-2xl bg-amber-500/10 dark:bg-amber-500/20 border border-mamas-accent/40 flex items-center justify-center text-mamas-accent mb-6 group-hover:scale-110 transition-transform">
-                <TrendingUp className="w-7 h-7 text-mamas-accent" />
+              <div className="w-14 h-14 rounded-2xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-900/60 flex items-center justify-center text-blue-600 dark:text-blue-400 mb-6 group-hover:scale-110 transition-transform">
+                <TrendingUp className="w-7 h-7" />
               </div>
               <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3">
                 Grow Together
@@ -401,7 +403,7 @@ export default function Landing() {
                 Every contribution builds our collective strength. The more we give, the more we can do — for each other, for our school, and for our legacy.
               </p>
             </div>
-            <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 text-xs font-bold text-mamas-primary dark:text-mamas-accent flex items-center gap-1">
+            <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 text-xs font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1">
               <span>Sustainable Alumni Endowment</span>
             </div>
           </div>
@@ -410,7 +412,7 @@ export default function Landing() {
       </section>
 
       {/* 3. HOW IT WORKS */}
-      <section className="py-16 bg-slate-100/70 dark:bg-slate-900/50 border-y border-slate-200/60 dark:border-slate-800 px-6 sm:px-12">
+      <section className="py-16 bg-slate-100/70 dark:bg-[#081226] border-y border-slate-200/60 dark:border-slate-800 px-6 sm:px-12">
         <div className="max-w-6xl mx-auto text-center">
           <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white mb-10">
             How It Works
@@ -419,12 +421,12 @@ export default function Landing() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
             
             {/* Step 1 */}
-            <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-md flex flex-col items-center text-center">
-              <div className="w-12 h-12 rounded-full bg-mamas-primary text-mamas-accent font-black text-lg flex items-center justify-center mb-4 shadow-md">
+            <div className="bg-white dark:bg-[#0c1731] p-6 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col items-center text-center">
+              <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white font-extrabold text-lg flex items-center justify-center mb-4 shadow-md shadow-blue-500/25">
                 1
               </div>
               <h4 className="text-lg font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
-                <UserPlus className="w-5 h-5 text-mamas-accent" />
+                <UserPlus className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                 <span>Join</span>
               </h4>
               <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
@@ -433,12 +435,12 @@ export default function Landing() {
             </div>
 
             {/* Step 2 */}
-            <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-md flex flex-col items-center text-center">
-              <div className="w-12 h-12 rounded-full bg-mamas-primary text-mamas-accent font-black text-lg flex items-center justify-center mb-4 shadow-md">
+            <div className="bg-white dark:bg-[#0c1731] p-6 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col items-center text-center">
+              <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white font-extrabold text-lg flex items-center justify-center mb-4 shadow-md shadow-blue-500/25">
                 2
               </div>
               <h4 className="text-lg font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
-                <Wallet className="w-5 h-5 text-mamas-accent" />
+                <Wallet className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                 <span>Contribute</span>
               </h4>
               <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
@@ -447,12 +449,12 @@ export default function Landing() {
             </div>
 
             {/* Step 3 */}
-            <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-md flex flex-col items-center text-center">
-              <div className="w-12 h-12 rounded-full bg-mamas-primary text-mamas-accent font-black text-lg flex items-center justify-center mb-4 shadow-md">
+            <div className="bg-white dark:bg-[#0c1731] p-6 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col items-center text-center">
+              <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white font-extrabold text-lg flex items-center justify-center mb-4 shadow-md shadow-blue-500/25">
                 3
               </div>
               <h4 className="text-lg font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-mamas-accent" />
+                <Sparkles className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                 <span>Impact</span>
               </h4>
               <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
@@ -465,18 +467,18 @@ export default function Landing() {
       </section>
 
       {/* CALL TO ACTION */}
-      <section className="py-16 sm:py-20 px-6 sm:px-12 bg-gradient-to-r from-mamas-primary via-slate-900 to-mamas-primary text-white text-center relative overflow-hidden">
+      <section className="py-16 sm:py-20 px-6 sm:px-12 bg-gradient-to-r from-[#07132c] via-[#0f2756] to-[#1e3a8a] text-white text-center relative overflow-hidden">
         <div className="max-w-3xl mx-auto space-y-6 relative z-10">
           <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
             Ready to Stand With Your Fellow Alumni?
           </h2>
-          <p className="text-slate-300 text-sm sm:text-base max-w-xl mx-auto leading-relaxed">
+          <p className="text-blue-100/90 text-sm sm:text-base max-w-xl mx-auto leading-relaxed">
             Join hundreds of Matuumu alumni already building a safety net for each other and transforming our school.
           </p>
           <div className="pt-2">
             <Link 
               to="/register" 
-              className="inline-flex items-center gap-2 px-8 py-4 rounded-full bg-mamas-accent text-mamas-primary font-extrabold text-base shadow-2xl hover:bg-mamas-accent-hover active:scale-95 transition-all"
+              className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white hover:bg-blue-50 text-blue-900 font-extrabold text-base shadow-2xl active:scale-95 transition-all cursor-pointer"
             >
               <span>Create Your Member Account</span>
               <ArrowRight className="w-5 h-5" />
@@ -486,7 +488,7 @@ export default function Landing() {
       </section>
 
       {/* 5. FOOTER */}
-      <footer className="w-full bg-slate-950 text-slate-400 py-10 px-6 sm:px-12 border-t border-slate-800">
+      <footer className="w-full bg-[#050b18] text-slate-400 py-10 px-6 sm:px-12 border-t border-slate-800">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-3">
             <Logo />

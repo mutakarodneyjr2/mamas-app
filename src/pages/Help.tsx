@@ -244,20 +244,20 @@ export default function Help() {
   };
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto pb-12 font-sans">
+    <div className="space-y-6 max-w-5xl mx-auto pb-28 font-sans animate-in fade-in duration-300">
       
       {/* Header Banner */}
-      <div className="bg-gradient-to-br from-mamas-primary via-mamas-primary/95 to-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
-        <div className="absolute -right-10 -bottom-10 w-64 h-64 bg-mamas-accent opacity-10 rounded-full blur-2xl pointer-events-none"></div>
+      <div className="bg-gradient-to-r from-[#07132c] via-[#0f2756] to-[#1e3a8a] rounded-3xl p-6 sm:p-8 text-white shadow-xl border border-blue-900/40 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-2xl pointer-events-none"></div>
         <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
           <div>
-            <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-3 py-1 rounded-full text-xs font-semibold text-mamas-accent border border-white/10 mb-3">
+            <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-blue-200 border border-white/15 mb-3 uppercase tracking-wider">
               <LifeBuoy className="w-3.5 h-3.5" /> Matuumu S.S. Alumni Help Desk
             </div>
-            <h1 className="text-2xl sm:text-3xl font-display font-bold tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
               How can we help you today?
             </h1>
-            <p className="text-slate-300 text-sm mt-1 max-w-xl leading-relaxed">
+            <p className="text-blue-100/80 text-xs sm:text-sm mt-1 max-w-xl leading-relaxed">
               Find answers to common questions about welfare assistance, weekly contributions, school campaigns, or send a direct message to the Executive Committee.
             </p>
           </div>
@@ -267,7 +267,7 @@ export default function Help() {
             {supportPhone && (
               <a
                 href={`tel:${supportPhone}`}
-                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold text-xs transition-all shadow-md hover:shadow-emerald-900/30"
+                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-bold text-xs transition-all shadow-md shadow-emerald-950/20 cursor-pointer"
               >
                 <PhoneCall className="w-4 h-4" />
                 <span>Call Executive</span>
@@ -278,7 +278,7 @@ export default function Help() {
                 href={`https://wa.me/${supportWhatsApp.replace(/[^0-9]/g, '')}?text=Hello%20MAMAS%20Executive,%20I%20have%20an%20inquiry%20regarding%20Matuumu%20Alumni%20Association`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-2xl font-bold text-xs transition-all shadow-md hover:shadow-teal-900/30"
+                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-teal-600 hover:bg-teal-500 text-white rounded-2xl font-bold text-xs transition-all shadow-md shadow-teal-950/20 cursor-pointer"
               >
                 <MessageSquare className="w-4 h-4" />
                 <span>WhatsApp Chat</span>
@@ -287,7 +287,7 @@ export default function Help() {
             {supportEmail && (
               <a
                 href={`mailto:${supportEmail}?subject=MAMAS%20Executive%20Inquiry`}
-                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold text-xs transition-all shadow-md hover:shadow-blue-900/30"
+                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-bold text-xs transition-all shadow-md shadow-blue-950/20 cursor-pointer"
               >
                 <Mail className="w-4 h-4" />
                 <span>Email Support</span>
@@ -298,7 +298,7 @@ export default function Help() {
                 href={whatsappGroupLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl font-bold text-xs transition-all shadow-md hover:shadow-emerald-900/30"
+                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-700 hover:bg-emerald-600 text-white rounded-2xl font-bold text-xs transition-all shadow-md cursor-pointer"
               >
                 <MessageSquare className="w-4 h-4" />
                 <span>Join Alumni Group</span>
@@ -311,8 +311,8 @@ export default function Help() {
         <div className="mt-8 flex flex-wrap gap-2 pt-4 border-t border-white/10">
           <button
             onClick={() => setActiveTab('faq')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-              activeTab === 'faq' ? 'bg-mamas-accent text-mamas-primary shadow-md' : 'bg-white/10 hover:bg-white/20 text-white'
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+              activeTab === 'faq' ? 'bg-white text-blue-900 shadow-md font-extrabold' : 'bg-white/10 hover:bg-white/20 text-white'
             }`}
           >
             <BookOpen className="w-4 h-4" /> FAQs & Knowledge Base
@@ -320,8 +320,8 @@ export default function Help() {
 
           <button
             onClick={() => setActiveTab('contact')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-              activeTab === 'contact' ? 'bg-mamas-accent text-mamas-primary shadow-md' : 'bg-white/10 hover:bg-white/20 text-white'
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+              activeTab === 'contact' ? 'bg-white text-blue-900 shadow-md font-extrabold' : 'bg-white/10 hover:bg-white/20 text-white'
             }`}
           >
             <Send className="w-4 h-4" /> Contact Support Ticket
@@ -331,8 +331,8 @@ export default function Help() {
             <>
               <button
                 onClick={() => setActiveTab('admin-articles')}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-                  activeTab === 'admin-articles' ? 'bg-amber-400 text-slate-900 shadow-md' : 'bg-white/10 hover:bg-white/20 text-amber-200'
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                  activeTab === 'admin-articles' ? 'bg-white text-blue-900 shadow-md font-extrabold' : 'bg-white/10 hover:bg-white/20 text-blue-200'
                 }`}
               >
                 <Edit3 className="w-4 h-4" /> Manage Articles
@@ -340,8 +340,8 @@ export default function Help() {
 
               <button
                 onClick={() => setActiveTab('admin-tickets')}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-                  activeTab === 'admin-tickets' ? 'bg-indigo-400 text-slate-900 shadow-md' : 'bg-white/10 hover:bg-white/20 text-indigo-200'
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                  activeTab === 'admin-tickets' ? 'bg-white text-blue-900 shadow-md font-extrabold' : 'bg-white/10 hover:bg-white/20 text-blue-200'
                 }`}
               >
                 <Inbox className="w-4 h-4" /> Support Tickets ({tickets.filter(t => t.status === 'open').length})
@@ -356,7 +356,7 @@ export default function Help() {
         <div className="space-y-6">
           
           {/* Search & Category Filter */}
-          <div className="bg-mamas-card border border-slate-200 rounded-3xl p-4 sm:p-6 shadow-sm space-y-4">
+          <div className="bg-white dark:bg-[#0c1731] border border-slate-200/80 dark:border-slate-800 rounded-3xl p-4 sm:p-6 shadow-xs space-y-4">
             <div className="relative">
               <Search className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
               <input
@@ -364,12 +364,12 @@ export default function Help() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search articles by keywords (e.g. welfare, contributions, registration)..."
-                className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium text-mamas-text focus:bg-white focus:ring-2 focus:ring-mamas-accent outline-none transition-all"
+                className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-2xl text-xs sm:text-sm font-medium text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600 font-bold bg-slate-200 px-2 py-0.5 rounded-full"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 font-bold bg-slate-200 dark:bg-slate-700 px-2 py-0.5 rounded-full cursor-pointer"
                 >
                   Clear
                 </button>
@@ -377,7 +377,7 @@ export default function Help() {
             </div>
 
             {/* Category Pills */}
-            <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100">
+            <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
               <span className="text-xs font-bold text-slate-400 mr-1 flex items-center gap-1">
                 <Filter className="w-3.5 h-3.5" /> Category:
               </span>
@@ -385,10 +385,10 @@ export default function Help() {
                 <button
                   key={cat}
                   onClick={() => setSelectedCategory(cat)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
+                  className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
                     selectedCategory === cat
-                      ? 'bg-mamas-primary text-white shadow-sm'
-                      : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300'
                   }`}
                 >
                   {cat}
@@ -399,20 +399,20 @@ export default function Help() {
 
           {/* Articles List */}
           {loadingArticles ? (
-            <div className="p-12 text-center bg-mamas-card rounded-3xl border border-slate-200 shadow-sm">
-              <Loader2 className="w-8 h-8 text-mamas-accent animate-spin mx-auto mb-3" />
-              <p className="text-sm font-medium text-slate-500">Loading help center articles...</p>
+            <div className="p-12 text-center bg-white dark:bg-[#0c1731] rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
+              <Loader2 className="w-8 h-8 text-blue-600 dark:text-blue-400 animate-spin mx-auto mb-3" />
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Loading help center articles...</p>
             </div>
           ) : filteredArticles.length === 0 ? (
-            <div className="p-12 text-center bg-mamas-card rounded-3xl border border-slate-200 shadow-sm">
-              <HelpCircle className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-              <h3 className="text-base font-bold text-mamas-text">No articles matched your search</h3>
-              <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
+            <div className="p-12 text-center bg-white dark:bg-[#0c1731] rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
+              <HelpCircle className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">No articles matched your search</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-md mx-auto">
                 Try searching with different keywords or submit a direct support message to the executive team.
               </p>
               <button
                 onClick={() => { setSearchQuery(''); setSelectedCategory('All'); }}
-                className="mt-4 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors"
+                className="mt-4 px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs rounded-xl transition-colors cursor-pointer"
               >
                 Reset Filters
               </button>
@@ -424,37 +424,37 @@ export default function Help() {
                 return (
                   <div
                     key={art.id}
-                    className={`bg-mamas-card border rounded-2xl overflow-hidden transition-all duration-200 ${
-                      isExpanded ? 'border-mamas-accent shadow-md ring-1 ring-mamas-accent/30' : 'border-slate-200 hover:border-slate-300'
+                    className={`bg-white dark:bg-[#0c1731] border rounded-3xl overflow-hidden transition-all duration-200 ${
+                      isExpanded ? 'border-blue-500 dark:border-blue-500 shadow-sm ring-1 ring-blue-500/20' : 'border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
                     }`}
                   >
                     <button
                       onClick={() => setExpandedArticleId(isExpanded ? null : art.id)}
-                      className="w-full p-4 sm:p-5 text-left flex items-start justify-between gap-4 focus:outline-none"
+                      className="w-full p-4 sm:p-5 text-left flex items-start justify-between gap-4 focus:outline-none cursor-pointer"
                     >
                       <div className="flex items-start gap-3">
-                        <div className="p-2 bg-slate-100 text-mamas-primary rounded-xl shrink-0 mt-0.5">
+                        <div className="p-2 bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 rounded-xl shrink-0 mt-0.5 border border-blue-100 dark:border-blue-900/60">
                           <BookOpen className="w-4 h-4" />
                         </div>
                         <div>
-                          <span className="text-[10px] font-bold text-mamas-accent uppercase tracking-wider bg-mamas-accent/10 px-2 py-0.5 rounded-md">
+                          <span className="text-[10px] font-extrabold text-blue-600 dark:text-blue-400 uppercase tracking-wider bg-blue-50 dark:bg-blue-950/80 px-2 py-0.5 rounded-md border border-blue-200/50 dark:border-blue-900/50">
                             {art.category}
                           </span>
-                          <h3 className="text-sm sm:text-base font-bold text-mamas-text mt-1">
+                          <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white mt-1">
                             {art.title}
                           </h3>
                         </div>
                       </div>
                       {isExpanded ? (
-                        <ChevronUp className="w-5 h-5 text-mamas-accent shrink-0 mt-1" />
+                        <ChevronUp className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-1" />
                       ) : (
                         <ChevronDown className="w-5 h-5 text-slate-400 shrink-0 mt-1" />
                       )}
                     </button>
 
                     {isExpanded && (
-                      <div className="px-5 pb-5 pt-1 text-sm text-slate-600 leading-relaxed border-t border-slate-100 bg-slate-50/50">
-                        <div className="prose prose-slate max-w-none text-xs sm:text-sm">
+                      <div className="px-5 pb-5 pt-1 text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
+                        <div className="prose dark:prose-invert prose-slate max-w-none text-xs sm:text-sm">
                           {art.content}
                         </div>
                       </div>
@@ -470,26 +470,26 @@ export default function Help() {
 
       {/* TAB 2: CONTACT SUPPORT TICKET */}
       {activeTab === 'contact' && (
-        <div className="bg-mamas-card border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm max-w-3xl mx-auto space-y-6">
+        <div className="bg-white dark:bg-[#0c1731] border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xs max-w-3xl mx-auto space-y-6">
           <div>
-            <h2 className="text-xl font-bold text-mamas-text flex items-center gap-2">
-              <Send className="w-5 h-5 text-mamas-accent" /> Contact Executive Support
+            <h2 className="text-xl font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+              <Send className="w-5 h-5 text-blue-600 dark:text-blue-400" /> Contact Executive Support
             </h2>
-            <p className="text-xs text-mamas-text-muted mt-1">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
               Have a confidential inquiry, welfare suggestion, or account issue? Send a direct support ticket to the Executive Committee.
             </p>
           </div>
 
           {ticketSuccess && (
-            <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-4 rounded-2xl text-xs sm:text-sm font-medium flex items-center gap-2">
-              <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+            <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-emerald-800 dark:text-emerald-300 p-4 rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-2">
+              <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
               <span>{ticketSuccess}</span>
             </div>
           )}
 
           {ticketError && (
-            <div className="bg-rose-50 border border-rose-200 text-rose-800 p-4 rounded-2xl text-xs sm:text-sm font-medium flex items-center gap-2">
-              <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
+            <div className="bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 text-rose-800 dark:text-rose-300 p-4 rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0" />
               <span>{ticketError}</span>
             </div>
           )}
@@ -497,53 +497,53 @@ export default function Help() {
           <form onSubmit={handleSubmitTicket} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Your Name</label>
+                <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase mb-1">Your Name</label>
                 <input
                   type="text"
                   readOnly
                   value={userProfile?.fullName || 'Guest Member'}
-                  className="w-full bg-slate-100 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-slate-700 cursor-not-allowed"
+                  className="w-full bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-2xl px-4 py-3 text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-not-allowed"
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Phone Number</label>
+                <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase mb-1">Phone Number</label>
                 <input
                   type="text"
                   readOnly
                   value={userProfile?.phoneNumber || 'N/A'}
-                  className="w-full bg-slate-100 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-slate-700 cursor-not-allowed"
+                  className="w-full bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-2xl px-4 py-3 text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-not-allowed"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Subject / Inquiry Type *</label>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">Subject / Inquiry Type *</label>
               <input
                 type="text"
                 required
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
                 placeholder="e.g., Welfare Payout Status Inquiry, Registration Correction..."
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:bg-white focus:ring-2 focus:ring-mamas-accent outline-none"
+                className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-2xl px-4 py-3 text-xs sm:text-sm font-medium text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-blue-500 outline-none"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Detailed Message *</label>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">Detailed Message *</label>
               <textarea
                 required
                 rows={5}
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 placeholder="Describe your request or issue clearly..."
-                className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm font-medium focus:bg-white focus:ring-2 focus:ring-mamas-accent outline-none"
+                className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-2xl p-4 text-xs sm:text-sm font-medium text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-blue-500 outline-none"
               />
             </div>
 
             <button
               type="submit"
               disabled={submittingTicket || !subject.trim() || !message.trim()}
-              className="w-full bg-mamas-primary hover:bg-mamas-primary-hover text-white font-bold py-3.5 px-6 rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-sm"
+              className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 px-6 rounded-2xl shadow-md shadow-blue-500/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-xs sm:text-sm cursor-pointer"
             >
               {submittingTicket ? (
                 <>
@@ -562,42 +562,42 @@ export default function Help() {
       {/* TAB 3: ADMIN ARTICLES MANAGEMENT */}
       {activeTab === 'admin-articles' && isAdmin && (
         <div className="space-y-6">
-          <div className="flex items-center justify-between bg-mamas-card border border-slate-200 rounded-3xl p-6 shadow-sm">
+          <div className="flex items-center justify-between bg-white dark:bg-[#0c1731] border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 shadow-xs">
             <div>
-              <h2 className="text-xl font-bold text-mamas-text">Help Center Article Management</h2>
-              <p className="text-xs text-mamas-text-muted mt-1">Create, edit, reorder, or publish articles for the member help center.</p>
+              <h2 className="text-xl font-extrabold text-slate-900 dark:text-white">Help Center Article Management</h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Create, edit, reorder, or publish articles for the member help center.</p>
             </div>
             <button
               onClick={() => {
                 setEditingArticle({ title: '', content: '', category: 'General', order: adminArticles.length + 1, isPublished: true });
                 setArticleModalOpen(true);
               }}
-              className="bg-mamas-primary hover:bg-mamas-primary-hover text-white font-bold px-4 py-2.5 rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition-colors"
+              className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 py-2.5 rounded-2xl text-xs flex items-center gap-1.5 shadow-md shadow-blue-500/25 transition-all cursor-pointer"
             >
               <Plus className="w-4 h-4" /> Add Article
             </button>
           </div>
 
-          <div className="bg-mamas-card border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
-            <div className="divide-y divide-slate-100">
+          <div className="bg-white dark:bg-[#0c1731] border border-slate-200/80 dark:border-slate-800 rounded-3xl overflow-hidden shadow-xs">
+            <div className="divide-y divide-slate-100 dark:divide-slate-800">
               {adminArticles.map((art) => (
-                <div key={art.id} className="p-4 sm:p-5 flex items-start justify-between gap-4 hover:bg-slate-50/50 transition-colors">
+                <div key={art.id} className="p-4 sm:p-5 flex items-start justify-between gap-4 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-[10px] font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md">
+                      <span className="text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2 py-0.5 rounded-md">
                         Order #{art.order}
                       </span>
-                      <span className="text-[10px] font-bold bg-mamas-accent/15 text-mamas-primary px-2 py-0.5 rounded-md">
+                      <span className="text-[10px] font-bold bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-md">
                         {art.category}
                       </span>
                       {!art.isPublished && (
-                        <span className="text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-md">
+                        <span className="text-[10px] font-bold bg-amber-100 dark:bg-amber-950/50 text-amber-800 dark:text-amber-400 px-2 py-0.5 rounded-md">
                           Draft (Unpublished)
                         </span>
                       )}
                     </div>
-                    <h3 className="font-bold text-mamas-text text-sm">{art.title}</h3>
-                    <p className="text-xs text-slate-500 line-clamp-2 mt-1">{art.content}</p>
+                    <h3 className="font-bold text-slate-900 dark:text-white text-sm">{art.title}</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mt-1">{art.content}</p>
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
@@ -606,14 +606,14 @@ export default function Help() {
                         setEditingArticle(art);
                         setArticleModalOpen(true);
                       }}
-                      className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors"
+                      className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/50 rounded-xl transition-colors cursor-pointer"
                       title="Edit"
                     >
                       <Edit3 className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => handleDeleteArticle(art.id)}
-                      className="p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-colors"
+                      className="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/50 rounded-xl transition-colors cursor-pointer"
                       title="Delete"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -629,41 +629,41 @@ export default function Help() {
       {/* TAB 4: ADMIN SUPPORT TICKETS */}
       {activeTab === 'admin-tickets' && isAdmin && (
         <div className="space-y-6">
-          <div className="bg-mamas-card border border-slate-200 rounded-3xl p-6 shadow-sm flex items-center justify-between">
+          <div className="bg-white dark:bg-[#0c1731] border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 shadow-xs flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-bold text-mamas-text">Submitted Member Support Tickets</h2>
-              <p className="text-xs text-mamas-text-muted mt-1">Review and manage member support inquiries.</p>
+              <h2 className="text-xl font-extrabold text-slate-900 dark:text-white">Submitted Member Support Tickets</h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Review and manage member support inquiries.</p>
             </div>
             <button
               onClick={loadTickets}
               disabled={loadingTickets}
-              className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors"
+              className="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-2xl text-xs font-bold transition-colors cursor-pointer"
             >
               Refresh
             </button>
           </div>
 
           {loadingTickets ? (
-            <div className="p-12 text-center bg-mamas-card rounded-3xl border border-slate-200 shadow-sm">
-              <Loader2 className="w-8 h-8 text-indigo-600 animate-spin mx-auto mb-2" />
-              <p className="text-xs text-slate-500">Loading support tickets...</p>
+            <div className="p-12 text-center bg-white dark:bg-[#0c1731] rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
+              <Loader2 className="w-8 h-8 text-blue-600 animate-spin mx-auto mb-2" />
+              <p className="text-xs text-slate-500 dark:text-slate-400">Loading support tickets...</p>
             </div>
           ) : tickets.length === 0 ? (
-            <div className="p-12 text-center bg-mamas-card rounded-3xl border border-slate-200 shadow-sm">
-              <Inbox className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-              <p className="text-sm font-bold text-slate-600">No support tickets found.</p>
+            <div className="p-12 text-center bg-white dark:bg-[#0c1731] rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
+              <Inbox className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
+              <p className="text-sm font-bold text-slate-600 dark:text-slate-400">No support tickets found.</p>
             </div>
           ) : (
             <div className="space-y-4">
               {tickets.map((t) => (
-                <div key={t.id} className="bg-mamas-card border border-slate-200 rounded-2xl p-5 shadow-sm space-y-3">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                <div key={t.id} className="bg-white dark:bg-[#0c1731] border border-slate-200/80 dark:border-slate-800 rounded-3xl p-5 shadow-xs space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
                     <div>
                       <div className="flex items-center gap-2">
                         <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase ${
-                          t.status === 'open' ? 'bg-amber-100 text-amber-800' :
-                          t.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
-                          'bg-emerald-100 text-emerald-800'
+                          t.status === 'open' ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-400' :
+                          t.status === 'in_progress' ? 'bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-blue-400' :
+                          'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-400'
                         }`}>
                           {t.status.replace('_', ' ')}
                         </span>
@@ -671,8 +671,8 @@ export default function Help() {
                           {new Date(t.createdAt).toLocaleString()}
                         </span>
                       </div>
-                      <h3 className="font-bold text-mamas-text text-base mt-1">{t.subject}</h3>
-                      <p className="text-xs text-slate-500 font-semibold mt-0.5">
+                      <h3 className="font-extrabold text-slate-900 dark:text-white text-base mt-1">{t.subject}</h3>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold mt-0.5">
                         Submitted by: {t.userName} • {t.userPhone || 'No Phone'} {t.userEmail ? `• ${t.userEmail}` : ''}
                       </p>
                     </div>
@@ -684,8 +684,8 @@ export default function Help() {
                           key={st}
                           disabled={updatingTicketId === t.id}
                           onClick={() => handleUpdateTicketStatus(t.id, st as TicketStatus)}
-                          className={`px-2.5 py-1 rounded-lg text-[10px] font-bold capitalize transition-colors ${
-                            t.status === st ? 'bg-mamas-primary text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                          className={`px-2.5 py-1 rounded-xl text-[10px] font-bold capitalize transition-colors cursor-pointer ${
+                            t.status === st ? 'bg-blue-600 text-white' : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300'
                           }`}
                         >
                           {st.replace('_', ' ')}
@@ -694,7 +694,7 @@ export default function Help() {
                     </div>
                   </div>
 
-                  <div className="bg-slate-50 p-4 rounded-xl text-xs text-slate-700 leading-relaxed font-medium">
+                  <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl text-xs text-slate-700 dark:text-slate-300 leading-relaxed font-medium">
                     {t.message}
                   </div>
                 </div>
@@ -706,55 +706,55 @@ export default function Help() {
 
       {/* ADMIN ARTICLE CREATE / EDIT MODAL */}
       {articleModalOpen && editingArticle && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-mamas-card border border-slate-200 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95">
-            <h3 className="text-lg font-bold text-mamas-text">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#0c1731] border border-slate-200/80 dark:border-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">
               {editingArticle.id ? 'Edit Help Article' : 'Create Help Article'}
             </h3>
 
             <form onSubmit={handleSaveArticle} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Title *</label>
+                <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase mb-1">Title *</label>
                 <input
                   type="text"
                   required
                   value={editingArticle.title || ''}
                   onChange={(e) => setEditingArticle({ ...editingArticle, title: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-sm font-semibold focus:bg-white focus:ring-2 focus:ring-mamas-accent outline-none"
+                  className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-2xl px-4 py-2.5 text-xs sm:text-sm font-semibold text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-blue-500 outline-none"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Category *</label>
+                  <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase mb-1">Category *</label>
                   <input
                     type="text"
                     required
                     value={editingArticle.category || ''}
                     onChange={(e) => setEditingArticle({ ...editingArticle, category: e.target.value })}
                     placeholder="e.g., Welfare Assistance"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-sm font-semibold focus:bg-white focus:ring-2 focus:ring-mamas-accent outline-none"
+                    className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-2xl px-4 py-2.5 text-xs sm:text-sm font-semibold text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-blue-500 outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Display Order</label>
+                  <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase mb-1">Display Order</label>
                   <input
                     type="number"
                     value={editingArticle.order || 1}
                     onChange={(e) => setEditingArticle({ ...editingArticle, order: parseInt(e.target.value) || 1 })}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-sm font-semibold focus:bg-white focus:ring-2 focus:ring-mamas-accent outline-none"
+                    className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-2xl px-4 py-2.5 text-xs sm:text-sm font-semibold text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-blue-500 outline-none"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Content / Answer *</label>
+                <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase mb-1">Content / Answer *</label>
                 <textarea
                   required
                   rows={5}
                   value={editingArticle.content || ''}
                   onChange={(e) => setEditingArticle({ ...editingArticle, content: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-sm font-medium focus:bg-white focus:ring-2 focus:ring-mamas-accent outline-none"
+                  className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-2xl p-4 text-xs sm:text-sm font-medium text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-blue-500 outline-none"
                 />
               </div>
 
@@ -764,25 +764,25 @@ export default function Help() {
                   id="isPublished"
                   checked={editingArticle.isPublished ?? true}
                   onChange={(e) => setEditingArticle({ ...editingArticle, isPublished: e.target.checked })}
-                  className="w-4 h-4 text-mamas-primary border-slate-300 rounded"
+                  className="w-4 h-4 text-blue-600 border-slate-300 rounded cursor-pointer"
                 />
-                <label htmlFor="isPublished" className="text-xs font-bold text-slate-700">
+                <label htmlFor="isPublished" className="text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer">
                   Publish immediately to Help Center
                 </label>
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => { setArticleModalOpen(false); setEditingArticle(null); }}
-                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl"
+                  className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={savingArticle}
-                  className="px-5 py-2 bg-mamas-primary hover:bg-mamas-primary-hover text-white font-bold text-xs rounded-xl shadow-md transition-colors disabled:opacity-50"
+                  className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-2xl shadow-md shadow-blue-500/25 transition-all disabled:opacity-50 cursor-pointer"
                 >
                   {savingArticle ? 'Saving...' : 'Save Article'}
                 </button>

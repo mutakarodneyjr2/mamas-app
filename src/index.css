@@ -1,21 +1,24 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;0,800;1,600&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 @import "tailwindcss";
 
 @variant dark (&:where(.dark, .dark *));
 
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Playfair Display", Georgia, serif;
+  --font-sans: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-serif: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
   
-  --color-mamas-primary: #0f172a;
-  --color-mamas-primary-hover: #1e293b;
-  --color-mamas-accent: #d4a843;
-  --color-mamas-accent-hover: #b48c36;
+  /* School Colors: Royal Blue, Crisp White, and Elevated Accents */
+  --color-mamas-primary: #0f2756;
+  --color-mamas-primary-hover: #1e3a8a;
+  --color-mamas-accent: #2563eb;
+  --color-mamas-accent-hover: #1d4ed8;
+  --color-mamas-gold: #f59e0b;
   
-  --color-mamas-bg: #ffffff;
+  --color-mamas-bg: #f8fafd;
   --color-mamas-card: #ffffff;
-  --color-mamas-text: #0f172a;
+  --color-mamas-text: #0b1329;
   --color-mamas-text-muted: #64748b;
   
   --color-mamas-success: #10b981;
@@ -23,70 +26,99 @@
   --color-mamas-danger: #f43f5e;
 }
 
+:root {
+  --color-mamas-primary: #0f2756;
+  --color-mamas-primary-hover: #1e3a8a;
+  --color-mamas-accent: #2563eb;
+  --color-mamas-accent-hover: #1d4ed8;
+  --color-mamas-bg: #f8fafd;
+  --color-mamas-card: #ffffff;
+  --color-mamas-text: #0b1329;
+  --color-mamas-text-muted: #64748b;
+  --color-mamas-border: #e2e8f0;
+}
+
 .dark {
-  --color-mamas-bg: #020617;
-  --color-mamas-card: #0f172a;
+  --color-mamas-bg: #060c1a;
+  --color-mamas-card: #0c1731;
   --color-mamas-text: #f8fafc;
   --color-mamas-text-muted: #94a3b8;
-  --color-mamas-primary: #1e293b;
-  --color-mamas-primary-hover: #334155;
+  --color-mamas-primary: #1e40af;
+  --color-mamas-primary-hover: #2563eb;
+  --color-mamas-accent: #3b82f6;
+  --color-mamas-accent-hover: #60a5fa;
+  --color-mamas-border: #1e2e54;
 }
 
-.dark input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
-.dark select,
-.dark textarea {
-  background-color: #1e293b !important;
-  color: #ffffff !important;
-  border-color: #475569 !important;
-}
-
-.dark input:focus,
-.dark select:focus,
-.dark textarea:focus {
-  border-color: #d4a843 !important;
-  outline: none !important;
-  box-shadow: 0 0 0 2px rgba(212, 168, 67, 0.3) !important;
-}
-
-.dark input::placeholder,
-.dark textarea::placeholder {
-  color: #94a3b8 !important;
-  opacity: 1 !important;
-}
-
-.dark option {
-  background-color: #1e293b !important;
-  color: #ffffff !important;
-}
-
-.dark .bg-white,
-.dark .bg-slate-50 {
-  background-color: #0f172a !important;
-  color: #f1f5f9 !important;
-  border-color: #334155 !important;
-}
-
+/* Global resets and typography */
 html, body {
   max-width: 100%;
   overflow-x: hidden;
   margin: 0;
   padding: 0;
+  font-family: var(--font-sans);
+  letter-spacing: -0.01em;
 }
 
 body {
   background-color: var(--color-mamas-bg);
-  background-image: linear-gradient(to bottom, #f8fafc, #ffffff);
+  background-image: radial-gradient(at 50% 0%, #edf4fe 0%, #f8fafd 70%);
   background-attachment: fixed;
   color: var(--color-mamas-text);
-  font-family: var(--font-sans);
-  transition: background-color 0.2s ease, color 0.2s ease;
+  transition: background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), color 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+.dark body,
+body.dark {
+  background-color: #060c1a;
+  background-image: radial-gradient(at 50% 0%, #0c1833 0%, #060c1a 75%);
+  color: #f8fafc;
+}
+
+/* Unified modern typography across all headings - NO clashing fonts */
 h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-display);
+  font-family: var(--font-sans) !important;
+  letter-spacing: -0.025em;
+}
+
+/* Form input refinements in dark mode */
+.dark input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.dark select,
+.dark textarea {
+  background-color: #0c1731;
+  color: #f8fafc;
+  border-color: #1e2e54;
+}
+
+.dark input:focus,
+.dark select:focus,
+.dark textarea:focus {
+  border-color: #3b82f6;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #64748b;
+  opacity: 1;
+}
+
+.dark option {
+  background-color: #0c1731;
+  color: #f8fafc;
 }
 
 /* Safe area padding for bottom nav */
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom, 20px);
+}
+
+/* Custom scrollbars */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

@@ -403,19 +403,19 @@ export default function Register() {
   const YEAR_OPTIONS: Option[] = years.map(y => ({ label: y.toString(), value: y.toString() }));
 
   return (
-    <div className="min-h-screen bg-slate-950 font-sans text-slate-100 flex items-center justify-center p-4 sm:p-6 lg:p-8 relative overflow-hidden selection:bg-mamas-accent selection:text-mamas-primary">
+    <div className="min-h-screen bg-[#f8fafd] dark:bg-[#060c1a] font-sans text-slate-900 dark:text-slate-100 flex items-center justify-center p-4 sm:p-6 lg:p-8 relative overflow-hidden transition-colors">
       {/* Background Floating Orbs */}
-      <div className="absolute top-1/4 -right-32 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-1/4 -left-32 w-96 h-96 bg-blue-600/15 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-1/4 -right-32 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-1/4 -left-32 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="w-full max-w-2xl bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200/80 dark:border-slate-800 rounded-3xl shadow-2xl overflow-hidden relative z-10 animate-in fade-in zoom-in-95 duration-300">
+      <div className="w-full max-w-2xl bg-white dark:bg-[#0c1731] text-slate-900 dark:text-slate-100 border border-slate-200/80 dark:border-slate-800 rounded-3xl shadow-2xl overflow-hidden relative z-10 animate-in fade-in zoom-in-95 duration-300">
         
         {/* Header Bar */}
-        <div className="p-6 sm:p-8 bg-gradient-to-r from-slate-900 via-mamas-primary to-slate-900 text-white flex items-center justify-between border-b border-slate-800 relative">
-          <Logo />
+        <div className="p-6 sm:p-8 bg-gradient-to-r from-[#07132c] via-[#0f2756] to-[#1e3a8a] text-white flex items-center justify-between border-b border-blue-900/40 relative">
+          <Logo dark />
           <Link 
             to="/login" 
-            className="text-xs font-semibold text-amber-400 hover:text-amber-300 bg-amber-500/10 px-3.5 py-1.5 rounded-full border border-amber-500/20 transition-all"
+            className="text-xs font-semibold text-white bg-white/10 hover:bg-white/20 px-3.5 py-1.5 rounded-full border border-white/20 transition-all"
           >
             Log In
           </Link>
@@ -429,7 +429,7 @@ export default function Register() {
               {/* Connecting Progress Line */}
               <div className="absolute left-6 right-6 top-4 h-1 bg-slate-200 dark:bg-slate-800 -z-0">
                 <div 
-                  className="h-full bg-amber-500 transition-all duration-300"
+                  className="h-full bg-blue-600 transition-all duration-300"
                   style={{
                     width: currentStep === 1 ? '0%' : currentStep === 2 ? '50%' : '100%'
                   }}
@@ -440,14 +440,14 @@ export default function Register() {
               <div className="relative z-10 flex flex-col items-center">
                 <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs shadow-md transition-all ${
                   currentStep === 1 
-                    ? 'bg-amber-500 text-slate-950 ring-4 ring-amber-500/20' 
+                    ? 'bg-blue-600 text-white ring-4 ring-blue-500/20' 
                     : currentStep > 1 
-                    ? 'bg-slate-900 text-white dark:bg-amber-500 dark:text-slate-950' 
+                    ? 'bg-blue-600 text-white' 
                     : 'bg-slate-200 dark:bg-slate-800 text-slate-500'
                 }`}>
                   {currentStep > 1 ? <Check className="w-4 h-4" /> : '1'}
                 </div>
-                <span className={`text-[11px] font-bold mt-1.5 ${currentStep === 1 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500'}`}>
+                <span className={`text-[11px] font-bold mt-1.5 ${currentStep === 1 ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500'}`}>
                   Account
                 </span>
               </div>
@@ -456,14 +456,14 @@ export default function Register() {
               <div className="relative z-10 flex flex-col items-center">
                 <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs shadow-md transition-all ${
                   currentStep === 2 
-                    ? 'bg-amber-500 text-slate-950 ring-4 ring-amber-500/20' 
+                    ? 'bg-blue-600 text-white ring-4 ring-blue-500/20' 
                     : currentStep > 2 
-                    ? 'bg-slate-900 text-white dark:bg-amber-500 dark:text-slate-950' 
+                    ? 'bg-blue-600 text-white' 
                     : 'bg-slate-200 dark:bg-slate-800 text-slate-500'
                 }`}>
                   {currentStep > 2 ? <Check className="w-4 h-4" /> : '2'}
                 </div>
-                <span className={`text-[11px] font-bold mt-1.5 ${currentStep === 2 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500'}`}>
+                <span className={`text-[11px] font-bold mt-1.5 ${currentStep === 2 ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500'}`}>
                   Profile
                 </span>
               </div>
@@ -472,12 +472,12 @@ export default function Register() {
               <div className="relative z-10 flex flex-col items-center">
                 <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs shadow-md transition-all ${
                   currentStep === 3 
-                    ? 'bg-amber-500 text-slate-950 ring-4 ring-amber-500/20' 
+                    ? 'bg-blue-600 text-white ring-4 ring-blue-500/20' 
                     : 'bg-slate-200 dark:bg-slate-800 text-slate-500'
                 }`}>
                   3
                 </div>
-                <span className={`text-[11px] font-bold mt-1.5 ${currentStep === 3 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500'}`}>
+                <span className={`text-[11px] font-bold mt-1.5 ${currentStep === 3 ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500'}`}>
                   Finalize
                 </span>
               </div>
@@ -500,7 +500,7 @@ export default function Register() {
             <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
               
               <div className="text-center sm:text-left">
-                <h2 className="text-2xl sm:text-3xl font-serif font-extrabold text-slate-900 dark:text-white tracking-tight">
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
                   Create Your Account
                 </h2>
                 <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
@@ -515,12 +515,12 @@ export default function Register() {
                     mode="register"
                     onClick={handleGoogleSignUp}
                     loading={loading}
-                    className="rounded-xl py-3.5 font-semibold text-sm shadow-sm hover:shadow-md border-slate-300 dark:border-slate-700 transition-all active:scale-[0.99]"
+                    className="rounded-2xl py-3.5 font-semibold text-sm shadow-xs hover:shadow-md border-slate-300 dark:border-slate-700 transition-all active:scale-[0.99]"
                   />
 
                   <div className="relative flex items-center justify-center my-6">
                     <div className="w-full border-t border-slate-200 dark:border-slate-800" />
-                    <span className="absolute bg-white dark:bg-slate-900 px-3 text-[11px] font-bold tracking-widest text-slate-400 uppercase">
+                    <span className="absolute bg-white dark:bg-[#0c1731] px-3 text-[11px] font-bold tracking-widest text-slate-400 uppercase">
                       OR REGISTER WITH EMAIL
                     </span>
                   </div>
@@ -560,7 +560,7 @@ export default function Register() {
                       onChange={handleChange}
                       name="email"
                       disabled={authProvider === 'google'}
-                      className="w-full pl-10 pr-10 py-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 text-slate-900 dark:text-white placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all disabled:opacity-60"
+                      className="w-full pl-10 pr-10 py-3 rounded-2xl border border-slate-200 dark:border-slate-700/80 bg-slate-50/70 dark:bg-slate-800/60 text-slate-900 dark:text-white placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all disabled:opacity-60"
                     />
                     {isEmailValid && (
                       <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-emerald-500 pointer-events-none">
@@ -589,12 +589,12 @@ export default function Register() {
                           placeholder="At least 6 characters"
                           value={formData.password}
                           onChange={handleChange}
-                          className="w-full pl-10 pr-10 py-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 text-slate-900 dark:text-white placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all"
+                          className="w-full pl-10 pr-10 py-3 rounded-2xl border border-slate-200 dark:border-slate-700/80 bg-slate-50/70 dark:bg-slate-800/60 text-slate-900 dark:text-white placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                         />
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                          className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
                         >
                           {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
@@ -604,11 +604,11 @@ export default function Register() {
                       {formData.password.length > 0 && (
                         <div className="mt-2 space-y-1">
                           <div className="flex gap-1.5 h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                            <div className={`h-full transition-all duration-300 ${pwdStrength >= 1 ? (pwdStrength === 1 ? 'w-1/3 bg-rose-500' : pwdStrength === 2 ? 'w-2/3 bg-amber-500' : 'w-full bg-emerald-500') : 'w-0'}`} />
+                            <div className={`h-full transition-all duration-300 ${pwdStrength >= 1 ? (pwdStrength === 1 ? 'w-1/3 bg-rose-500' : pwdStrength === 2 ? 'w-2/3 bg-blue-500' : 'w-full bg-emerald-500') : 'w-0'}`} />
                           </div>
                           <p className="text-[11px] font-semibold text-slate-400 flex justify-between">
                             <span>Strength:</span>
-                            <span className={pwdStrength === 1 ? 'text-rose-500 font-bold' : pwdStrength === 2 ? 'text-amber-500 font-bold' : 'text-emerald-500 font-bold'}>
+                            <span className={pwdStrength === 1 ? 'text-rose-500 font-bold' : pwdStrength === 2 ? 'text-blue-500 font-bold' : 'text-emerald-500 font-bold'}>
                               {pwdStrength === 1 ? 'Weak' : pwdStrength === 2 ? 'Medium' : 'Strong'}
                             </span>
                           </p>
@@ -645,7 +645,7 @@ export default function Register() {
                           placeholder="Re-enter password"
                           value={formData.confirmPassword}
                           onChange={handleChange}
-                          className="w-full pl-10 pr-10 py-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 text-slate-900 dark:text-white placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all"
+                          className="w-full pl-10 pr-10 py-3 rounded-2xl border border-slate-200 dark:border-slate-700/80 bg-slate-50/70 dark:bg-slate-800/60 text-slate-900 dark:text-white placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                         />
                         {formData.confirmPassword.length > 0 && (
                           <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none">
@@ -664,7 +664,7 @@ export default function Register() {
                 <button
                   type="button"
                   onClick={handleNextStep1}
-                  className="w-full py-3.5 px-6 rounded-full bg-slate-900 dark:bg-amber-500 text-white dark:text-slate-950 font-bold text-sm shadow-xl hover:scale-[1.01] active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  className="w-full py-3.5 px-6 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm shadow-md shadow-blue-500/25 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <span>Continue to Profile</span>
                   <ArrowRight className="w-4 h-4" />
@@ -679,7 +679,7 @@ export default function Register() {
             <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
               
               <div className="text-center sm:text-left">
-                <h2 className="text-2xl sm:text-3xl font-serif font-extrabold text-slate-900 dark:text-white tracking-tight">
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
                   Tell Us About Yourself
                 </h2>
                 <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
@@ -706,7 +706,7 @@ export default function Register() {
                       placeholder="e.g. John Okello"
                       value={formData.fullName}
                       onChange={handleChange}
-                      className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 text-slate-900 dark:text-white placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all"
+                      className="w-full pl-10 pr-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-700/80 bg-slate-50/70 dark:bg-slate-800/60 text-slate-900 dark:text-white placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                     />
                   </div>
                 </div>
@@ -728,7 +728,7 @@ export default function Register() {
                       placeholder="+256 700 000000"
                       value={formData.phoneNumber}
                       onChange={handleChange}
-                      className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 text-slate-900 dark:text-white placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all"
+                      className="w-full pl-10 pr-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-700/80 bg-slate-50/70 dark:bg-slate-800/60 text-slate-900 dark:text-white placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                     />
                   </div>
                 </div>
@@ -786,7 +786,7 @@ export default function Register() {
                       placeholder="Enter occupation"
                       value={formData.otherOccupation}
                       onChange={handleChange}
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 text-slate-900 dark:text-white placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all"
+                      className="w-full px-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-700/80 bg-slate-50/70 dark:bg-slate-800/60 text-slate-900 dark:text-white placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                     />
                   </div>
                 )}
@@ -805,7 +805,7 @@ export default function Register() {
                         placeholder="e.g. Makerere University"
                         value={formData.university}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 text-slate-900 dark:text-white placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all"
+                        className="w-full px-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-700/80 bg-slate-50/70 dark:bg-slate-800/60 text-slate-900 dark:text-white placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                       />
                     </div>
                     <div className="sm:col-span-1">
@@ -857,7 +857,7 @@ export default function Register() {
                     placeholder="e.g. Ntinda, Kampala"
                     value={formData.placeOfResidence}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 text-slate-900 dark:text-white placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all"
+                    className="w-full px-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-700/80 bg-slate-50/70 dark:bg-slate-800/60 text-slate-900 dark:text-white placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                   />
                 </div>
 
@@ -868,7 +868,7 @@ export default function Register() {
                 <button
                   type="button"
                   onClick={() => setCurrentStep(1)}
-                  className="w-1/3 py-3.5 px-4 rounded-full border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold text-sm hover:bg-slate-100 dark:hover:bg-slate-800 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="w-1/3 py-3.5 px-4 rounded-2xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold text-sm hover:bg-slate-100 dark:hover:bg-slate-800 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <ArrowLeft className="w-4 h-4" />
                   <span>Back</span>
@@ -876,7 +876,7 @@ export default function Register() {
                 <button
                   type="button"
                   onClick={handleNextStep2}
-                  className="w-2/3 py-3.5 px-6 rounded-full bg-slate-900 dark:bg-amber-500 text-white dark:text-slate-950 font-bold text-sm shadow-xl hover:scale-[1.01] active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  className="w-2/3 py-3.5 px-6 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm shadow-md shadow-blue-500/25 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <span>Continue to Final Step</span>
                   <ArrowRight className="w-4 h-4" />
@@ -891,7 +891,7 @@ export default function Register() {
             <form onSubmit={handleSubmitRegistration} className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
               
               <div className="text-center sm:text-left">
-                <h2 className="text-2xl sm:text-3xl font-serif font-extrabold text-slate-900 dark:text-white tracking-tight">
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
                   Almost There!
                 </h2>
                 <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
@@ -901,7 +901,7 @@ export default function Register() {
 
               {/* Next of Kin Details */}
               <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800 space-y-4">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
                   <Users className="w-4 h-4" /> Next of Kin Information
                 </h4>
 
@@ -918,7 +918,7 @@ export default function Register() {
                       placeholder="e.g. Mary Okello"
                       value={formData.nextOfKinName}
                       onChange={handleChange}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 text-xs focus:ring-2 focus:ring-amber-500"
+                      className="w-full px-3.5 py-2.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 text-xs focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
 
@@ -934,7 +934,7 @@ export default function Register() {
                       placeholder="+256 770 000000"
                       value={formData.nextOfKinPhone}
                       onChange={handleChange}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 text-xs focus:ring-2 focus:ring-amber-500"
+                      className="w-full px-3.5 py-2.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 text-xs focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
                 </div>
@@ -943,7 +943,7 @@ export default function Register() {
               {/* Profile Photo Upload */}
               <div className="flex items-center gap-5 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800">
                 <div className="relative group shrink-0">
-                  <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-800 border-2 border-amber-500/40 flex items-center justify-center overflow-hidden shadow-inner">
+                  <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-800 border-2 border-blue-500/40 flex items-center justify-center overflow-hidden shadow-inner">
                     {profilePicPreview ? (
                       <img src={profilePicPreview} alt="Preview" className="w-full h-full object-cover" />
                     ) : (
@@ -952,7 +952,7 @@ export default function Register() {
                   </div>
                   <label 
                     htmlFor="profilePic"
-                    className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center cursor-pointer shadow-md hover:scale-110 transition-transform"
+                    className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center cursor-pointer shadow-md hover:scale-110 transition-transform"
                   >
                     <Camera className="w-3.5 h-3.5" />
                   </label>
@@ -961,7 +961,7 @@ export default function Register() {
                 <div>
                   <h4 className="text-xs font-bold text-slate-900 dark:text-white">Profile Picture</h4>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400">Add a clear photo (Optional, helps admin verify your identity).</p>
-                  <label htmlFor="profilePic" className="inline-block text-xs font-bold text-amber-600 dark:text-amber-400 hover:underline mt-1 cursor-pointer">
+                  <label htmlFor="profilePic" className="inline-block text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline mt-1 cursor-pointer">
                     {profilePicFile ? 'Change image' : 'Upload photo'}
                   </label>
                   <input 
@@ -975,17 +975,17 @@ export default function Register() {
               </div>
 
               {/* Terms Checkbox */}
-              <div className="flex items-start gap-3 p-3 rounded-xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/50 dark:border-amber-900/40">
+              <div className="flex items-start gap-3 p-3 rounded-2xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200/50 dark:border-blue-900/40">
                 <input
                   id="terms"
                   type="checkbox"
                   required
                   checked={agreedToTerms}
                   onChange={(e) => setAgreedToTerms(e.target.checked)}
-                  className="mt-1 h-4 w-4 text-amber-500 focus:ring-amber-500 rounded border-slate-300 dark:border-slate-700 cursor-pointer"
+                  className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 rounded border-slate-300 dark:border-slate-700 cursor-pointer"
                 />
                 <label htmlFor="terms" className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed cursor-pointer">
-                  I agree to the <Link to="/terms" target="_blank" className="font-bold text-amber-600 dark:text-amber-400 hover:underline">Terms of Service</Link> and <Link to="/privacy" target="_blank" className="font-bold text-amber-600 dark:text-amber-400 hover:underline">Privacy Policy</Link> of the Matuumu Alumni Mutual Aid Association.
+                  I agree to the <Link to="/terms" target="_blank" className="font-bold text-blue-600 dark:text-blue-400 hover:underline">Terms of Service</Link> and <Link to="/privacy" target="_blank" className="font-bold text-blue-600 dark:text-blue-400 hover:underline">Privacy Policy</Link> of the Matuumu Alumni Mutual Aid Association.
                 </label>
               </div>
 
@@ -994,7 +994,7 @@ export default function Register() {
                 <button
                   type="button"
                   onClick={() => setCurrentStep(2)}
-                  className="w-1/3 py-3.5 px-4 rounded-full border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold text-sm hover:bg-slate-100 dark:hover:bg-slate-800 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="w-1/3 py-3.5 px-4 rounded-2xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold text-sm hover:bg-slate-100 dark:hover:bg-slate-800 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <ArrowLeft className="w-4 h-4" />
                   <span>Back</span>
@@ -1003,13 +1003,13 @@ export default function Register() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-2/3 py-4 px-6 rounded-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-sm shadow-xl hover:scale-[1.01] active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  className="w-2/3 py-4 px-6 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-sm shadow-md shadow-blue-500/25 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
                   {loading ? (
                     <span>Creating Account...</span>
                   ) : (
                     <>
-                      <Sparkles className="w-4 h-4 fill-slate-950" />
+                      <Sparkles className="w-4 h-4 fill-white" />
                       <span>Complete Registration</span>
                     </>
                   )}
@@ -1031,7 +1031,7 @@ export default function Register() {
               </div>
 
               <div>
-                <h2 className="text-3xl font-serif font-extrabold text-slate-900 dark:text-white">
+                <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
                   Welcome to MAMAS!
                 </h2>
                 <p className="text-sm text-slate-600 dark:text-slate-300 mt-2 leading-relaxed">
@@ -1045,7 +1045,7 @@ export default function Register() {
               <div className="pt-4">
                 <button
                   onClick={() => navigate('/pending-approval')}
-                  className="w-full py-4 px-8 rounded-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-sm shadow-xl transition-all cursor-pointer flex items-center justify-center gap-2"
+                  className="w-full py-4 px-8 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-sm shadow-md shadow-blue-500/25 transition-all cursor-pointer flex items-center justify-center gap-2"
                 >
                   <span>Check Account Status</span>
                   <ArrowRight className="w-4 h-4" />
@@ -1059,9 +1059,9 @@ export default function Register() {
 
         {/* Footer info */}
         {currentStep !== 'success' && (
-          <div className="px-6 py-4 bg-slate-100/70 dark:bg-slate-900/80 border-t border-slate-200/80 dark:border-slate-800 text-center text-xs text-slate-500 flex items-center justify-between">
-            <span>Already registered? <Link to="/login" className="font-bold text-amber-600 dark:text-amber-400 hover:underline">Log In</Link></span>
-            <span className="flex items-center gap-1 text-[11px]"><ShieldCheck className="w-3.5 h-3.5 text-amber-500" /> Secure Member Portal</span>
+          <div className="px-6 py-4 bg-slate-100/70 dark:bg-[#0c1731] border-t border-slate-200/80 dark:border-slate-800 text-center text-xs text-slate-500 flex items-center justify-between">
+            <span>Already registered? <Link to="/login" className="font-bold text-blue-600 dark:text-blue-400 hover:underline">Log In</Link></span>
+            <span className="flex items-center gap-1 text-[11px]"><ShieldCheck className="w-3.5 h-3.5 text-blue-500" /> Secure Member Portal</span>
           </div>
         )}
 

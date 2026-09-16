@@ -9,6 +9,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { Logo } from './components/Logo';
 import { NotificationBell } from './components/NotificationBell';
+import { ThemeIconButton } from './components/ThemeToggle';
 import { OnboardingTour } from './components/OnboardingTour';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -22,11 +23,11 @@ function Layout() {
   const { logout, userProfile } = useAuth();
   
   return (
-    <div className="min-h-screen bg-mamas-bg flex flex-col font-sans">
+    <div className="min-h-screen bg-mamas-bg flex flex-col font-sans transition-colors duration-200">
       {userProfile && userProfile?.status === 'approved' && userProfile?.hasCompletedOnboarding !== true && (
         <OnboardingTour userProfile={userProfile} onComplete={() => {}} />
       )}
-      <header className="bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-50 shadow-sm">
+      <header className="bg-white/90 dark:bg-[#0c1731]/90 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800/80 sticky top-0 z-50 shadow-xs transition-colors">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-8">
             <Link to="/dashboard" className="flex items-center">
@@ -34,28 +35,32 @@ function Layout() {
             </Link>
             {userProfile && userProfile?.status === 'approved' && (
               <nav className="hidden md:flex gap-6">
-                <Link to="/dashboard" className="text-sm font-medium text-gray-600 hover:text-mamas-primary transition-colors">Dashboard</Link>
-                <Link to="/directory" className="text-sm font-medium text-gray-600 hover:text-mamas-primary transition-colors">Directory</Link>
-                <Link to="/welfare" className="text-sm font-medium text-gray-600 hover:text-mamas-primary transition-colors">Welfare</Link>
-                <Link to="/expenses" className="text-sm font-medium text-gray-600 hover:text-mamas-primary transition-colors">Expenses</Link>
-                <Link to="/campaigns" className="text-sm font-medium text-gray-600 hover:text-mamas-primary transition-colors">Campaigns</Link>
-                <Link to="/statement" className="text-sm font-medium text-gray-600 hover:text-mamas-primary transition-colors">Statement</Link>
-                <Link to="/help" className="text-sm font-medium text-gray-600 hover:text-mamas-primary transition-colors">Help</Link>
+                <Link to="/dashboard" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Dashboard</Link>
+                <Link to="/directory" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Directory</Link>
+                <Link to="/welfare" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Welfare</Link>
+                <Link to="/expenses" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Expenses</Link>
+                <Link to="/campaigns" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Campaigns</Link>
+                <Link to="/statement" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Statement</Link>
+                <Link to="/help" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Help</Link>
               </nav>
             )}
           </div>
-          <div className="flex items-center gap-2 sm:gap-4">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <ThemeIconButton />
             {userProfile && <NotificationBell />}
             {userProfile && (
-              <Link to="/profile" className="text-sm text-gray-600 hover:text-mamas-primary hidden sm:block font-medium">
-                {userProfile?.fullName || 'User'} <span className="opacity-70 text-xs ml-1 bg-amber-50 text-mamas-accent border border-amber-200/50 px-2 py-1 rounded-full uppercase tracking-widest">{userProfile?.role?.replace('_', ' ') || 'MEMBER'}</span>
+              <Link to="/profile" className="text-sm text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 hidden sm:flex items-center gap-1.5 font-medium">
+                <span>{userProfile?.fullName || 'User'}</span>
+                <span className="text-[10px] font-bold bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                  {userProfile?.role?.replace('_', ' ') || 'MEMBER'}
+                </span>
               </Link>
             )}
-            <button onClick={logout} className="text-sm font-bold text-mamas-accent hover:text-mamas-accent-hover transition-colors px-3 py-1.5 rounded-full hover:bg-amber-50">Log Out</button>
+            <button onClick={logout} className="text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition-colors px-3 py-1.5 rounded-full hover:bg-rose-50 dark:hover:bg-rose-950/30 cursor-pointer">Log Out</button>
           </div>
         </div>
       </header>
-      <main className="flex-1 w-full max-w-7xl mx-auto p-3 sm:px-5 lg:px-8 pb-32 md:pb-8 flex flex-col gap-6 overflow-x-hidden">
+      <main className="flex-1 w-full max-w-7xl mx-auto p-3 sm:px-5 lg:px-8 pb-32 md:pb-8 flex flex-col gap-6 overflow-x-hidden text-slate-900 dark:text-slate-100">
         <Outlet />
       </main>
       <BottomNav />
@@ -148,10 +153,10 @@ const AdminLayout = () => {
             <Link
               key={item.path}
               to={item.path}
-              className={`rounded-full px-4 py-2 text-xs font-semibold whitespace-nowrap transition-colors shadow-sm ${
+              className={`rounded-2xl px-4 py-2 text-xs font-semibold whitespace-nowrap transition-colors shadow-xs ${
                 isActive
-                  ? 'bg-slate-900 text-white'
-                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25'
+                  : 'bg-white dark:bg-[#0c1731] text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800'
               }`}
             >
               {item.label}

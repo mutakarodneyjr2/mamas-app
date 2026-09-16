@@ -230,60 +230,65 @@ export default function Contribute() {
     <div className="max-w-2xl mx-auto w-full pb-12 animate-in fade-in duration-300">
       
       {/* HEADER BANNER */}
-      <div className="bg-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl border border-slate-800 mb-8">
-        <h1 className="text-2xl font-extrabold tracking-tight">Make a Contribution</h1>
-        <p className="text-slate-300 text-sm mt-1">
-          Support the Welfare Relief Fund or back active school infrastructure campaigns via Mobile Money.
+      <div className="bg-gradient-to-r from-[#07132c] via-[#0f2756] to-[#1e3a8a] rounded-3xl p-6 sm:p-8 text-white shadow-xl border border-blue-900/40 mb-8 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-2xl pointer-events-none" />
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white/10 text-blue-200 backdrop-blur-xs border border-white/15 mb-3">
+          <Heart className="w-3.5 h-3.5 text-blue-300" />
+          <span>Matuumu Mutual Aid</span>
+        </span>
+        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Make a Contribution</h1>
+        <p className="text-blue-100/80 text-sm mt-1 max-w-xl">
+          Support the Welfare Relief Fund or back active school infrastructure campaigns via secure Mobile Money.
         </p>
       </div>
 
       {error && (
-        <div className="bg-rose-50 text-rose-700 p-4 rounded-2xl text-sm font-bold border border-rose-200 mb-6 flex items-start gap-3">
+        <div className="bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 p-4 rounded-2xl text-sm font-bold border border-rose-200 dark:border-rose-900/50 mb-6 flex items-start gap-3">
           <AlertCircle className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
           <div>{error}</div>
         </div>
       )}
 
       {success && (
-        <div className="bg-emerald-50 text-emerald-800 p-6 rounded-3xl text-sm font-bold border border-emerald-200 flex items-center gap-3 mb-6 shadow-sm">
+        <div className="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 p-6 rounded-3xl text-sm font-bold border border-emerald-200 dark:border-emerald-900/50 flex items-center gap-3 mb-6 shadow-xs">
           <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0" />
           <div>
-            <div className="text-base font-extrabold text-emerald-900">Payment Verified!</div>
-            <div className="text-emerald-700 text-xs mt-0.5">Your contribution was successfully recorded. Redirecting to your statement...</div>
+            <div className="text-base font-extrabold text-emerald-900 dark:text-emerald-200">Payment Verified!</div>
+            <div className="text-emerald-700 dark:text-emerald-400 text-xs mt-0.5">Your contribution was successfully recorded. Redirecting to your statement...</div>
           </div>
         </div>
       )}
 
       {/* MOBILE MONEY PROMPT SENT CARD */}
       {promptSent ? (
-        <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-xl border border-amber-200 space-y-6 animate-in zoom-in-95 duration-200">
+        <div className="bg-white dark:bg-[#0c1731] rounded-3xl p-6 sm:p-8 shadow-xl border border-blue-500/30 dark:border-blue-500/40 space-y-6 animate-in zoom-in-95 duration-200">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 bg-amber-500/10 border border-amber-500/30 rounded-2xl flex items-center justify-center shrink-0">
-              <Smartphone className="w-7 h-7 text-amber-600 animate-bounce" />
+            <div className="w-14 h-14 bg-blue-600/10 border border-blue-500/30 rounded-2xl flex items-center justify-center shrink-0">
+              <Smartphone className="w-7 h-7 text-blue-600 dark:text-blue-400 animate-bounce" />
             </div>
             <div>
-              <span className="px-3 py-1 bg-amber-100 text-amber-900 rounded-full text-xs font-extrabold uppercase tracking-wide">
+              <span className="px-3 py-1 bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 rounded-full text-xs font-extrabold uppercase tracking-wide border border-blue-200 dark:border-blue-900">
                 Prompt Sent
               </span>
-              <h2 className="text-xl font-extrabold text-slate-900 mt-1">Check Your Phone</h2>
+              <h2 className="text-xl font-extrabold text-slate-900 dark:text-white mt-1">Check Your Phone</h2>
             </div>
           </div>
 
-          <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 space-y-2">
-            <p className="text-sm font-semibold text-slate-700">
-              A Mobile Money payment prompt of <span className="font-extrabold text-slate-900">UGX {parseInt(amount || '0', 10).toLocaleString()}</span> has been sent to:
+          <div className="bg-slate-50 dark:bg-slate-800/50 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 space-y-2">
+            <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+              A Mobile Money payment prompt of <span className="font-extrabold text-slate-900 dark:text-white">UGX {parseInt(amount || '0', 10).toLocaleString()}</span> has been sent to:
             </p>
-            <div className="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+            <div className="text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
               <span>{normalizedPhoneUsed}</span>
-              <span className="text-xs px-2.5 py-0.5 bg-slate-200 text-slate-700 rounded-lg">{network}</span>
+              <span className="text-xs px-2.5 py-0.5 bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 rounded-lg">{network}</span>
             </div>
-            <p className="text-xs text-slate-500 font-medium pt-1">
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium pt-1">
               Please enter your Mobile Money PIN on your handset to approve the transaction.
             </p>
           </div>
 
-          <div className="flex items-center gap-3 p-4 bg-amber-50 rounded-2xl border border-amber-100 text-amber-900 text-xs font-semibold">
-            <Loader2 className="w-5 h-5 text-amber-600 animate-spin shrink-0" />
+          <div className="flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-950/30 rounded-2xl border border-blue-100 dark:border-blue-900/40 text-blue-900 dark:text-blue-200 text-xs font-semibold">
+            <Loader2 className="w-5 h-5 text-blue-600 dark:text-blue-400 animate-spin shrink-0" />
             <span>{pollingMessage}</span>
           </div>
 
@@ -292,7 +297,7 @@ export default function Contribute() {
               type="button"
               onClick={handleManualRefresh}
               disabled={checkingStatus}
-              className="flex-1 bg-slate-900 hover:bg-slate-800 text-white py-3.5 px-5 rounded-2xl font-bold text-sm shadow-md flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+              className="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-3.5 px-5 rounded-2xl font-bold text-sm shadow-md shadow-blue-500/25 flex items-center justify-center gap-2 transition-all disabled:opacity-50 cursor-pointer"
             >
               <RefreshCw className={`w-4 h-4 ${checkingStatus ? 'animate-spin' : ''}`} />
               {checkingStatus ? 'Checking...' : 'Refresh Status'}
@@ -304,7 +309,7 @@ export default function Contribute() {
                 setPromptSent(false);
                 setError('');
               }}
-              className="bg-slate-100 hover:bg-slate-200 text-slate-700 py-3.5 px-5 rounded-2xl font-bold text-sm transition-all border border-slate-200 text-center"
+              className="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 py-3.5 px-5 rounded-2xl font-bold text-sm transition-all border border-slate-200 dark:border-slate-700 text-center cursor-pointer"
             >
               Cancel / Try Again
             </button>
@@ -317,38 +322,40 @@ export default function Contribute() {
             <button
               type="button"
               onClick={() => setPurpose('welfare')}
-              className={`p-5 rounded-3xl flex flex-col items-center justify-center text-center transition-all ${
+              className={`p-5 rounded-3xl flex flex-col items-center justify-center text-center transition-all cursor-pointer ${
                 purpose === 'welfare' 
-                  ? 'bg-rose-500/10 border-2 border-rose-500 shadow-md text-rose-900' 
-                  : 'bg-white border border-slate-200 hover:bg-slate-50 text-slate-700'
+                  ? 'bg-blue-50 dark:bg-blue-950/40 border-2 border-blue-600 shadow-md text-blue-950 dark:text-blue-200' 
+                  : 'bg-white dark:bg-[#0c1731] border border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/40 text-slate-700 dark:text-slate-300'
               }`}
             >
-              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-3 ${purpose === 'welfare' ? 'bg-rose-500 text-white' : 'bg-rose-50 text-rose-500'}`}>
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-3 transition-colors ${purpose === 'welfare' ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}`}>
                 <Heart className="w-6 h-6" fill={purpose === 'welfare' ? 'currentColor' : 'none'} />
               </div>
               <span className="font-bold text-sm">Welfare Relief Fund</span>
+              <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Monthly dues & aid</span>
             </button>
             
             <button
               type="button"
               onClick={() => setPurpose('campaign')}
-              className={`p-5 rounded-3xl flex flex-col items-center justify-center text-center transition-all ${
+              className={`p-5 rounded-3xl flex flex-col items-center justify-center text-center transition-all cursor-pointer ${
                 purpose === 'campaign' 
-                  ? 'bg-amber-500/10 border-2 border-amber-500 shadow-md text-amber-900' 
-                  : 'bg-white border border-slate-200 hover:bg-slate-50 text-slate-700'
+                  ? 'bg-blue-50 dark:bg-blue-950/40 border-2 border-blue-600 shadow-md text-blue-950 dark:text-blue-200' 
+                  : 'bg-white dark:bg-[#0c1731] border border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/40 text-slate-700 dark:text-slate-300'
               }`}
             >
-              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-3 ${purpose === 'campaign' ? 'bg-amber-500 text-slate-950' : 'bg-amber-50 text-amber-600'}`}>
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-3 transition-colors ${purpose === 'campaign' ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}`}>
                 <Target className="w-6 h-6" />
               </div>
               <span className="font-bold text-sm">School Campaign</span>
+              <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Projects & upgrades</span>
             </button>
           </div>
 
           {/* CAMPAIGN SELECTION */}
           {purpose === 'campaign' && (
-            <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 space-y-3">
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest">
+            <div className="bg-white dark:bg-[#0c1731] rounded-3xl p-6 shadow-xs border border-slate-200/80 dark:border-slate-800 space-y-3">
+              <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">
                 Select Active Campaign
               </label>
               {fetchingCampaigns ? (
@@ -367,14 +374,14 @@ export default function Contribute() {
           )}
 
           {/* AMOUNT INPUT */}
-          <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200">
-            <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">
+          <div className="bg-white dark:bg-[#0c1731] rounded-3xl p-6 shadow-xs border border-slate-200/80 dark:border-slate-800">
+            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-4">
               Amount (UGX)
             </label>
             
             <div className="relative mb-6">
               <div className="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none">
-                <span className="text-slate-400 font-extrabold text-xl">UGX</span>
+                <span className="text-slate-400 dark:text-slate-500 font-extrabold text-xl">UGX</span>
               </div>
               <input
                 type="number"
@@ -382,7 +389,7 @@ export default function Contribute() {
                 min="1000"
                 value={amount}
                 onChange={e => setAmount(e.target.value)}
-                className="w-full pl-20 pr-6 py-4 bg-slate-50 border-2 border-slate-200 rounded-2xl text-3xl font-extrabold text-slate-900 focus:outline-none focus:border-amber-500 focus:bg-white transition-all text-right"
+                className="w-full pl-20 pr-6 py-4 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-2xl text-3xl font-extrabold text-slate-900 dark:text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500 transition-all text-right"
                 placeholder="0"
               />
             </div>
@@ -393,7 +400,7 @@ export default function Contribute() {
                   key={preset}
                   type="button"
                   onClick={() => setAmount(preset.toString())}
-                  className="px-4 py-2 bg-slate-100 hover:bg-amber-500 hover:text-slate-950 text-slate-700 rounded-xl text-xs font-bold transition-all border border-slate-200"
+                  className="px-4 py-2 bg-slate-100 dark:bg-slate-800/80 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600 dark:hover:text-white text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold transition-all border border-slate-200/80 dark:border-slate-700/80 cursor-pointer"
                 >
                   {preset.toLocaleString()} UGX
                 </button>
@@ -402,8 +409,8 @@ export default function Contribute() {
           </div>
 
           {/* NETWORK & PHONE */}
-          <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 space-y-4">
-            <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest">
+          <div className="bg-white dark:bg-[#0c1731] rounded-3xl p-6 shadow-xs border border-slate-200/80 dark:border-slate-800 space-y-4">
+            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">
               Mobile Money Details
             </label>
             <div className="flex flex-col sm:flex-row gap-4">
@@ -423,7 +430,7 @@ export default function Contribute() {
                   required
                   value={phone}
                   onChange={e => setPhone(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 font-bold focus:outline-none focus:border-amber-500 focus:bg-white transition-all text-sm"
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-2xl text-slate-900 dark:text-white font-bold focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500 transition-all text-sm"
                   placeholder="Phone e.g. 0771234567"
                 />
               </div>
@@ -435,17 +442,17 @@ export default function Contribute() {
             <button
               type="submit"
               disabled={loading || success}
-              className="w-full bg-slate-900 text-white rounded-full py-4 text-base font-bold shadow-xl hover:bg-slate-800 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-70 cursor-pointer"
+              className="w-full bg-blue-600 hover:bg-blue-500 text-white rounded-2xl py-4 text-base font-bold shadow-md shadow-blue-500/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-70 cursor-pointer"
             >
               {loading ? (
                 <>
-                  <Loader2 className="w-5 h-5 animate-spin text-amber-400" /> Sending Payment Prompt...
+                  <Loader2 className="w-5 h-5 animate-spin text-white" /> Sending Payment Prompt...
                 </>
               ) : (
                 `Pay ${amount ? `UGX ${parseInt(amount, 10).toLocaleString()}` : ''} Now`
               )}
             </button>
-            <div className="mt-4 flex items-center justify-center gap-2 text-slate-400">
+            <div className="mt-4 flex items-center justify-center gap-2 text-slate-400 dark:text-slate-500">
               <Lock className="w-3.5 h-3.5" />
               <span className="text-xs font-semibold">Secured by Relworx Mobile Money Gateway</span>
             </div>

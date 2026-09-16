@@ -109,63 +109,68 @@ export default function AdminNotices() {
   }
 
   return (
-    <div className="space-y-8 max-w-4xl mx-auto pb-10">
+    <div className="space-y-8 max-w-4xl mx-auto pb-16 px-4 font-sans">
       <div>
-        <h2 className="text-2xl font-display font-bold text-mamas-text flex items-center gap-2">
-          <Megaphone className="w-6 h-6 text-mamas-accent" /> Announcements
+        <div className="flex items-center gap-2 mb-1">
+          <span className="bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400 text-[10px] font-extrabold uppercase tracking-wider rounded-full px-2.5 py-0.5 border border-blue-200 dark:border-blue-900/60">
+            Official Communications
+          </span>
+        </div>
+        <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+          <Megaphone className="w-6 h-6 text-blue-600 dark:text-blue-400" /> Announcements & Bulletins
         </h2>
-        <p className="text-mamas-text-muted text-sm mt-1">Broadcast messages to all association members.</p>
+        <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-0.5">Broadcast formal messages to all association members.</p>
       </div>
 
       {successMsg && (
-        <div className="bg-teal-50 border border-teal-200 text-teal-800 p-4 rounded-2xl text-sm font-medium animate-in fade-in">
+        <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 p-4 rounded-2xl text-xs sm:text-sm font-semibold animate-in fade-in shadow-xs">
           {successMsg}
         </div>
       )}
 
-      <div className="bg-mamas-card rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
-        <div className="px-6 md:px-8 py-5 border-b border-slate-100 bg-slate-50/50">
-          <h3 className="text-lg font-bold text-mamas-text">Post a New Notice</h3>
+      <div className="bg-white dark:bg-[#0c1731] rounded-3xl shadow-xs border border-slate-200/80 dark:border-slate-800 overflow-hidden">
+        <div className="px-6 md:px-8 py-5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40">
+          <h3 className="text-base font-extrabold text-slate-900 dark:text-white">Compose Official Notice</h3>
         </div>
         
         <div className="p-6 md:p-8">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {error && <div className="bg-rose-50 text-rose-700 p-4 rounded-xl text-sm font-medium border border-rose-100">{error}</div>}
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {error && <div className="bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 p-4 rounded-2xl text-xs sm:text-sm font-semibold border border-rose-200 dark:border-rose-900/50">{error}</div>}
             
             <div>
-              <label htmlFor="title" className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Notice Title</label>
+              <label htmlFor="title" className="block text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Notice Title</label>
               <input
                 type="text"
                 id="title"
                 required
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:bg-white focus:ring-2 focus:ring-mamas-accent focus:border-transparent transition-all outline-none font-medium"
+                className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-3 text-xs sm:text-sm text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-blue-500 transition-all outline-none font-medium placeholder:text-slate-400"
                 placeholder="e.g. End of Year General Meeting"
               />
             </div>
 
             <div>
-              <label htmlFor="body" className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Message Content</label>
+              <label htmlFor="body" className="block text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Message Content</label>
               <textarea
                 id="body"
                 rows={4}
                 required
                 value={body}
                 onChange={(e) => setBody(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:bg-white focus:ring-2 focus:ring-mamas-accent focus:border-transparent transition-all outline-none font-medium resize-y"
+                className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-3 text-xs sm:text-sm text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-blue-500 transition-all outline-none font-medium resize-y placeholder:text-slate-400"
                 placeholder="Details of the announcement..."
               />
             </div>
             
-            <div className="flex items-center justify-between bg-slate-50 p-4 rounded-xl border border-slate-100">
+            <div className="flex items-center justify-between bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-800">
               <div>
-                <label htmlFor="isPinned" className="font-semibold text-sm text-mamas-text cursor-pointer">Pin to top of Dashboard</label>
-                <p className="text-xs text-slate-500 mt-0.5">Pinned notices remain visible at the top until unpinned.</p>
+                <label htmlFor="isPinned" className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white cursor-pointer">Pin to top of Dashboard</label>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-medium">Pinned notices remain prominent at the top until unpinned.</p>
               </div>
               <div className="relative">
-                <input type="checkbox" id="isPinned" checked={isPinned} onChange={(e) => setIsPinned(e.target.checked)} className="sr-only peer" />
-                <div className="w-11 h-6 bg-slate-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-mamas-accent"></div>
+                <input type="checkbox" id="isPinned" checked={isPinned} onChange={(e) => setIsPinned(e.target.checked)} className="sr-only peer cursor-pointer" />
+                <div className="w-11 h-6 bg-slate-200 dark:bg-slate-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 cursor-pointer"></div>
               </div>
             </div>
 
@@ -173,9 +178,9 @@ export default function AdminNotices() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full sm:w-auto bg-mamas-primary hover:bg-mamas-primary-hover text-white font-semibold py-3 px-8 rounded-xl shadow-md transition-all focus:ring-2 focus:ring-offset-2 focus:ring-mamas-primary disabled:opacity-50"
+                className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-3.5 px-8 rounded-2xl shadow-xs transition-all focus:ring-2 focus:ring-blue-500 disabled:opacity-50 text-xs uppercase tracking-wider cursor-pointer active:scale-95"
               >
-                {isSubmitting ? 'Posting...' : 'Post Notice'}
+                {isSubmitting ? 'Posting...' : 'Publish Announcement'}
               </button>
             </div>
           </form>
@@ -183,45 +188,47 @@ export default function AdminNotices() {
       </div>
 
       <div className="space-y-4">
-        <h3 className="text-lg font-bold text-mamas-text">Recent Notices</h3>
+        <h3 className="text-base font-extrabold text-slate-900 dark:text-white">Recent Notices ({notices.length})</h3>
         
         {loading ? (
           <div className="p-8 text-center text-slate-400 font-medium">Loading notices...</div>
         ) : notices.length === 0 ? (
-          <div className="bg-white border border-slate-200 rounded-3xl p-12 flex flex-col items-center justify-center text-center">
-            <Megaphone className="w-12 h-12 text-slate-300 mb-4" />
-            <p className="text-mamas-text font-bold">No announcements yet</p>
-            <p className="text-sm text-slate-500 mt-1">Posted notices will appear here.</p>
+          <div className="bg-white dark:bg-[#0c1731] border border-slate-200/80 dark:border-slate-800 rounded-3xl p-12 flex flex-col items-center justify-center text-center">
+            <Megaphone className="w-12 h-12 text-slate-300 dark:text-slate-600 mb-3" />
+            <p className="text-slate-900 dark:text-white font-extrabold text-sm">No announcements yet</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Published bulletins will appear here.</p>
           </div>
         ) : (
           <div className="space-y-4">
             {notices.map(notice => (
-              <div key={notice.id} className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+              <div key={notice.id} className="bg-white dark:bg-[#0c1731] border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 shadow-xs hover:border-blue-500/40 transition-all relative overflow-hidden group">
                 {notice.isPinned && (
                   <div className="absolute top-0 right-0">
-                    <div className="w-16 h-16 bg-amber-500/10 rounded-bl-full flex items-start justify-end p-3">
+                    <div className="w-14 h-14 bg-amber-500/10 dark:bg-amber-500/20 rounded-bl-3xl flex items-start justify-end p-2.5">
                       <Pin className="w-4 h-4 text-amber-500" />
                     </div>
                   </div>
                 )}
                 
-                <div className="pr-12">
-                  <h4 className="text-lg font-bold text-mamas-text mb-1">{notice.title}</h4>
-                  <p className="text-xs font-semibold text-mamas-accent tracking-wider uppercase mb-3">
-                    By {notice.postedBy} <span className="text-slate-300 mx-1">|</span> <span className="text-slate-500">{new Date(notice.createdAt).toLocaleString()}</span>
+                <div className="pr-10">
+                  <h4 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white mb-1.5">{notice.title}</h4>
+                  <p className="text-[10px] font-extrabold text-blue-600 dark:text-blue-400 tracking-wider uppercase mb-3 flex items-center gap-1.5 flex-wrap">
+                    <span>By {notice.postedBy}</span>
+                    <span className="text-slate-300 dark:text-slate-600">•</span>
+                    <span className="text-slate-500 dark:text-slate-400">{new Date(notice.createdAt).toLocaleString()}</span>
                   </p>
-                  <p className="text-slate-700 whitespace-pre-wrap text-sm leading-relaxed">{notice.body}</p>
+                  <p className="text-slate-700 dark:text-slate-300 whitespace-pre-wrap text-xs sm:text-sm leading-relaxed">{notice.body}</p>
                 </div>
-                <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-end gap-3 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2.5">
                   <button 
                     onClick={() => togglePin(notice)}
-                    className="flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-amber-600 bg-slate-50 hover:bg-amber-50 px-3 py-1.5 rounded-lg transition-colors"
+                    className="flex items-center gap-1.5 text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 bg-slate-50 dark:bg-slate-800/60 hover:bg-amber-50 dark:hover:bg-amber-950/40 border border-slate-200/60 dark:border-slate-700 px-3.5 py-2 rounded-xl transition-colors cursor-pointer"
                   >
                     <Pin className="w-3.5 h-3.5" /> {notice.isPinned ? 'Unpin' : 'Pin'}
                   </button>
                   <button 
                     onClick={() => handleDelete(notice.id)}
-                    className="flex items-center gap-1.5 text-xs font-bold text-rose-500 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 px-3 py-1.5 rounded-lg transition-colors"
+                    className="flex items-center gap-1.5 text-xs font-bold text-rose-600 dark:text-rose-400 hover:text-rose-700 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 border border-rose-200/60 dark:border-rose-900/50 px-3.5 py-2 rounded-xl transition-colors cursor-pointer"
                   >
                     <Trash2 className="w-3.5 h-3.5" /> Delete
                   </button>

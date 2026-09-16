@@ -105,18 +105,18 @@ export default function Directory() {
       )}
 
       {/* Search & Filters */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row gap-3">
+      <div className="bg-white dark:bg-[#0c1731] rounded-3xl p-4 shadow-xs border border-slate-200/80 dark:border-slate-800 flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             type="text"
             placeholder="Search by name..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all placeholder:text-slate-400"
+            className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-2xl text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-slate-400"
           />
         </div>
-        <div className="w-full sm:w-40 shrink-0">
+        <div className="w-full sm:w-44 shrink-0">
           <SelectDropdown
             options={yearOptions}
             value={yearFilter}
@@ -128,11 +128,13 @@ export default function Directory() {
 
       {/* List */}
       {loading ? (
-        <div className="text-center py-12 text-slate-400 dark:text-slate-500 font-medium">Loading directory...</div>
+        <div className="flex justify-center py-12">
+          <div className="w-8 h-8 border-3 border-blue-200 dark:border-blue-900 border-t-blue-600 rounded-full animate-spin"></div>
+        </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {filteredMembers.length === 0 ? (
-            <div className="col-span-full text-center py-12 text-slate-400 dark:text-slate-500 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div className="col-span-full text-center py-12 text-slate-400 dark:text-slate-500 bg-white dark:bg-[#0c1731] rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
               No members found matching your search.
             </div>
           ) : (
@@ -142,21 +144,21 @@ export default function Directory() {
                 <div 
                   key={member.uid} 
                   onClick={() => setSelectedMember(member)}
-                  className="bg-white dark:bg-slate-900 rounded-2xl p-4 shadow-sm border border-slate-200 dark:border-slate-800 flex items-center gap-4 cursor-pointer hover:shadow-md transition-all active:scale-[0.98]"
+                  className="bg-white dark:bg-[#0c1731] rounded-3xl p-4 shadow-xs border border-slate-200/80 dark:border-slate-800 hover:border-blue-500/50 dark:hover:border-blue-500/50 flex items-center gap-4 cursor-pointer hover:shadow-md transition-all active:scale-[0.98]"
                 >
                   {member.profilePictureUrl ? (
-                    <img src={member.profilePictureUrl} alt={member.fullName} className="w-12 h-12 rounded-full object-cover border border-slate-200 dark:border-slate-700 shrink-0" />
+                    <img src={member.profilePictureUrl} alt={member.fullName} className="w-12 h-12 rounded-2xl object-cover border border-slate-200 dark:border-slate-700 shrink-0" />
                   ) : (
-                    <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 font-bold text-sm shrink-0">
+                    <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-950/60 border border-blue-100 dark:border-blue-900 flex items-center justify-center text-blue-700 dark:text-blue-300 font-extrabold text-sm shrink-0">
                       {initials}
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
                     <h3 className="text-sm font-bold text-slate-900 dark:text-white truncate">{member.fullName}</h3>
                     <p className="text-xs font-medium text-slate-500 dark:text-slate-400 truncate flex items-center gap-1.5 mt-1">
-                      <School className="w-3.5 h-3.5 text-slate-400" /> 
-                      {member.yearLeftSchool ? `Class of ${member.yearLeftSchool}` : 'Unknown Year'}
-                      {member.district && <span className="opacity-50 mx-1">•</span>}
+                      <School className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400" /> 
+                      {member.yearLeftSchool ? `Class of ${member.yearLeftSchool}` : 'Alumni'}
+                      {member.district && <span className="opacity-50 mx-0.5">•</span>}
                       {member.district && <span className="truncate">{member.district}</span>}
                     </p>
                   </div>
@@ -174,7 +176,7 @@ export default function Directory() {
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <motion.div 
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
-              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+              className="absolute inset-0 bg-slate-950/70 backdrop-blur-xs"
               onClick={() => setSelectedMember(null)}
             />
             <motion.div 
@@ -182,11 +184,11 @@ export default function Directory() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
               transition={{ type: "spring", stiffness: 300, damping: 25 }}
-              className="relative bg-white dark:bg-slate-900 w-full max-w-sm rounded-3xl shadow-xl overflow-hidden border border-slate-200/50 dark:border-slate-800"
+              className="relative bg-white dark:bg-[#0c1731] w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden border border-slate-200/80 dark:border-slate-800"
             >
               {/* Cover / Header */}
-              <div className="h-28 bg-gradient-to-br from-amber-500 via-amber-600 to-amber-700 relative">
-                <button onClick={() => setSelectedMember(null)} className="absolute top-4 right-4 w-8 h-8 rounded-full bg-black/20 text-white flex items-center justify-center hover:bg-black/40 transition-colors z-10">
+              <div className="h-28 bg-gradient-to-r from-[#07132c] via-[#0f2756] to-[#1e3a8a] relative">
+                <button onClick={() => setSelectedMember(null)} className="absolute top-4 right-4 w-8 h-8 rounded-full bg-black/30 text-white flex items-center justify-center hover:bg-black/50 transition-colors z-10 cursor-pointer">
                   <X className="w-4 h-4" />
                 </button>
               </div>
@@ -195,9 +197,9 @@ export default function Directory() {
                 {/* Avatar */}
                 <div className="-mt-14 mb-3 flex justify-center relative z-10">
                   {selectedMember.profilePictureUrl ? (
-                    <img src={selectedMember.profilePictureUrl} alt={selectedMember.fullName} className="w-28 h-28 rounded-full object-cover border-4 border-white dark:border-slate-900 bg-white" />
+                    <img src={selectedMember.profilePictureUrl} alt={selectedMember.fullName} className="w-28 h-28 rounded-2xl object-cover border-4 border-white dark:border-[#0c1731] bg-white dark:bg-[#0c1731] shadow-md" />
                   ) : (
-                    <div className="w-28 h-28 rounded-full border-4 border-white dark:border-slate-900 bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 font-extrabold text-3xl shadow-sm">
+                    <div className="w-28 h-28 rounded-2xl border-4 border-white dark:border-[#0c1731] bg-blue-50 dark:bg-blue-950/80 flex items-center justify-center text-blue-700 dark:text-blue-300 font-extrabold text-3xl shadow-md border-blue-200 dark:border-blue-900">
                       {selectedMember.fullName ? selectedMember.fullName.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() : 'AM'}
                     </div>
                   )}
@@ -205,19 +207,19 @@ export default function Directory() {
                 
                 <div className="text-center mb-6">
                   <h3 className="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">{selectedMember.fullName}</h3>
-                  <p className="text-sm font-bold text-amber-600 dark:text-amber-500 mt-1 uppercase tracking-wider">Class of {selectedMember.yearLeftSchool || 'Unknown'}</p>
+                  <p className="text-xs font-bold text-blue-600 dark:text-blue-400 mt-1 uppercase tracking-wider">Class of {selectedMember.yearLeftSchool || 'Unknown'}</p>
                 </div>
                 
                 <div className="space-y-2 mb-6">
                   {selectedMember.district && (
                     <div className="flex items-center gap-3 text-sm font-medium text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-2xl border border-slate-100 dark:border-slate-800">
-                      <MapPin className="w-4 h-4 text-slate-400 shrink-0" />
+                      <MapPin className="w-4 h-4 text-blue-500 dark:text-blue-400 shrink-0" />
                       <span className="truncate">{selectedMember.district}</span>
                     </div>
                   )}
                   {selectedMember.occupation && (
                     <div className="flex items-center gap-3 text-sm font-medium text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-2xl border border-slate-100 dark:border-slate-800">
-                      <Briefcase className="w-4 h-4 text-slate-400 shrink-0" />
+                      <Briefcase className="w-4 h-4 text-blue-500 dark:text-blue-400 shrink-0" />
                       <span className="truncate">{selectedMember.occupation}</span>
                     </div>
                   )}
@@ -225,31 +227,31 @@ export default function Directory() {
                 
                 {/* Contact actions */}
                 <div className="space-y-3 pt-2">
-                  <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-3 px-1">Contact Details</h4>
+                  <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-3 px-1">Contact Details</h4>
                   
                   {(selectedMember.privacySettings?.showPhone || selectedMember.privacySettings?.showEmail) ? (
                     <div className="flex flex-col gap-2.5">
                       {selectedMember.privacySettings?.showPhone && selectedMember.phoneNumber && (
                         <div className="flex gap-2.5">
-                          <a href={`tel:${selectedMember.phoneNumber}`} className="flex-1 flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-900 dark:text-white py-3 rounded-xl text-sm font-bold transition-all active:scale-[0.98]">
-                            <Phone className="w-4 h-4" /> Call
+                          <a href={`tel:${selectedMember.phoneNumber}`} className="flex-1 flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-900 dark:text-white py-3 rounded-2xl text-sm font-bold transition-all active:scale-[0.98]">
+                            <Phone className="w-4 h-4 text-blue-600 dark:text-blue-400" /> Call
                           </a>
-                          <a href={`https://wa.me/${selectedMember.phoneNumber.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white py-3 rounded-xl text-sm font-bold shadow-sm shadow-emerald-500/20 transition-all active:scale-[0.98]">
+                          <a href={`https://wa.me/${selectedMember.phoneNumber.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded-2xl text-sm font-bold shadow-xs transition-all active:scale-[0.98]">
                             <MessageSquare className="w-4 h-4" /> WhatsApp
                           </a>
                         </div>
                       )}
                       
                       {selectedMember.privacySettings?.showEmail && selectedMember.email && (
-                         <a href={`mailto:${selectedMember.email}`} className="w-full flex items-center justify-center gap-2 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/30 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 py-3 rounded-xl text-sm font-bold transition-all border border-slate-200 dark:border-slate-700 active:scale-[0.98]">
-                           <Mail className="w-4 h-4 text-slate-400" /> {selectedMember.email}
+                         <a href={`mailto:${selectedMember.email}`} className="w-full flex items-center justify-center gap-2 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/40 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 py-3 rounded-2xl text-sm font-bold transition-all border border-slate-200 dark:border-slate-700/80 active:scale-[0.98]">
+                           <Mail className="w-4 h-4 text-blue-500 dark:text-blue-400" /> {selectedMember.email}
                          </a>
                       )}
                     </div>
                   ) : (
-                    <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl text-center border border-slate-100 dark:border-slate-800">
-                      <p className="text-xs font-bold text-slate-400 flex items-center justify-center gap-1.5 uppercase tracking-wide">
-                        <UserIcon className="w-3.5 h-3.5" /> Contact hidden by user
+                    <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl text-center border border-slate-100 dark:border-slate-800">
+                      <p className="text-xs font-bold text-slate-400 dark:text-slate-500 flex items-center justify-center gap-1.5 uppercase tracking-wide">
+                        <UserIcon className="w-3.5 h-3.5" /> Contact details kept private
                       </p>
                     </div>
                   )}

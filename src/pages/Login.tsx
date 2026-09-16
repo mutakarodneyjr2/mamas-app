@@ -106,78 +106,77 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 font-sans text-slate-100 flex items-center justify-center p-4 sm:p-6 lg:p-8 relative overflow-hidden selection:bg-mamas-accent selection:text-mamas-primary">
+    <div className="min-h-screen bg-[#f8fafd] dark:bg-[#060c1a] font-sans text-slate-900 dark:text-slate-100 flex items-center justify-center p-4 sm:p-6 lg:p-8 relative overflow-hidden transition-colors">
       {/* Background Floating Abstract Blobs */}
-      <div className="absolute top-1/4 -left-32 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-blue-600/15 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute top-10 right-1/3 w-64 h-64 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
+      <div className="absolute top-1/4 -left-32 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
 
       {/* Main Split Screen Container */}
-      <div className="w-full max-w-5xl bg-slate-900/90 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden grid grid-cols-1 lg:grid-cols-12 relative z-10 backdrop-blur-xl animate-in fade-in zoom-in-95 duration-300">
+      <div className="w-full max-w-5xl bg-white dark:bg-[#0c1731] border border-slate-200/80 dark:border-slate-800 rounded-3xl shadow-2xl overflow-hidden grid grid-cols-1 lg:grid-cols-12 relative z-10 animate-in fade-in zoom-in-95 duration-300">
         
-        {/* Left Desktop Hero Section (50% on lg) */}
-        <div className="hidden lg:flex lg:col-span-6 bg-gradient-to-br from-slate-900 via-mamas-primary to-slate-950 p-12 flex-col justify-between relative overflow-hidden border-r border-slate-800">
+        {/* Left Desktop Hero Section (50% on lg) - School Blue & White Theme */}
+        <div className="hidden lg:flex lg:col-span-6 bg-gradient-to-br from-[#07132c] via-[#0f2756] to-[#1e3a8a] p-12 flex-col justify-between relative overflow-hidden border-r border-blue-900/40 text-white">
           
           {/* Subtle Graphic Accents */}
-          <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/10 rounded-full blur-2xl pointer-events-none" />
-          <div className="absolute bottom-0 left-0 w-80 h-80 bg-blue-500/10 rounded-full blur-2xl pointer-events-none" />
+          <div className="absolute top-0 right-0 w-80 h-80 bg-blue-400/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute bottom-0 left-0 w-80 h-80 bg-blue-600/15 rounded-full blur-3xl pointer-events-none" />
 
           {/* Top Header Logo */}
           <div className="relative z-10">
-            <Logo />
+            <Logo dark />
           </div>
 
           {/* Middle Content Quote */}
           <div className="relative z-10 space-y-6 my-auto">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-400 text-xs font-bold uppercase tracking-wider">
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-200 text-xs font-bold uppercase tracking-wider">
+              <Sparkles className="w-3.5 h-3.5 text-blue-300" />
               <span>Matuumu Alumni Network</span>
             </div>
 
-            <h2 className="text-3xl xl:text-4xl font-serif font-extrabold text-white leading-tight">
+            <h2 className="text-3xl xl:text-4xl font-extrabold text-white leading-tight tracking-tight">
               Welcome Back to <br />
-              <span className="text-amber-400">Our Alumni Family.</span>
+              <span className="text-blue-300">Our Alumni Family.</span>
             </h2>
 
-            <p className="text-slate-300 text-sm leading-relaxed max-w-md">
+            <p className="text-blue-100/80 text-sm leading-relaxed max-w-md">
               Where alumni support one another in times of need, fund school development, and grow together as one strong community.
             </p>
 
             {/* Feature Pills */}
             <div className="space-y-3 pt-2">
-              <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
-                <div className="w-8 h-8 rounded-xl bg-amber-500/20 flex items-center justify-center shrink-0">
-                  <Heart className="w-4 h-4 text-amber-400 fill-amber-400/20" />
+              <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/10 border border-white/15 backdrop-blur-sm">
+                <div className="w-8 h-8 rounded-xl bg-blue-500/30 flex items-center justify-center shrink-0">
+                  <Heart className="w-4 h-4 text-white fill-white/20" />
                 </div>
                 <div>
                   <h4 className="text-xs font-bold text-white">Mutual Aid Welfare</h4>
-                  <p className="text-[11px] text-slate-400">Grants and emergency support for members</p>
+                  <p className="text-[11px] text-blue-200/80">Grants and emergency support for members</p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
-                <div className="w-8 h-8 rounded-xl bg-blue-500/20 flex items-center justify-center shrink-0">
-                  <GraduationCap className="w-4 h-4 text-blue-400" />
+              <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/10 border border-white/15 backdrop-blur-sm">
+                <div className="w-8 h-8 rounded-xl bg-blue-500/30 flex items-center justify-center shrink-0">
+                  <GraduationCap className="w-4 h-4 text-white" />
                 </div>
                 <div>
                   <h4 className="text-xs font-bold text-white">School Development</h4>
-                  <p className="text-[11px] text-slate-400">Giving back to Matuumu projects</p>
+                  <p className="text-[11px] text-blue-200/80">Giving back to Matuumu projects</p>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Bottom Footer Note */}
-          <div className="relative z-10 pt-6 text-xs text-slate-400 border-t border-white/10 flex items-center justify-between">
+          <div className="relative z-10 pt-6 text-xs text-blue-200/70 border-t border-white/10 flex items-center justify-between">
             <span>&copy; {new Date().getFullYear()} MAMAS</span>
-            <span className="flex items-center gap-1.5 text-amber-400 font-semibold">
-              <ShieldCheck className="w-4 h-4" /> Official Portal
+            <span className="flex items-center gap-1.5 text-white font-semibold">
+              <ShieldCheck className="w-4 h-4 text-blue-300" /> Official Portal
             </span>
           </div>
         </div>
 
         {/* Right Form Card Section */}
-        <div className="lg:col-span-6 p-6 sm:p-10 md:p-12 flex flex-col justify-center bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
+        <div className="lg:col-span-6 p-6 sm:p-10 md:p-12 flex flex-col justify-center bg-white dark:bg-[#0c1731] text-slate-900 dark:text-slate-100">
           
           {/* Mobile Logo Header */}
           <div className="lg:hidden mb-6 text-center">
@@ -188,7 +187,7 @@ export default function Login() {
 
           {/* Form Hero Titles */}
           <div className="text-center sm:text-left mb-8">
-            <h1 className="text-2xl sm:text-3xl font-serif font-extrabold text-slate-900 dark:text-white tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
               {step === 'login' ? 'Welcome Back' : 'Reset Password'}
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1.5">
@@ -203,7 +202,7 @@ export default function Login() {
             <div className="mb-6 p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300 text-xs font-semibold animate-in fade-in space-y-2">
               <p>{error}</p>
               {error.includes('register first') && (
-                <Link to="/register" className="inline-flex items-center gap-1 font-bold text-amber-600 dark:text-amber-400 hover:underline">
+                <Link to="/register" className="inline-flex items-center gap-1 font-bold text-blue-600 dark:text-blue-400 hover:underline">
                   <span>Register with Google now</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </Link>
@@ -227,14 +226,14 @@ export default function Login() {
                   mode="login"
                   onClick={handleGoogleSignIn}
                   loading={loading}
-                  className="rounded-xl py-3.5 font-semibold text-sm shadow-sm hover:shadow-md border-slate-300 dark:border-slate-700 transition-all active:scale-[0.99]"
+                  className="rounded-2xl py-3.5 font-semibold text-sm shadow-xs hover:shadow-md border-slate-300 dark:border-slate-700 transition-all active:scale-[0.99]"
                 />
               </div>
 
               {/* Divider */}
               <div className="relative flex items-center justify-center my-4">
                 <div className="w-full border-t border-slate-200 dark:border-slate-800" />
-                <span className="absolute bg-white dark:bg-slate-900 px-3 text-[11px] font-bold tracking-widest text-slate-400 uppercase">
+                <span className="absolute bg-white dark:bg-[#0c1731] px-3 text-[11px] font-bold tracking-widest text-slate-400 uppercase">
                   OR
                 </span>
               </div>
@@ -258,7 +257,7 @@ export default function Login() {
                       placeholder="e.g. member@mamas.org"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 text-slate-900 dark:text-white placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
+                      className="w-full pl-10 pr-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-700/80 bg-slate-50/70 dark:bg-slate-800/60 text-slate-900 dark:text-white placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                     />
                   </div>
                 </div>
@@ -272,7 +271,7 @@ export default function Login() {
                     <button
                       type="button"
                       onClick={() => { setError(''); setSuccess(''); setStep('forgot-password'); }}
-                      className="text-xs font-semibold text-amber-600 dark:text-amber-400 hover:underline"
+                      className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
                     >
                       Forgot Password?
                     </button>
@@ -289,12 +288,12 @@ export default function Login() {
                       placeholder="Enter your password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full pl-10 pr-10 py-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 text-slate-900 dark:text-white placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
+                      className="w-full pl-10 pr-10 py-3 rounded-2xl border border-slate-200 dark:border-slate-700/80 bg-slate-50/70 dark:bg-slate-800/60 text-slate-900 dark:text-white placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                      className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -306,7 +305,7 @@ export default function Login() {
                   <button
                     type="submit"
                     disabled={loading || !email || !password}
-                    className="w-full py-3.5 px-6 rounded-full bg-slate-900 dark:bg-amber-500 hover:bg-slate-800 dark:hover:bg-amber-400 text-white dark:text-slate-950 font-bold text-sm shadow-xl hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 transition-all cursor-pointer flex items-center justify-center gap-2"
+                    className="w-full py-3.5 px-6 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm shadow-md shadow-blue-500/25 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 transition-all cursor-pointer flex items-center justify-center gap-2"
                   >
                     {loading ? (
                       <span>Signing in...</span>
@@ -326,7 +325,7 @@ export default function Login() {
                 Don't have an account yet?{' '}
                 <Link 
                   to="/register" 
-                  className="font-bold text-amber-600 dark:text-amber-400 hover:underline"
+                  className="font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
                 >
                   Become a Member
                 </Link>
@@ -353,7 +352,7 @@ export default function Login() {
                     placeholder="e.g. member@mamas.org"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 text-slate-900 dark:text-white placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all"
+                    className="w-full pl-10 pr-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-700/80 bg-slate-50/70 dark:bg-slate-800/60 text-slate-900 dark:text-white placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                   />
                 </div>
               </div>
@@ -361,7 +360,7 @@ export default function Login() {
               <button
                 type="submit"
                 disabled={loading || !email}
-                className="w-full py-3.5 px-6 rounded-full bg-slate-900 dark:bg-amber-500 text-white dark:text-slate-950 font-bold text-sm shadow-lg hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 transition-all"
+                className="w-full py-3.5 px-6 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm shadow-md shadow-blue-500/25 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 transition-all cursor-pointer"
               >
                 {loading ? 'Sending link...' : 'Send Reset Link'}
               </button>
@@ -370,7 +369,7 @@ export default function Login() {
                 <button
                   type="button"
                   onClick={() => { setError(''); setSuccess(''); setStep('login'); }}
-                  className="text-xs font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-white transition-colors"
+                  className="text-xs font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-white transition-colors cursor-pointer"
                 >
                   &larr; Back to Login
                 </button>
