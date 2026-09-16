@@ -68,20 +68,47 @@ export const getActiveBanners = async (): Promise<Banner[]> => {
 };
 
 export const createBanner = async (banner: Omit<Banner, 'id'>): Promise<string> => {
-  const newRef = doc(collection(db, 'banners'));
-  await setDoc(newRef, {
+  const docId = doc(collection(db, 'landingBanners')).id;
+  
+  await setDoc(doc(db, 'landingBanners', docId), {
     ...banner,
     createdAt: Date.now()
   });
-  return newRef.id;
+
+  try {
+    await setDoc(doc(db, 'banners', docId), {
+      ...banner,
+      createdAt: Date.now()
+    });
+  } catch (e) {
+    console.warn("Could not save to secondary banners collection:", e);
+  }
+
+  return docId;
 };
 
 export const updateBanner = async (id: string, data: Partial<Banner>): Promise<void> => {
-  const bannerRef = doc(db, 'banners', id);
-  await updateDoc(bannerRef, data);
+  try {
+    await updateDoc(doc(db, 'landingBanners', id), data);
+  } catch (e) {
+    console.warn(e);
+  }
+  try {
+    await updateDoc(doc(db, 'banners', id), data);
+  } catch (e) {
+    console.warn(e);
+  }
 };
 
 export const deleteBanner = async (id: string): Promise<void> => {
-  const bannerRef = doc(db, 'banners', id);
-  await deleteDoc(bannerRef);
+  try {
+    await deleteDoc(doc(db, 'landingBanners', id));
+  } catch (e) {
+    console.warn(e);
+  }
+  try {
+    await deleteDoc(doc(db, 'banners', id));
+  } catch (e) {
+    console.warn(e);
+  }
 };

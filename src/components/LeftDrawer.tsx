@@ -117,96 +117,126 @@ export function LeftDrawer({ isOpen, onClose }: LeftDrawerProps) {
 
           {/* Scrollable Navigation List */}
           <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-5">
-            {/* Primary Member Navigation */}
-            <div>
-              <div className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 dark:text-slate-500 px-3 mb-2">
-                Main Navigation
-              </div>
-              <div className="space-y-1">
-                <Link to="/dashboard" onClick={onClose} className={navLinkClass('/dashboard')}>
-                  <Home className="w-4 h-4" />
-                  <span>Home Feed</span>
-                </Link>
-                <Link to="/profile" onClick={onClose} className={navLinkClass('/profile')}>
-                  <User className="w-4 h-4" />
-                  <span>My Profile</span>
-                </Link>
-                <Link to="/directory" onClick={onClose} className={navLinkClass('/directory')}>
-                  <Users className="w-4 h-4" />
-                  <span>Alumni Directory</span>
-                </Link>
-                <Link to="/top-contributors" onClick={onClose} className={navLinkClass('/top-contributors')}>
-                  <Trophy className="w-4 h-4 text-amber-500" />
-                  <span>Top Contributors</span>
-                </Link>
-                <Link to="/statement" onClick={onClose} className={navLinkClass('/statement')}>
-                  <FileText className="w-4 h-4" />
-                  <span>Financial Statement</span>
-                </Link>
-              </div>
-            </div>
-
-            {/* Quick Summary Links */}
-            <div>
-              <div className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 dark:text-slate-500 px-3 mb-2">
-                Community & Projects
-              </div>
-              <div className="space-y-1">
-                <Link to="/campaigns" onClick={onClose} className={navLinkClass('/campaigns')}>
-                  <Target className="w-4 h-4 text-blue-500" />
-                  <span>Active Projects</span>
-                </Link>
-                <Link to="/welfare" onClick={onClose} className={navLinkClass('/welfare')}>
-                  <HeartHandshake className="w-4 h-4 text-rose-500" />
-                  <span>Welfare & Solidarity</span>
-                </Link>
-                <Link to="/contribute" onClick={onClose} className={navLinkClass('/contribute')}>
-                  <Wallet className="w-4 h-4 text-emerald-500" />
-                  <span>Pay Dues & Support</span>
-                </Link>
-              </div>
-            </div>
-
-            {/* Governance / Admin Portal Section */}
-            {isExecutive && (
-              <div>
-                <div className="text-[10px] font-extrabold uppercase tracking-widest text-amber-600 dark:text-amber-400 px-3 mb-2 flex items-center gap-1.5">
-                  <Shield className="w-3 h-3" />
-                  <span>Executive Governance</span>
+            {userProfile?.status === 'pending' ? (
+              <>
+                {/* Basic Status Indicator */}
+                <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <Shield className="w-4 h-4 text-amber-500 animate-pulse" />
+                    <span className="text-xs font-extrabold uppercase tracking-wider">Account Status</span>
+                  </div>
+                  <p className="text-[11px] font-medium leading-relaxed">
+                    Your registration is currently under review by the Executive Committee. Once verified, all alumni features will be fully unlocked.
+                  </p>
                 </div>
-                <div className="space-y-1">
-                  <Link to="/admin" onClick={onClose} className={navLinkClass('/admin')}>
-                    <Shield className="w-4 h-4 text-amber-500" />
-                    <span>Governance Portal</span>
-                  </Link>
-                  {canSeeExpenses && (
-                    <Link to="/expenses" onClick={onClose} className={navLinkClass('/expenses')}>
-                      <TrendingUp className="w-4 h-4 text-blue-500" />
-                      <span>Requisitions & Approvals</span>
+
+                {/* Restricted Support Link */}
+                <div>
+                  <div className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 dark:text-slate-500 px-3 mb-2">
+                    Support
+                  </div>
+                  <div className="space-y-1">
+                    <Link to="/help" onClick={onClose} className={navLinkClass('/help')}>
+                      <HelpCircle className="w-4 h-4" />
+                      <span>Help & Guide</span>
                     </Link>
-                  )}
-                  {canSeeMoneyOut && (
-                    <Link to="/money-out" onClick={onClose} className={navLinkClass('/money-out')}>
-                      <ArrowUpRight className="w-4 h-4 text-rose-500" />
-                      <span>Money Out Disburse</span>
-                    </Link>
-                  )}
+                  </div>
                 </div>
-              </div>
+              </>
+            ) : (
+              <>
+                {/* Primary Member Navigation */}
+                <div>
+                  <div className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 dark:text-slate-500 px-3 mb-2">
+                    Main Navigation
+                  </div>
+                  <div className="space-y-1">
+                    <Link to="/dashboard" onClick={onClose} className={navLinkClass('/dashboard')}>
+                      <Home className="w-4 h-4" />
+                      <span>Home Feed</span>
+                    </Link>
+                    <Link to="/profile" onClick={onClose} className={navLinkClass('/profile')}>
+                      <User className="w-4 h-4" />
+                      <span>My Profile</span>
+                    </Link>
+                    <Link to="/directory" onClick={onClose} className={navLinkClass('/directory')}>
+                      <Users className="w-4 h-4" />
+                      <span>Alumni Directory</span>
+                    </Link>
+                    <Link to="/top-contributors" onClick={onClose} className={navLinkClass('/top-contributors')}>
+                      <Trophy className="w-4 h-4 text-amber-500" />
+                      <span>Top Contributors</span>
+                    </Link>
+                    <Link to="/statement" onClick={onClose} className={navLinkClass('/statement')}>
+                      <FileText className="w-4 h-4" />
+                      <span>Financial Statement</span>
+                    </Link>
+                  </div>
+                </div>
+
+                {/* Quick Summary Links */}
+                <div>
+                  <div className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 dark:text-slate-500 px-3 mb-2">
+                    Community & Projects
+                  </div>
+                  <div className="space-y-1">
+                    <Link to="/campaigns" onClick={onClose} className={navLinkClass('/campaigns')}>
+                      <Target className="w-4 h-4 text-blue-500" />
+                      <span>Active Projects</span>
+                    </Link>
+                    <Link to="/welfare" onClick={onClose} className={navLinkClass('/welfare')}>
+                      <HeartHandshake className="w-4 h-4 text-rose-500" />
+                      <span>Welfare & Solidarity</span>
+                    </Link>
+                    <Link to="/contribute" onClick={onClose} className={navLinkClass('/contribute')}>
+                      <Wallet className="w-4 h-4 text-emerald-500" />
+                      <span>Pay Dues & Support</span>
+                    </Link>
+                  </div>
+                </div>
+
+                {/* Governance / Admin Portal Section */}
+                {isExecutive && (
+                  <div>
+                    <div className="text-[10px] font-extrabold uppercase tracking-widest text-amber-600 dark:text-amber-400 px-3 mb-2 flex items-center gap-1.5">
+                      <Shield className="w-3 h-3" />
+                      <span>Executive Governance</span>
+                    </div>
+                    <div className="space-y-1">
+                      <Link to="/admin" onClick={onClose} className={navLinkClass('/admin')}>
+                        <Shield className="w-4 h-4 text-amber-500" />
+                        <span>Governance Portal</span>
+                      </Link>
+                      {canSeeExpenses && (
+                        <Link to="/expenses" onClick={onClose} className={navLinkClass('/expenses')}>
+                          <TrendingUp className="w-4 h-4 text-blue-500" />
+                          <span>Requisitions & Approvals</span>
+                        </Link>
+                      )}
+                      {canSeeMoneyOut && (
+                        <Link to="/money-out" onClick={onClose} className={navLinkClass('/money-out')}>
+                          <ArrowUpRight className="w-4 h-4 text-rose-500" />
+                          <span>Money Out Disburse</span>
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Support / Help */}
+                <div>
+                  <div className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 dark:text-slate-500 px-3 mb-2">
+                    Support
+                  </div>
+                  <div className="space-y-1">
+                    <Link to="/help" onClick={onClose} className={navLinkClass('/help')}>
+                      <HelpCircle className="w-4 h-4" />
+                      <span>Help & Guide</span>
+                    </Link>
+                  </div>
+                </div>
+              </>
             )}
-
-            {/* Support / Help */}
-            <div>
-              <div className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 dark:text-slate-500 px-3 mb-2">
-                Support
-              </div>
-              <div className="space-y-1">
-                <Link to="/help" onClick={onClose} className={navLinkClass('/help')}>
-                  <HelpCircle className="w-4 h-4" />
-                  <span>Help & Guide</span>
-                </Link>
-              </div>
-            </div>
           </div>
 
           {/* Bottom Logout Area */}

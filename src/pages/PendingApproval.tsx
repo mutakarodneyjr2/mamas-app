@@ -6,6 +6,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { getAppSettings } from '../lib/services';
 import { cancelAccountDeletion } from '../lib/auth';
 import { Logo } from '../components/Logo';
+import { getActiveBanners } from '../lib/bannerService';
 import { 
   Clock, 
   Hourglass, 
@@ -26,7 +27,11 @@ import {
   Check, 
   AlertTriangle, 
   Undo2, 
-  Lock 
+  Lock,
+  ChevronLeft,
+  ChevronRight,
+  Pause,
+  Play
 } from 'lucide-react';
 
 export default function PendingApproval() {
@@ -39,6 +44,34 @@ export default function PendingApproval() {
   const [supportEmail, setSupportEmail] = useState<string>('');
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [cancellingDeletion, setCancellingDeletion] = useState(false);
+
+  const [activeBanners, setActiveBanners] = useState<string[]>([]);
+  const [activeBannerIdx, setActiveBannerIdx] = useState(0);
+  const [isAutoplay, setIsAutoplay] = useState(true);
+
+  // Fetch active banners for slider
+  useEffect(() => {
+    let isMounted = true;
+    getActiveBanners().then(banners => {
+      if (isMounted) {
+        const urls = banners.map(b => b.url).filter(Boolean);
+        if (urls.length > 0) {
+          setActiveBanners(urls);
+        }
+      }
+    }).catch(err => console.error("Error loading banners for Pending screen:", err));
+
+    return () => { isMounted = false; };
+  }, []);
+
+  // Slide interval
+  useEffect(() => {
+    if (activeBanners.length <= 1 || !isAutoplay) return;
+    const interval = setInterval(() => {
+      setActiveBannerIdx(prev => (prev + 1) % activeBanners.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [activeBanners, isAutoplay]);
 
   // Fetch support contacts from settings
   useEffect(() => {
@@ -286,6 +319,64 @@ export default function PendingApproval() {
                 </div>
                 <span className={`text-[11px] font-semibold mt-1.5 ${isApproved ? 'text-emerald-600 font-bold' : 'text-slate-400'}`}>Approved</span>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Active Banners Slider Carousel */}
+        {activeBanners.length > 0 && (
+          <div className="bg-white dark:bg-[#0c1731] rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800 space-y-3.5 shadow-xs">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+              <div>
+                <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500">MAMAS Highlights</h3>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">See what is new in our community while we review your account.</p>
+              </div>
+            </div>
+
+            <div className="relative aspect-video max-h-56 w-full bg-slate-950 rounded-2xl overflow-hidden flex items-center justify-center border border-slate-200/60 dark:border-slate-800/60 group">
+              <img 
+                src={activeBanners[activeBannerIdx]} 
+                alt="Active MAMAS Banner" 
+                className="h-full w-full object-contain transition-all duration-700 ease-in-out"
+              />
+              
+              {activeBanners.length > 1 && (
+                <>
+                  <button
+                    onClick={() => {
+                      setIsAutoplay(false);
+                      setActiveBannerIdx(prev => (prev - 1 + activeBanners.length) % activeBanners.length);
+                    }}
+                    className="absolute left-2.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/50 hover:bg-blue-600 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsAutoplay(false);
+                      setActiveBannerIdx(prev => (prev + 1) % activeBanners.length);
+                    }}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/50 hover:bg-blue-600 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+
+                  <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 flex gap-1 z-10 bg-black/35 px-2 py-0.5 rounded-full animate-in fade-in">
+                    {activeBanners.map((_, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => {
+                          setIsAutoplay(false);
+                          setActiveBannerIdx(idx);
+                        }}
+                        className={`h-1 rounded-full transition-all cursor-pointer ${
+                          idx === activeBannerIdx ? 'w-3.5 bg-blue-500' : 'w-1 bg-white/40'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}

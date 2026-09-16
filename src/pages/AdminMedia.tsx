@@ -1,11 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../firebase';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { Banner } from '../types';
 import { createBanner, updateBanner, deleteBanner } from '../lib/bannerService';
-import { uploadImage, deleteImage } from '../lib/storage';
-import { Loader2, Image as ImageIcon, Trash2, Plus, ArrowUp, ArrowDown, Eye, EyeOff, ShieldAlert, CheckCircle, AlertCircle } from 'lucide-react';
+import { uploadImage } from '../lib/storage';
+import { 
+  Loader2, Image as ImageIcon, Trash2, Plus, ArrowUp, ArrowDown, 
+  Eye, EyeOff, ShieldAlert, CheckCircle, AlertCircle, X, ChevronLeft, 
+  ChevronRight, Play, Pause, AlertTriangle 
+} from 'lucide-react';
 
 export default function AdminMedia() {
   const { currentUser, userProfile } = useAuth();
@@ -13,6 +17,15 @@ export default function AdminMedia() {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  
+  // Pending upload states
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  
+  // Auto-slide active carousel preview states
+  const [activeSlideIndex, setActiveSlideIndex] = useState(0);
+  const [isAutoplay, setIsAutoplay] = useState(true);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (userProfile?.role !== 'super_admin') {
     return (
@@ -39,12 +52,24 @@ export default function AdminMedia() {
     return unsub;
   }, [currentUser]);
 
+  // Autoplay slider interval
+  useEffect(() => {
+    const activeBanners = banners.filter(b => b.isActive);
+    if (activeBanners.length <= 1 || !isAutoplay) return;
+
+    const interval = setInterval(() => {
+      setActiveSlideIndex(prev => (prev + 1) % activeBanners.length);
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [banners, isAutoplay]);
+
   const showMessage = (msg: string) => {
     setMessage(msg);
     setTimeout(() => setMessage(''), 3000);
   };
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -53,11 +78,30 @@ export default function AdminMedia() {
       return;
     }
 
+    setPendingFile(file);
+    setPreviewUrl(URL.createObjectURL(file));
+    setError('');
+  };
+
+  const cancelPendingUpload = () => {
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+    setPendingFile(null);
+    setPreviewUrl(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleConfirmUpload = async () => {
+    if (!pendingFile) return;
+
     setUploading(true);
     setError('');
     try {
-      const path = `banners/${Date.now()}_${file.name}`;
-      const url = await uploadImage(file, path);
+      const path = `banners/${Date.now()}_${pendingFile.name}`;
+      const url = await uploadImage(pendingFile, path);
       
       await createBanner({
         url,
@@ -65,28 +109,32 @@ export default function AdminMedia() {
         order: banners.length,
         createdAt: Date.now()
       });
+      
       showMessage('Banner uploaded successfully');
+      cancelPendingUpload();
     } catch (err: any) {
       setError(err.message || 'Failed to upload image');
     } finally {
       setUploading(false);
-      e.target.value = '';
     }
   };
 
   const toggleActive = async (id: string, currentStatus: boolean) => {
     try {
       await updateBanner(id, { isActive: !currentStatus });
+      showMessage(`Banner successfully ${!currentStatus ? 'activated' : 'hidden'}`);
     } catch (err: any) {
       setError('Failed to update banner status');
     }
   };
 
-  const handleDelete = async (id: string, url: string) => {
-    if (!window.confirm('Are you sure you want to delete this banner?')) return;
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this banner permanently?')) return;
     try {
       await deleteBanner(id);
       showMessage('Banner deleted successfully');
+      // Reset active slide index in case it goes out of bounds
+      setActiveSlideIndex(0);
     } catch (err: any) {
       setError('Failed to delete banner');
     }
@@ -109,27 +157,17 @@ export default function AdminMedia() {
       await Promise.all(
         newBanners.map((banner, i) => updateBanner(banner.id, { order: i }))
       );
+      showMessage('Banners reordered successfully');
     } catch (err) {
       setError('Failed to reorder banners');
     }
   };
 
-  const canManageMedia = ['super_admin', 'chairperson', 'vice_chairperson', 'publicity_secretary'].includes(userProfile?.role || '');
-
-  if (!canManageMedia) {
-    return (
-      <div className="max-w-md mx-auto my-12 p-8 bg-white dark:bg-[#0c1731] rounded-3xl border border-slate-200/80 dark:border-slate-800 text-center shadow-xs">
-        <div className="w-12 h-12 rounded-2xl bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 flex items-center justify-center mx-auto mb-3 border border-rose-200 dark:border-rose-900/60">
-          <ShieldAlert className="w-6 h-6" />
-        </div>
-        <h2 className="text-base font-extrabold text-slate-900 dark:text-white mb-1">Access Restricted</h2>
-        <p className="text-xs text-slate-500 dark:text-slate-400">Media and homepage banner management requires administrative permissions.</p>
-      </div>
-    );
-  }
+  const activeBanners = banners.filter(b => b.isActive);
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-16 px-4 font-sans">
+      
       {/* Header Banner */}
       <div className="bg-white dark:bg-[#0c1731] rounded-3xl p-6 sm:p-8 shadow-xs border border-slate-200/80 dark:border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3.5">
@@ -146,7 +184,7 @@ export default function AdminMedia() {
               Media & Hero Banners
             </h1>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Curate homepage carousel graphics and visual banners ({banners.length} total)
+              Curate homepage carousel graphics and popup advertisements ({banners.length} total)
             </p>
           </div>
         </div>
@@ -156,14 +194,13 @@ export default function AdminMedia() {
             type="file" 
             accept="image/*" 
             className="hidden" 
-            onChange={handleFileChange}
+            onChange={handleFileSelect}
+            ref={fileInputRef}
             disabled={uploading}
           />
-          <div className={`flex items-center gap-2 px-5 py-3 rounded-2xl text-xs font-extrabold uppercase tracking-wider text-white transition-all shadow-xs active:scale-95 cursor-pointer ${
-            uploading ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
-          }`}>
-            {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-            {uploading ? 'Uploading...' : 'Upload Banner'}
+          <div className="flex items-center gap-2 px-5 py-3 rounded-2xl text-xs font-extrabold uppercase tracking-wider text-white bg-blue-600 hover:bg-blue-700 transition-all shadow-xs active:scale-95 cursor-pointer">
+            <Plus className="w-4 h-4" />
+            <span>Select Image File</span>
           </div>
         </label>
       </div>
@@ -174,6 +211,7 @@ export default function AdminMedia() {
           <span>{error}</span>
         </div>
       )}
+      
       {message && (
         <div className="p-4 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 rounded-2xl text-xs sm:text-sm font-semibold flex items-center gap-2.5 shadow-xs animate-in fade-in">
           <CheckCircle className="w-4 h-4 shrink-0" />
@@ -181,15 +219,137 @@ export default function AdminMedia() {
         </div>
       )}
 
+      {/* Pre-upload Interactive Preview Overlay */}
+      {previewUrl && pendingFile && (
+        <div className="bg-amber-500/5 dark:bg-amber-500/5 rounded-3xl p-6 border-2 border-dashed border-amber-400/60 dark:border-amber-500/40 space-y-4 animate-in slide-in-from-top-4 duration-300">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <span className="p-1.5 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                <AlertTriangle className="w-5 h-5" />
+              </span>
+              <div>
+                <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">Confirm New Banner Asset</h3>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">Review image layout before uploading to Cloud Storage.</p>
+              </div>
+            </div>
+            <button 
+              onClick={cancelPendingUpload}
+              className="p-1.5 rounded-xl bg-slate-100 hover:bg-rose-500 hover:text-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 transition-all cursor-pointer"
+              title="Cancel Upload"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="aspect-video max-h-80 w-full rounded-2xl overflow-hidden bg-slate-950 border border-slate-200 dark:border-slate-800 relative flex items-center justify-center">
+            <img 
+              src={previewUrl} 
+              alt="Pre-upload Visual Check" 
+              className="h-full w-full object-contain"
+            />
+            {uploading && (
+              <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-md flex flex-col items-center justify-center gap-3 text-white">
+                <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+                <span className="text-xs font-bold uppercase tracking-widest">Uploading to Cloud...</span>
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center justify-end gap-2.5">
+            <button
+              onClick={cancelPendingUpload}
+              disabled={uploading}
+              className="px-4 py-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold rounded-xl transition-all cursor-pointer disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleConfirmUpload}
+              disabled={uploading}
+              className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold uppercase tracking-wider rounded-xl transition-all shadow-md cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+            >
+              {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+              <span>Upload & Publish</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Auto-sliding Real-time Preview Slider */}
+      {activeBanners.length > 0 && (
+        <div className="bg-white dark:bg-[#0c1731] rounded-3xl p-6 border border-slate-200/80 dark:border-slate-800 space-y-3">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+            <div>
+              <h2 className="text-sm font-extrabold text-slate-900 dark:text-white">Live Carousel Simulator</h2>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">See how they slide automatically on home & login screens.</p>
+            </div>
+            <button
+              onClick={() => setIsAutoplay(!isAutoplay)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-[10px] font-extrabold uppercase tracking-wider transition-colors cursor-pointer text-slate-700 dark:text-slate-200"
+            >
+              {isAutoplay ? (
+                <>
+                  <Pause className="w-3.5 h-3.5 text-blue-500" />
+                  <span>Autoplay ON</span>
+                </>
+              ) : (
+                <>
+                  <Play className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Autoplay OFF</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          <div className="relative aspect-video max-h-72 w-full bg-slate-950 rounded-2xl overflow-hidden flex items-center justify-center border border-slate-200 dark:border-slate-800 group">
+            <img 
+              src={activeBanners[activeSlideIndex]?.url} 
+              alt="Live Carousel Preview" 
+              className="h-full w-full object-contain transition-all duration-500 ease-in-out"
+            />
+            
+            {activeBanners.length > 1 && (
+              <>
+                <button
+                  onClick={() => setActiveSlideIndex(prev => (prev - 1 + activeBanners.length) % activeBanners.length)}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/60 hover:bg-blue-600 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setActiveSlideIndex(prev => (prev + 1) % activeBanners.length)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/60 hover:bg-blue-600 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+
+                {/* Dot Indicators */}
+                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 px-2.5 py-1 bg-black/40 rounded-full backdrop-blur-xs">
+                  {activeBanners.map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setActiveSlideIndex(idx)}
+                      className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                        idx === activeSlideIndex ? 'w-4 bg-blue-500' : 'w-1.5 bg-white/40'
+                      }`}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Main List */}
       <div className="bg-white dark:bg-[#0c1731] rounded-3xl shadow-xs border border-slate-200/80 dark:border-slate-800 p-6 sm:p-8">
         <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-100 dark:border-slate-800">
           <div>
-            <h2 className="text-base font-extrabold text-slate-900 dark:text-white">Active Carousel Sliders</h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Drag or use controls to adjust slide ordering</p>
+            <h2 className="text-base font-extrabold text-slate-900 dark:text-white">All Custom Carousel Slides</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Toggle status, delete, or rearrange priority slide ordering</p>
           </div>
           <span className="text-xs font-extrabold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 border border-blue-200/60 dark:border-blue-900/60 px-3 py-1 rounded-full">
-            {banners.filter(b => b.isActive).length} Active
+            {activeBanners.length} Active / {banners.length} Total
           </span>
         </div>
 
@@ -200,13 +360,13 @@ export default function AdminMedia() {
                 <ImageIcon className="w-6 h-6 opacity-40" />
               </div>
               <p className="font-extrabold text-sm text-slate-900 dark:text-white">No banners uploaded yet</p>
-              <p className="text-xs text-slate-400 mt-1">Click "Upload Banner" to select a high-resolution hero photo.</p>
+              <p className="text-xs text-slate-400 mt-1">Select an image file above to review and upload a custom banner graphic.</p>
             </div>
           ) : (
             banners.map((banner, index) => (
               <div 
                 key={banner.id} 
-                className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 bg-slate-50/70 dark:bg-slate-800/40 rounded-3xl border border-slate-200/70 dark:border-slate-800 hover:border-blue-500/30 transition-all shadow-xs"
+                className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 bg-slate-50/70 dark:bg-slate-800/40 rounded-3xl border border-slate-200/70 dark:border-slate-800 hover:border-blue-500/30 transition-all shadow-xs animate-in fade-in"
               >
                 {/* Reorder Buttons */}
                 <div className="flex sm:flex-col gap-1.5 self-start sm:self-center">
@@ -283,7 +443,7 @@ export default function AdminMedia() {
                     )}
                   </button>
                   <button
-                    onClick={() => handleDelete(banner.id, banner.url)}
+                    onClick={() => handleDelete(banner.id)}
                     className="p-2.5 text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 rounded-2xl border border-rose-200/60 dark:border-rose-900/50 transition-colors cursor-pointer"
                     title="Delete Banner"
                   >

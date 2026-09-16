@@ -29,6 +29,7 @@ import {
 import type { User } from '../types';
 import { GoogleSignInButton } from '../components/GoogleSignInButton';
 import { SelectDropdown, type Option } from '../components/SelectDropdown';
+import { getActiveBanners } from '../lib/bannerService';
 
 type RegisterStep = 1 | 2 | 3 | 'success';
 
@@ -130,6 +131,31 @@ export default function Register() {
   
   const [authProvider, setAuthProvider] = useState<'email' | 'google'>('email');
   const [googleUid, setGoogleUid] = useState('');
+
+  const [activeBanners, setActiveBanners] = useState<string[]>([]);
+  const [activeBannerIdx, setActiveBannerIdx] = useState(0);
+
+  useEffect(() => {
+    let isMounted = true;
+    getActiveBanners().then(banners => {
+      if (isMounted) {
+        const urls = banners.map(b => b.url).filter(Boolean);
+        if (urls.length > 0) {
+          setActiveBanners(urls);
+        }
+      }
+    }).catch(err => console.error("Error loading banners for Register page:", err));
+
+    return () => { isMounted = false; };
+  }, []);
+
+  useEffect(() => {
+    if (activeBanners.length <= 1) return;
+    const interval = setInterval(() => {
+      setActiveBannerIdx(prev => (prev + 1) % activeBanners.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [activeBanners]);
 
   const [formData, setFormData] = useState({
     fullName: '',
@@ -406,19 +432,68 @@ export default function Register() {
   const YEAR_OPTIONS: Option[] = years.map(y => ({ label: y.toString(), value: y.toString() }));
 
   return (
-    <div className="w-full max-w-3xl mx-auto py-6 px-4 sm:px-6 animate-in fade-in duration-300">
+    <div className="w-full min-h-screen bg-mamas-bg flex flex-col animate-in fade-in duration-300">
       
-      {/* Header Bar */}
-      <div className="p-5 sm:p-6 bg-gradient-to-r from-[#07132c] via-[#0f2756] to-[#1e3a8a] text-white flex items-center justify-between rounded-2xl mb-6 shadow-md border border-blue-900/40 relative">
-        <Logo dark />
-        <Link 
-          to="/login" 
-          className="text-xs font-bold text-blue-200 hover:text-white transition-colors underline"
-        >
-          Already a member? Log In
-        </Link>
+      {/* Immersive Banner Section at the top (covers from top to near middle, NO card boundary, banner is perfectly visible and clear) */}
+      <div className="relative w-full overflow-hidden min-h-[260px] sm:min-h-[320px] flex flex-col items-center justify-center p-6 text-center">
+        
+        {/* Sliding Background */}
+        {activeBanners.length > 0 ? (
+          <div className="absolute inset-0 z-0">
+            <div 
+              className="absolute inset-0 bg-cover bg-center transition-all duration-1000 transform scale-100"
+              style={{ 
+                backgroundImage: `url(${activeBanners[activeBannerIdx]})`,
+              }}
+            />
+            {/* Extremely subtle top & bottom shadow gradient vignette to keep banner crisp and 100% visible, no dark blur */}
+            <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-transparent to-black/45" />
+          </div>
+        ) : (
+          <div className="absolute inset-0 z-0 bg-gradient-to-br from-[#07132c] via-[#0f2756] to-[#1e3a8a]" />
+        )}
+
+        {/* Content sitting cleanly inside the background */}
+        <div className="relative z-10 space-y-4 max-w-xl">
+          <div className="inline-block transform hover:scale-105 transition-all">
+            <Logo dark />
+          </div>
+          
+          <div className="space-y-1">
+            <h1 className="text-2xl sm:text-3.5xl font-black text-white tracking-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.85)]">
+              Create Account
+            </h1>
+            <p className="text-xs sm:text-sm text-blue-50 font-bold max-w-sm mx-auto leading-relaxed drop-shadow-[0_1.5px_2.5px_rgba(0,0,0,0.85)]">
+              Join the Matuumu Alumni family to connect and contribute.
+            </p>
+          </div>
+
+          <div className="pt-2">
+            <Link 
+              to="/login" 
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-black/45 hover:bg-black/60 text-xs font-bold text-blue-200 hover:text-white transition-all border border-blue-500/20 backdrop-blur-xs shadow-xs"
+            >
+              Already a member? Log In
+            </Link>
+          </div>
+        </div>
+
+        {/* Carousel indicator dots */}
+        {activeBanners.length > 1 && (
+          <div className="absolute bottom-4 flex gap-1.5 z-10 bg-black/40 px-3 py-1 rounded-full backdrop-blur-xs">
+            {activeBanners.map((_, idx) => (
+              <span 
+                key={idx}
+                className={`h-1.5 rounded-full transition-all ${idx === activeBannerIdx ? 'w-5 bg-blue-400' : 'w-1.5 bg-white/40'}`}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
+      {/* Main Register Form Container below */}
+      <div className="w-full max-w-3xl mx-auto py-8 px-4 sm:px-6 flex-1">
+        
         {/* STEP PROGRESS INDICATOR (Steps 1, 2, 3) */}
         {currentStep !== 'success' && (
           <div className="px-6 py-5 bg-slate-50 dark:bg-slate-900/60 border-b border-slate-200/80 dark:border-slate-800">
@@ -1063,6 +1138,7 @@ export default function Register() {
           </div>
         )}
 
+      </div>
     </div>
   );
 }
