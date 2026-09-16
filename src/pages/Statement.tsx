@@ -148,7 +148,7 @@ export default function Statement() {
     <div className="max-w-4xl mx-auto w-full animate-in fade-in duration-300 pb-20">
       
       {/* STICKY TITLE HEADER */}
-      <div className="sticky top-16 z-30 bg-mamas-bg/95 backdrop-blur-md py-3.5 border-b border-slate-200/60 dark:border-slate-800/60 mb-5 flex items-center justify-between gap-3">
+      <div className="sticky top-0 z-30 bg-mamas-bg/95 backdrop-blur-md px-4 sm:px-6 py-3.5 border-b border-slate-200/60 dark:border-slate-800/60 mb-5 flex items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
             <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />

@@ -93,8 +93,8 @@ function Layout() {
       {/* Left Drawer Menu */}
       <LeftDrawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
 
-      {/* Solid MAMAS Blue Fixed Top Header */}
-      <header className="bg-[#07132c] text-white border-b border-blue-900/60 shrink-0 h-16 z-50 shadow-md transition-colors">
+      {/* Vibrant Light Blue Fixed Top Header */}
+      <header className="bg-blue-600 dark:bg-blue-700 text-white border-b border-blue-500/40 shrink-0 h-16 z-50 shadow-md transition-colors">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-full flex items-center justify-between">
           
           {/* Left Side: Drawer Toggle + User Profile Photo / Name */}
@@ -127,7 +127,7 @@ function Layout() {
                     referrerPolicy="no-referrer"
                   />
                 ) : (
-                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-blue-600 text-white font-extrabold text-xs flex items-center justify-center border border-white/30 shrink-0">
+                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-blue-800 text-white font-extrabold text-xs flex items-center justify-center border border-white/30 shrink-0">
                     {userProfile.fullName ? userProfile.fullName.slice(0, 2).toUpperCase() : 'AM'}
                   </div>
                 )}
@@ -173,7 +173,7 @@ function Layout() {
       </header>
 
       {/* Main Inner Content Area (ONLY THIS SCROLLS) */}
-      <main className="flex-1 w-full max-w-7xl mx-auto p-3 sm:px-5 lg:px-8 pb-28 overflow-y-auto text-slate-900 dark:text-slate-100">
+      <main className="flex-1 w-full max-w-7xl mx-auto p-0 pb-28 overflow-y-auto text-slate-900 dark:text-slate-100">
         <Outlet />
       </main>
 

@@ -278,7 +278,7 @@ export default function Profile() {
     <div className="max-w-2xl mx-auto w-full pb-20 animate-in fade-in duration-300">
       
       {/* STICKY TOP PAGE TITLE HEADER */}
-      <div className="sticky top-16 z-30 bg-mamas-bg/95 backdrop-blur-md py-3.5 border-b border-slate-200/60 dark:border-slate-800/60 mb-5 flex items-center justify-between gap-3">
+      <div className="sticky top-0 z-30 bg-mamas-bg/95 backdrop-blur-md px-4 sm:px-6 py-3.5 border-b border-slate-200/60 dark:border-slate-800/60 mb-5 flex items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
             <User className="w-5 h-5 text-blue-600 dark:text-blue-400" />
@@ -401,11 +401,11 @@ export default function Profile() {
         </div>
       </div>
 
-      {/* CORE PERSONAL DETAILS CARDS */}
+      {/* CORE PERSONAL DETAILS CARDS (EDGE-TO-EDGE) */}
       <div className="space-y-4">
         {/* Core Info */}
-        <section className="bg-white dark:bg-[#0c1731] rounded-3xl shadow-xs border border-slate-200/80 dark:border-slate-800 overflow-hidden">
-          <div className="px-5 py-3.5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 flex items-center justify-between">
+        <section className="bg-white dark:bg-[#0c1731] border-b border-slate-200/60 dark:border-slate-800/60 py-3">
+          <div className="px-4 sm:px-6 py-2.5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
             <h2 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
               Membership Details
             </h2>
@@ -416,7 +416,7 @@ export default function Profile() {
               <Edit3 className="w-3.5 h-3.5" /> Edit Details
             </button>
           </div>
-          <div className="divide-y divide-slate-100 dark:divide-slate-800">
+          <div className="divide-y divide-slate-100 dark:divide-slate-800 px-4 sm:px-6">
             <ProfileRow icon={Briefcase} label="Occupation" value={userProfile.occupation} />
             <ProfileRow icon={GraduationCap} label="Class Year" value={userProfile.yearLeftSchool ? `Class of ${userProfile.yearLeftSchool}` : undefined} />
             <ProfileRow icon={MapPin} label="District / Residence" value={userProfile.district} />
@@ -425,8 +425,8 @@ export default function Profile() {
         </section>
 
         {/* Next of Kin */}
-        <section className="bg-white dark:bg-[#0c1731] rounded-3xl shadow-xs border border-slate-200/80 dark:border-slate-800 overflow-hidden">
-          <div className="px-5 py-3.5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 flex items-center justify-between">
+        <section className="bg-white dark:bg-[#0c1731] border-b border-slate-200/60 dark:border-slate-800/60 py-3">
+          <div className="px-4 sm:px-6 py-2.5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
             <h2 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
               Next of Kin
             </h2>
@@ -437,7 +437,7 @@ export default function Profile() {
               <Edit3 className="w-3.5 h-3.5" /> Edit
             </button>
           </div>
-          <div className="divide-y divide-slate-100 dark:divide-slate-800">
+          <div className="divide-y divide-slate-100 dark:divide-slate-800 px-4 sm:px-6">
             <ProfileRow icon={User} label="Name" value={userProfile.nextOfKinName} />
             <ProfileRow icon={Phone} label="Phone Number" value={userProfile.nextOfKinPhone} />
           </div>

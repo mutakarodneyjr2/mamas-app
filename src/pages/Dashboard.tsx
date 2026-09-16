@@ -32,7 +32,7 @@ type FeedItem = {
 export default function Dashboard() {
   const { userProfile } = useAuth();
   const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
-  const [filterType, setFilterType] = useState<'all' | 'campaign' | 'welfare'>('all');
+  const [filterType, setFilterType] = useState<'all' | 'announcement' | 'campaign' | 'welfare'>('all');
   const [selectedPost, setSelectedPost] = useState<FeedItem | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -138,14 +138,17 @@ export default function Dashboard() {
 
   const filteredFeed = feedItems.filter(item => {
     if (filterType === 'all') return true;
+    if (filterType === 'announcement') {
+      return item.raw?.isOfficial === true || item.raw?.category?.toLowerCase() === 'announcement' || item.raw?.type === 'announcement';
+    }
     return item.itemType === filterType;
   });
 
   return (
     <div className="max-w-2xl mx-auto w-full pb-20 animate-in fade-in duration-300">
       
-      {/* COMPACT GREETING LINE & STICKY FEED CONTROLS */}
-      <div className="sticky top-16 z-30 bg-mamas-bg/95 backdrop-blur-md pt-3 pb-3 border-b border-slate-200/60 dark:border-slate-800/60 flex flex-col gap-2.5">
+      {/* COMPACT GREETING LINE & STICKY FEED CONTROLS (ATTACHED DIRECTLY TOP-0) */}
+      <div className="sticky top-0 z-30 bg-mamas-bg/95 backdrop-blur-md pt-3 pb-3 px-4 sm:px-6 border-b border-slate-200/60 dark:border-slate-800/60 flex flex-col gap-2.5">
         <div className="flex items-center justify-between">
           <div className="min-w-0">
             <h1 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white tracking-tight truncate">
@@ -177,6 +180,17 @@ export default function Dashboard() {
             }`}
           >
             All Updates ({feedItems.length})
+          </button>
+          <button
+            onClick={() => setFilterType('announcement')}
+            className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
+              filterType === 'announcement'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'bg-white dark:bg-[#0c1731] text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+            <span>Announcements</span>
           </button>
           <button
             onClick={() => setFilterType('campaign')}

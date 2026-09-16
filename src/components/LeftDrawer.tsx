@@ -41,7 +41,7 @@ export function LeftDrawer({ isOpen, onClose }: LeftDrawerProps) {
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex">
+      <div className="fixed inset-0 z-[100] flex">
         {/* Backdrop */}
         <motion.div
           initial={{ opacity: 0 }}

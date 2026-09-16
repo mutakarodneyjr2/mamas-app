@@ -355,8 +355,8 @@ export default function Help() {
       {activeTab === 'faq' && (
         <div className="space-y-6">
           
-          {/* Search & Category Filter */}
-          <div className="bg-white dark:bg-[#0c1731] border border-slate-200/80 dark:border-slate-800 rounded-3xl p-4 sm:p-6 shadow-xs space-y-4">
+          {/* Search & Category Filter (EDGE-TO-EDGE) */}
+          <div className="bg-white dark:bg-[#0c1731] border-b border-slate-200/60 dark:border-slate-800/60 p-4 sm:p-6 space-y-4">
             <div className="relative">
               <Search className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
               <input
@@ -399,12 +399,12 @@ export default function Help() {
 
           {/* Articles List */}
           {loadingArticles ? (
-            <div className="p-12 text-center bg-white dark:bg-[#0c1731] rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
+            <div className="p-12 text-center bg-white dark:bg-[#0c1731]">
               <Loader2 className="w-8 h-8 text-blue-600 dark:text-blue-400 animate-spin mx-auto mb-3" />
               <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Loading help center articles...</p>
             </div>
           ) : filteredArticles.length === 0 ? (
-            <div className="p-12 text-center bg-white dark:bg-[#0c1731] rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
+            <div className="p-12 text-center bg-white dark:bg-[#0c1731]">
               <HelpCircle className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
               <h3 className="text-base font-bold text-slate-900 dark:text-white">No articles matched your search</h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-md mx-auto">
@@ -418,15 +418,13 @@ export default function Help() {
               </button>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="divide-y divide-slate-200/60 dark:divide-slate-800/60">
               {filteredArticles.map((art) => {
                 const isExpanded = expandedArticleId === art.id;
                 return (
                   <div
                     key={art.id}
-                    className={`bg-white dark:bg-[#0c1731] border rounded-3xl overflow-hidden transition-all duration-200 ${
-                      isExpanded ? 'border-blue-500 dark:border-blue-500 shadow-sm ring-1 ring-blue-500/20' : 'border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
-                    }`}
+                    className="bg-white dark:bg-[#0c1731] transition-all duration-200"
                   >
                     <button
                       onClick={() => setExpandedArticleId(isExpanded ? null : art.id)}
