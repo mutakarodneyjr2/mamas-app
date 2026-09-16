@@ -131,7 +131,7 @@ export default function Directory() {
       )}
 
       {/* Search & Filters */}
-      <div className="bg-white dark:bg-[#0c1731] rounded-3xl p-4 shadow-xs border border-slate-200/80 dark:border-slate-800 flex flex-col sm:flex-row gap-3 mb-5">
+      <div className="bg-white dark:bg-[#0c1731] py-3 px-2 sm:px-4 border-b border-slate-200/60 dark:border-slate-800/60 flex flex-col sm:flex-row gap-3 mb-5">
         <div className="relative flex-1">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
@@ -154,13 +154,13 @@ export default function Directory() {
 
       {/* List */}
       {loading ? (
-        <div className="flex justify-center py-16 bg-white dark:bg-[#0c1731] rounded-3xl border border-slate-200/80 dark:border-slate-800">
+        <div className="flex justify-center py-16 bg-white dark:bg-[#0c1731]">
           <div className="w-7 h-7 border-3 border-blue-200 dark:border-blue-900 border-t-blue-600 rounded-full animate-spin"></div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="divide-y divide-slate-200/60 dark:divide-slate-800/60">
           {filteredMembers.length === 0 ? (
-            <div className="col-span-full text-center py-12 text-slate-400 dark:text-slate-500 bg-white dark:bg-[#0c1731] rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
+            <div className="text-center py-12 text-slate-400 dark:text-slate-500 bg-white dark:bg-[#0c1731]">
               No alumni members found matching your search.
             </div>
           ) : (
@@ -170,7 +170,7 @@ export default function Directory() {
                 <div 
                   key={member.uid} 
                   onClick={() => setSelectedMember(member)}
-                  className="bg-white dark:bg-[#0c1731] rounded-3xl p-4 shadow-xs border border-slate-200/80 dark:border-slate-800 hover:border-blue-500/50 dark:hover:border-blue-500/50 flex items-center gap-3.5 cursor-pointer hover:shadow-md transition-all active:scale-[0.98]"
+                  className="bg-white dark:bg-[#0c1731] py-3.5 px-2 sm:px-4 flex items-center gap-3.5 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-all"
                 >
                   {member.profilePictureUrl ? (
                     <img src={member.profilePictureUrl} alt={member.fullName} className="w-12 h-12 rounded-2xl object-cover border border-slate-200 dark:border-slate-700 shrink-0" referrerPolicy="no-referrer" />

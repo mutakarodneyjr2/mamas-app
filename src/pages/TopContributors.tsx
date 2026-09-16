@@ -90,19 +90,18 @@ export default function TopContributors() {
           <div className="w-8 h-8 border-3 border-blue-200 dark:border-blue-900 border-t-blue-600 rounded-full animate-spin"></div>
         </div>
       ) : contributors.length === 0 ? (
-        <div className="bg-white dark:bg-[#0c1731] rounded-3xl p-8 text-center border border-slate-200/80 dark:border-slate-800 shadow-xs">
+        <div className="py-12 text-center text-slate-400">
           <Trophy className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto mb-2" strokeWidth={1.5} />
           <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">No Contribution Records Yet</h3>
           <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">When members pay dues or back campaigns, the verified leaderboard will appear here.</p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="divide-y divide-slate-200/60 dark:divide-slate-800/60">
           {contributors.map((member, index) => {
             const rank = index + 1;
             const rankLabel = rank === 1 ? '1st' : rank === 2 ? '2nd' : rank === 3 ? '3rd' : `${rank}th`;
             const initials = member.fullName ? member.fullName.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() : 'AM';
 
-            const isTop3 = rank <= 3;
             const badgeBg = rank === 1 
               ? 'bg-amber-500 text-slate-950 border-amber-400' 
               : rank === 2 
@@ -115,9 +114,7 @@ export default function TopContributors() {
               <div
                 key={member.uid}
                 onClick={() => setSelectedMember(member)}
-                className={`bg-white dark:bg-[#0c1731] rounded-3xl p-4 sm:p-5 shadow-xs border transition-all cursor-pointer flex items-center justify-between gap-3 sm:gap-4 hover:border-blue-500/50 active:scale-[0.99] ${
-                  rank === 1 ? 'border-amber-400/60 dark:border-amber-500/40 shadow-amber-500/5' : 'border-slate-200/80 dark:border-slate-800'
-                }`}
+                className="bg-white dark:bg-[#0c1731] py-3.5 px-2 sm:px-4 transition-all cursor-pointer flex items-center justify-between gap-3 sm:gap-4 hover:bg-slate-50 dark:hover:bg-slate-800/40"
               >
                 <div className="flex items-center gap-3 sm:gap-4 min-w-0">
                   {/* Rank Badge */}

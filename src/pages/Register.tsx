@@ -406,23 +406,18 @@ export default function Register() {
   const YEAR_OPTIONS: Option[] = years.map(y => ({ label: y.toString(), value: y.toString() }));
 
   return (
-    <div className="min-h-screen bg-[#f8fafd] dark:bg-[#060c1a] font-sans text-slate-900 dark:text-slate-100 flex items-center justify-center p-4 sm:p-6 lg:p-8 relative overflow-hidden transition-colors">
-      {/* Background Floating Orbs */}
-      <div className="absolute top-1/4 -right-32 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-1/4 -left-32 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
-
-      <div className="w-full max-w-2xl bg-white dark:bg-[#0c1731] text-slate-900 dark:text-slate-100 border border-slate-200/80 dark:border-slate-800 rounded-3xl shadow-2xl overflow-hidden relative z-10 animate-in fade-in zoom-in-95 duration-300">
-        
-        {/* Header Bar */}
-        <div className="p-6 sm:p-8 bg-gradient-to-r from-[#07132c] via-[#0f2756] to-[#1e3a8a] text-white flex items-center justify-between border-b border-blue-900/40 relative">
-          <Logo dark />
-          <Link 
-            to="/login" 
-            className="text-xs font-semibold text-white bg-white/10 hover:bg-white/20 px-3.5 py-1.5 rounded-full border border-white/20 transition-all"
-          >
-            Log In
-          </Link>
-        </div>
+    <div className="w-full max-w-3xl mx-auto py-6 px-4 sm:px-6 animate-in fade-in duration-300">
+      
+      {/* Header Bar */}
+      <div className="p-5 sm:p-6 bg-gradient-to-r from-[#07132c] via-[#0f2756] to-[#1e3a8a] text-white flex items-center justify-between rounded-2xl mb-6 shadow-md border border-blue-900/40 relative">
+        <Logo dark />
+        <Link 
+          to="/login" 
+          className="text-xs font-bold text-blue-200 hover:text-white transition-colors underline"
+        >
+          Already a member? Log In
+        </Link>
+      </div>
 
         {/* STEP PROGRESS INDICATOR (Steps 1, 2, 3) */}
         {currentStep !== 'success' && (
@@ -1068,7 +1063,6 @@ export default function Register() {
           </div>
         )}
 
-      </div>
     </div>
   );
 }

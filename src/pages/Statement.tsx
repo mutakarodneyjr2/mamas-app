@@ -172,8 +172,8 @@ export default function Statement() {
         </button>
       </div>
 
-      {/* COMPACT SUMMARY CARD (3 CATEGORIES IN ONE ROW) */}
-      <div className="bg-white dark:bg-[#0c1731] rounded-3xl p-5 shadow-xs border border-slate-200/80 dark:border-slate-800 mb-6 space-y-4">
+      {/* COMPACT SUMMARY HEADER (3 CATEGORIES IN ONE ROW) */}
+      <div className="bg-white dark:bg-[#0c1731] py-4 px-2 sm:px-4 border-b border-slate-200/60 dark:border-slate-800/60 mb-6 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
           <div>
             <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500 block">
@@ -277,11 +277,11 @@ export default function Statement() {
       {/* TRANSACTION LIST */}
       <div>
         {loading ? (
-          <div className="flex justify-center py-16 bg-white dark:bg-[#0c1731] rounded-3xl border border-slate-200/80 dark:border-slate-800">
+          <div className="flex justify-center py-16 bg-white dark:bg-[#0c1731]">
             <div className="w-7 h-7 border-3 border-blue-200 dark:border-blue-900 border-t-blue-600 rounded-full animate-spin"></div>
           </div>
         ) : filteredContributions.length > 0 ? (
-          <div className="space-y-3">
+          <div className="divide-y divide-slate-200/60 dark:divide-slate-800/60">
             {filteredContributions.map((item: any) => {
               const isVerified = item.status === 'verified';
               const isPending = item.status === 'pending';
@@ -300,7 +300,7 @@ export default function Statement() {
               return (
                 <div 
                   key={item.id} 
-                  className="bg-white dark:bg-[#0c1731] rounded-3xl p-4 sm:p-5 shadow-xs border border-slate-200/80 dark:border-slate-800 hover:border-blue-500/40 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                  className="bg-white dark:bg-[#0c1731] py-4 px-2 sm:px-4 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                 >
                   <div className="flex items-start gap-3.5 min-w-0">
                     <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${

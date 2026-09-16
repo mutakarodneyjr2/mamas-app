@@ -107,96 +107,26 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8fafd] dark:bg-[#060c1a] font-sans text-slate-900 dark:text-slate-100 flex items-center justify-center p-4 sm:p-6 lg:p-8 relative overflow-hidden transition-colors">
-      {/* Background Floating Abstract Blobs */}
-      <div className="absolute top-1/4 -left-32 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
-
-      {/* Main Split Screen Container */}
-      <div className="w-full max-w-5xl bg-white dark:bg-[#0c1731] border border-slate-200/80 dark:border-slate-800 rounded-3xl shadow-2xl overflow-hidden grid grid-cols-1 lg:grid-cols-12 relative z-10 animate-in fade-in zoom-in-95 duration-300">
-        
-        {/* Left Desktop Hero Section (50% on lg) - School Blue & White Theme */}
-        <div className="hidden lg:flex lg:col-span-6 bg-gradient-to-br from-[#07132c] via-[#0f2756] to-[#1e3a8a] p-12 flex-col justify-between relative overflow-hidden border-r border-blue-900/40 text-white">
-          
-          {/* Subtle Graphic Accents */}
-          <div className="absolute top-0 right-0 w-80 h-80 bg-blue-400/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute bottom-0 left-0 w-80 h-80 bg-blue-600/15 rounded-full blur-3xl pointer-events-none" />
-
-          {/* Top Header Logo */}
-          <div className="relative z-10">
-            <Logo dark />
-          </div>
-
-          {/* Middle Content Quote */}
-          <div className="relative z-10 space-y-6 my-auto">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-200 text-xs font-bold uppercase tracking-wider">
-              <Sparkles className="w-3.5 h-3.5 text-blue-300" />
-              <span>Matuumu Alumni Network</span>
-            </div>
-
-            <h2 className="text-3xl xl:text-4xl font-extrabold text-white leading-tight tracking-tight">
-              Welcome Back to <br />
-              <span className="text-blue-300">Our Alumni Family.</span>
-            </h2>
-
-            <p className="text-blue-100/80 text-sm leading-relaxed max-w-md">
-              Where alumni support one another in times of need, fund school development, and grow together as one strong community.
-            </p>
-
-            {/* Feature Pills */}
-            <div className="space-y-3 pt-2">
-              <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/10 border border-white/15 backdrop-blur-sm">
-                <div className="w-8 h-8 rounded-xl bg-blue-500/30 flex items-center justify-center shrink-0">
-                  <Heart className="w-4 h-4 text-white fill-white/20" />
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold text-white">Mutual Aid Welfare</h4>
-                  <p className="text-[11px] text-blue-200/80">Grants and emergency support for members</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/10 border border-white/15 backdrop-blur-sm">
-                <div className="w-8 h-8 rounded-xl bg-blue-500/30 flex items-center justify-center shrink-0">
-                  <GraduationCap className="w-4 h-4 text-white" />
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold text-white">School Development</h4>
-                  <p className="text-[11px] text-blue-200/80">Giving back to Matuumu projects</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Bottom Footer Note */}
-          <div className="relative z-10 pt-6 text-xs text-blue-200/70 border-t border-white/10 flex items-center justify-between">
-            <span>&copy; {new Date().getFullYear()} MAMAS</span>
-            <span className="flex items-center gap-1.5 text-white font-semibold">
-              <ShieldCheck className="w-4 h-4 text-blue-300" /> Official Portal
-            </span>
-          </div>
+    <div className="w-full max-w-3xl mx-auto py-8 px-4 sm:px-6 animate-in fade-in duration-300">
+      
+      {/* Header Logo */}
+      <div className="mb-6 text-center">
+        <div className="inline-block">
+          <Logo />
         </div>
+      </div>
 
-        {/* Right Form Card Section */}
-        <div className="lg:col-span-6 p-6 sm:p-10 md:p-12 flex flex-col justify-center bg-white dark:bg-[#0c1731] text-slate-900 dark:text-slate-100">
-          
-          {/* Mobile Logo Header */}
-          <div className="lg:hidden mb-6 text-center">
-            <div className="inline-block">
-              <Logo />
-            </div>
-          </div>
-
-          {/* Form Hero Titles */}
-          <div className="text-center sm:text-left mb-8">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-              {step === 'login' ? 'Welcome Back' : 'Reset Password'}
-            </h1>
-            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1.5">
-              {step === 'login' 
-                ? 'Sign in to continue your journey with the Matuumu Alumni family.'
-                : 'Enter your email address to receive password reset instructions.'}
-            </p>
-          </div>
+      {/* Form Hero Titles */}
+      <div className="text-center mb-8">
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+          {step === 'login' ? 'Welcome Back' : 'Reset Password'}
+        </h1>
+        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1.5">
+          {step === 'login' 
+            ? 'Sign in to continue your journey with the Matuumu Alumni family.'
+            : 'Enter your email address to receive password reset instructions.'}
+        </p>
+      </div>
 
           {/* Feedback Messages */}
           {error && (
@@ -421,9 +351,6 @@ export default function Login() {
             </div>
           )}
 
-        </div>
-
-      </div>
     </div>
   );
 }

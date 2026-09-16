@@ -204,14 +204,14 @@ export default function Dashboard() {
       </div>
 
       {/* FEED CONTENT */}
-      <div className="mt-4 space-y-4">
+      <div className="mt-2 divide-y divide-slate-200/60 dark:divide-slate-800/60">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20">
             <div className="w-8 h-8 border-3 border-blue-200 dark:border-blue-900 border-t-blue-600 rounded-full animate-spin"></div>
             <p className="text-xs font-semibold text-slate-400 mt-2">Loading updates...</p>
           </div>
         ) : filteredFeed.length === 0 ? (
-          <div className="bg-white dark:bg-[#0c1731] rounded-3xl p-8 sm:p-12 text-center border border-slate-200/80 dark:border-slate-800 shadow-xs">
+          <div className="py-12 text-center">
             <Layers className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto mb-3" strokeWidth={1.5} />
             <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">No Active Posts Right Now</h3>
             <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 max-w-sm mx-auto">
@@ -236,7 +236,7 @@ export default function Dashboard() {
             return (
               <div 
                 key={`${item.itemType}-${item.id}`}
-                className="bg-white dark:bg-[#0c1731] rounded-3xl p-5 shadow-xs border border-slate-200/80 dark:border-slate-800 hover:border-blue-500/40 dark:hover:border-blue-500/40 transition-all flex flex-col justify-between"
+                className="bg-white dark:bg-[#0c1731] py-5 px-3 sm:px-5 border-b border-slate-200/60 dark:border-slate-800/60 transition-all flex flex-col justify-between"
               >
                 <div>
                   {/* Top Badge Row */}

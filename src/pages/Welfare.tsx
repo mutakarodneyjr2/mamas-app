@@ -120,11 +120,11 @@ export default function Welfare() {
         </div>
 
         {loading ? (
-          <div className="flex justify-center p-8 bg-white dark:bg-[#0c1731] rounded-3xl border border-slate-200/80 dark:border-slate-800">
+          <div className="flex justify-center p-8 bg-white dark:bg-[#0c1731]">
             <div className="w-7 h-7 border-3 border-blue-200 dark:border-blue-900 border-t-blue-600 rounded-full animate-spin"></div>
           </div>
         ) : requests.length > 0 ? (
-          <div className="space-y-3">
+          <div className="divide-y divide-slate-200/60 dark:divide-slate-800/60">
             {requests.map((req) => {
               const statusStr = (req.status || 'pending').toLowerCase();
               const isRejected = statusStr === 'rejected';
@@ -135,13 +135,7 @@ export default function Welfare() {
               return (
                 <div 
                   key={req.id} 
-                  className={`bg-white dark:bg-[#0c1731] rounded-3xl p-4 sm:p-5 shadow-xs border transition-all ${
-                    isRejected 
-                      ? 'border-rose-200 dark:border-rose-900/60' 
-                      : isPaid 
-                      ? 'border-emerald-200 dark:border-emerald-900/60' 
-                      : 'border-slate-200/80 dark:border-slate-800'
-                  }`}
+                  className="bg-white dark:bg-[#0c1731] py-4 px-2 sm:px-4 transition-all"
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>

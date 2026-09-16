@@ -84,7 +84,7 @@ function Layout() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   
   return (
-    <div className="min-h-screen bg-mamas-bg flex flex-col font-sans transition-colors duration-200">
+    <div className="h-screen w-screen overflow-hidden bg-mamas-bg flex flex-col font-sans transition-colors duration-200">
       <DeletionBanner />
       {userProfile && userProfile?.status === 'approved' && userProfile?.hasCompletedOnboarding !== true && (
         <OnboardingTour userProfile={userProfile} onComplete={() => {}} />
@@ -93,17 +93,17 @@ function Layout() {
       {/* Left Drawer Menu */}
       <LeftDrawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
 
-      {/* Sticky Top Header */}
-      <header className="bg-white/95 dark:bg-[#0c1731]/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800/80 sticky top-0 z-50 shadow-xs transition-colors h-16">
+      {/* Solid MAMAS Blue Fixed Top Header */}
+      <header className="bg-[#07132c] text-white border-b border-blue-900/60 shrink-0 h-16 z-50 shadow-md transition-colors">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-full flex items-center justify-between">
           
           {/* Left Side: Drawer Toggle + User Profile Photo / Name */}
-          <div className="flex items-center gap-2 sm:gap-3.5 min-w-0">
+          <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
             {userProfile ? (
               <button
                 type="button"
                 onClick={() => setDrawerOpen(true)}
-                className="p-2 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer shrink-0"
+                className="p-2 rounded-2xl bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer shrink-0"
                 aria-label="Open menu drawer"
               >
                 <Menu className="w-5 h-5" />
@@ -117,26 +117,26 @@ function Layout() {
             {userProfile && (
               <Link 
                 to="/profile" 
-                className="flex items-center gap-2.5 group p-1 -ml-1 rounded-2xl hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors min-w-0"
+                className="flex items-center gap-2.5 group p-1 -ml-1 rounded-2xl hover:bg-white/10 transition-colors min-w-0"
               >
                 {userProfile.profilePictureUrl ? (
                   <img 
                     src={userProfile.profilePictureUrl} 
                     alt={userProfile.fullName} 
-                    className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover border border-slate-200 dark:border-slate-700 shrink-0" 
+                    className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover border border-white/20 shrink-0" 
                     referrerPolicy="no-referrer"
                   />
                 ) : (
-                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-extrabold text-xs flex items-center justify-center border border-blue-200 dark:border-blue-800 shrink-0">
+                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-blue-600 text-white font-extrabold text-xs flex items-center justify-center border border-white/30 shrink-0">
                     {userProfile.fullName ? userProfile.fullName.slice(0, 2).toUpperCase() : 'AM'}
                   </div>
                 )}
                 <div className="min-w-0 hidden xs:block sm:block">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                    <span className="text-xs sm:text-sm font-bold text-white truncate group-hover:text-amber-300 transition-colors">
                       {userProfile.fullName || 'Member'}
                     </span>
-                    <span className="text-[9px] font-extrabold bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/80 px-1.5 py-0.2 rounded-full uppercase tracking-wider hidden md:inline">
+                    <span className="text-[9px] font-extrabold bg-amber-400 text-slate-950 px-1.5 py-0.2 rounded-full uppercase tracking-wider hidden md:inline">
                       {userProfile.role?.replace('_', ' ') || 'MEMBER'}
                     </span>
                   </div>
@@ -145,8 +145,8 @@ function Layout() {
             )}
           </div>
 
-          {/* Right Side: Theme, Notifications, Directory Button (NO Logout here) */}
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          {/* Right Side: Theme, Notifications, Directory Button */}
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0 text-white">
             <ThemeIconButton />
 
             {userProfile && <NotificationBell />}
@@ -154,7 +154,7 @@ function Layout() {
             {userProfile && (
               <Link
                 to="/directory"
-                className="flex items-center gap-1.5 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/60 dark:hover:bg-blue-900/60 text-blue-700 dark:text-blue-300 border border-blue-200/80 dark:border-blue-800/80 px-3 py-1.5 rounded-full text-xs font-bold transition-all shadow-xs active:scale-95 cursor-pointer"
+                className="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 text-white border border-white/20 px-3 py-1.5 rounded-full text-xs font-bold transition-all shadow-xs active:scale-95 cursor-pointer"
                 title="Open Alumni Directory"
               >
                 <Users className="w-3.5 h-3.5" />
@@ -164,21 +164,23 @@ function Layout() {
 
             {!userProfile && (
               <div className="flex items-center gap-2">
-                <Link to="/login" className="text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors px-3 py-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">Log In</Link>
-                <Link to="/register" className="text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 transition-colors px-4 py-1.5 rounded-full shadow-md shadow-blue-500/20 cursor-pointer">Join MAMAS</Link>
+                <Link to="/login" className="text-xs font-bold text-white/90 hover:text-white transition-colors px-3 py-1.5 rounded-full hover:bg-white/10 cursor-pointer">Log In</Link>
+                <Link to="/register" className="text-xs font-bold text-slate-950 bg-amber-400 hover:bg-amber-300 transition-colors px-4 py-1.5 rounded-full shadow-md cursor-pointer">Join MAMAS</Link>
               </div>
             )}
           </div>
         </div>
       </header>
 
-      {/* Main Content Area */}
-      <main className="flex-1 w-full max-w-7xl mx-auto p-3 sm:px-5 lg:px-8 pb-32 md:pb-8 flex flex-col gap-6 text-slate-900 dark:text-slate-100">
+      {/* Main Inner Content Area (ONLY THIS SCROLLS) */}
+      <main className="flex-1 w-full max-w-7xl mx-auto p-3 sm:px-5 lg:px-8 pb-28 overflow-y-auto text-slate-900 dark:text-slate-100">
         <Outlet />
       </main>
 
-      {/* Sticky Bottom Tabs */}
-      <BottomNav />
+      {/* Fixed Bottom Navigation */}
+      <div className="shrink-0 z-50">
+        <BottomNav />
+      </div>
     </div>
   );
 }
