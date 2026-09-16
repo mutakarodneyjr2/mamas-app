@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigate, Link, useSearchParams } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams, useLocation } from 'react-router-dom';
 import { Logo } from '../components/Logo';
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '../firebase';
@@ -13,8 +13,9 @@ type LoginStep = 'login' | 'forgot-password';
 export default function Login() {
   const { currentUser, userProfile, googleSignIn, checkUserExists, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
-  const returnUrl = searchParams.get('returnUrl') || '/dashboard';
+  const returnUrl = (location.state as any)?.from || searchParams.get('returnUrl') || '/dashboard';
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

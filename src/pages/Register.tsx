@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth, db } from '../firebase';
 import { doc, setDoc, updateDoc } from 'firebase/firestore';
@@ -150,15 +150,18 @@ export default function Register() {
     showEmail: true
   });
 
+  const location = useLocation();
+  const returnUrl = (location.state as any)?.from || '/dashboard';
+
   const [showPassword, setShowPassword] = useState(false);
   const [profilePicFile, setProfilePicFile] = useState<File | null>(null);
   const [profilePicPreview, setProfilePicPreview] = useState<string>('');
 
   useEffect(() => {
     if (userProfile && currentStep !== 'success') {
-      navigate('/dashboard');
+      navigate(returnUrl);
     }
-  }, [userProfile, navigate, currentStep]);
+  }, [userProfile, navigate, currentStep, returnUrl]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
@@ -1044,10 +1047,10 @@ export default function Register() {
 
               <div className="pt-4">
                 <button
-                  onClick={() => navigate('/pending-approval')}
+                  onClick={() => navigate(returnUrl)}
                   className="w-full py-4 px-8 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-sm shadow-md shadow-blue-500/25 transition-all cursor-pointer flex items-center justify-center gap-2"
                 >
-                  <span>Check Account Status</span>
+                  <span>Continue to Workspace</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </div>

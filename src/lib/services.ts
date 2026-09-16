@@ -393,15 +393,22 @@ export const castWelfareVote = async (requestId: string, voterId: string, vote: 
   let welfareCategory = "";
   let resultingStatus: string | null = null;
   
+  const trimmedReason = reason?.trim() || "";
+  if (vote === 'reject' && !trimmedReason) {
+    throw new Error("A reason is required when rejecting a request.");
+  }
+
   await runTransaction(db, async (transaction) => {
     const requestDoc = await transaction.get(requestRef);
     if (!requestDoc.exists()) throw new Error("Request not found");
     
     const requestData = requestDoc.data() as WelfareRequest;
-    if (requestData.status !== "pending") throw new Error("Request is no longer pending");
+    if (requestData.status !== "pending") {
+      throw new Error(`Request is already ${requestData.status}. No further votes are needed.`);
+    }
 
     if (requestData.userId === voterId) {
-      throw new Error("Conflict of Interest: You cannot vote on your own welfare request.");
+      throw new Error("You cannot act on your own request.");
     }
 
     applicantId = requestData.userId;
@@ -414,7 +421,6 @@ export const castWelfareVote = async (requestId: string, voterId: string, vote: 
       throw new Error("User is not an authorized welfare approver for this request");
     }
 
-    const trimmedReason = reason?.trim() || "";
     const newVotes = requestData.votes.filter(v => v.userId !== voterId);
     const voteObj: WelfareVote = {
       userId: voterId,
@@ -435,7 +441,6 @@ export const castWelfareVote = async (requestId: string, voterId: string, vote: 
     let rejectCount = 0;
 
     newVotes.forEach(v => {
-      // Valid votes are from eligible approvers or escalated approvers if escalated
       if (eligibleApprovers.includes(v.userId) || (eligibleApprovers.length < 2 && ['super_admin', 'chairperson', 'vice_chairperson'].includes(voterRole || ''))) {
          if (v.vote === 'approve') approveCount++;
          if (v.vote === 'reject') rejectCount++;
@@ -535,12 +540,6 @@ export const initiateWelfareDisbursement = async (
   const amount = requestData.amountRequested;
   const network = requestData.recipientNetwork || 'MTN'; // fallback
   
-  // Set to processing
-  await updateDoc(requestRef, {
-    disbursementStatus: "processing",
-    updatedAt: Date.now()
-  });
-
   await logActivity('INITIATE_WELFARE_DISBURSEMENT', treasurerId, requestId, `Initiated mobile money disbursement of UGX ${amount}`);
 
   const currentUser = auth.currentUser;
@@ -560,13 +559,6 @@ export const initiateWelfareDisbursement = async (
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    
-    // Revert status on immediate failure
-    await updateDoc(requestRef, {
-      disbursementStatus: "failed",
-      updatedAt: Date.now()
-    });
-    
     throw new Error(errorData.message || errorData.error || "Failed to initiate mobile money disbursement.");
   }
   
@@ -665,6 +657,74 @@ export const recordExpense = async (amount: number, reason: string, transactionR
   }).catch(err => console.error("Notification error:", err));
 };
 
+export const reverseWelfareDecision = async (requestId: string, adminId: string, reason: string) => {
+  const requestRef = doc(db, 'welfareRequests', requestId);
+  const trimmedReason = reason?.trim() || "";
+  
+  if (!trimmedReason) {
+    throw new Error("A reason is required to reverse a decision.");
+  }
+
+  await runTransaction(db, async (transaction) => {
+    const requestDoc = await transaction.get(requestRef);
+    if (!requestDoc.exists()) throw new Error("Request not found");
+    
+    const data = requestDoc.data() as WelfareRequest;
+    
+    if (data.status === "paid" || data.disbursementStatus === "successful") {
+      throw new Error("Cannot reverse decision: Funds have already been paid.");
+    }
+    if (data.disbursementStatus === "in_progress") {
+      throw new Error("Cannot reverse decision: Payout is currently in progress.");
+    }
+    if (data.status === "pending") {
+      throw new Error("Request is already pending.");
+    }
+
+    transaction.update(requestRef, {
+      status: "pending",
+      votes: [], // Clear votes to require re-review
+      updatedAt: Date.now()
+    });
+  });
+
+  await logActivity('REVERSE_WELFARE_DECISION', adminId, requestId, `Reversed welfare decision. Reason: ${trimmedReason}`);
+};
+
+export const reverseExpenseDecision = async (expenseId: string, adminId: string, reason: string) => {
+  const expenseRef = doc(db, 'expenses', expenseId);
+  const trimmedReason = reason?.trim() || "";
+  
+  if (!trimmedReason) {
+    throw new Error("A reason is required to reverse a decision.");
+  }
+
+  await runTransaction(db, async (transaction) => {
+    const expenseDoc = await transaction.get(expenseRef);
+    if (!expenseDoc.exists()) throw new Error("Expense not found");
+    
+    const data = expenseDoc.data() as Expense;
+    
+    if (data.status === "paid" || data.disbursementStatus === "successful") {
+      throw new Error("Cannot reverse decision: Funds have already been paid.");
+    }
+    if (data.disbursementStatus === "in_progress") {
+      throw new Error("Cannot reverse decision: Payout is currently in progress.");
+    }
+    if (data.status === "pending") {
+      throw new Error("Expense is already pending.");
+    }
+
+    transaction.update(expenseRef, {
+      status: "pending",
+      votes: [], // Clear votes to require re-review
+      updatedAt: Date.now()
+    });
+  });
+
+  await logActivity('REVERSE_EXPENSE_DECISION', adminId, expenseId, `Reversed expense decision. Reason: ${trimmedReason}`);
+};
+
 export const submitExpense = async (
   creatorId: string,
   data: {
@@ -710,28 +770,35 @@ export const submitExpense = async (
   return docRef.id;
 };
 
-export const voteOnExpense = async (expenseId: string, voterId: string, vote: 'approve' | 'reject') => {
+export const voteOnExpense = async (expenseId: string, voterId: string, vote: 'approve' | 'reject', reason?: string) => {
   const expenseRef = doc(db, 'expenses', expenseId);
   const settings = await getAppSettings();
   if (!settings || !settings.welfareApprovers) throw new Error("App settings not found");
 
   const eligibleApprovers = settings.welfareApprovers;
   let creatorId = "";
-  let expenseReason = "";
+  let expenseReasonText = "";
   let resultingStatus: string | null = null;
+  
+  const trimmedReason = reason?.trim() || "";
+  if (vote === 'reject' && !trimmedReason) {
+    throw new Error("A reason is required when rejecting a request.");
+  }
 
   await runTransaction(db, async (transaction) => {
     const expenseDoc = await transaction.get(expenseRef);
     if (!expenseDoc.exists()) throw new Error("Expense not found");
 
     const expenseData = expenseDoc.data() as Expense;
-    if (expenseData.status !== "pending") throw new Error("Expense is no longer pending");
+    if (expenseData.status !== "pending") {
+      throw new Error(`Expense is already ${expenseData.status}. No further votes are needed.`);
+    }
 
     creatorId = expenseData.userId;
-    expenseReason = expenseData.reason;
+    expenseReasonText = expenseData.reason;
 
     if (creatorId === voterId) {
-      throw new Error("Conflict of Interest: You cannot vote on an expense you created.");
+      throw new Error("You cannot act on your own request.");
     }
 
     if (!eligibleApprovers.includes(voterId)) {
@@ -740,7 +807,16 @@ export const voteOnExpense = async (expenseId: string, voterId: string, vote: 'a
 
     const existingVotes = expenseData.votes || [];
     const filteredVotes = existingVotes.filter(v => v.userId !== voterId);
-    const newVotes = [...filteredVotes, { userId: voterId, vote, votedAt: Date.now() }];
+    
+    const voteObj: WelfareVote = {
+      userId: voterId,
+      vote,
+      votedAt: Date.now()
+    };
+    if (trimmedReason) {
+      voteObj.reason = trimmedReason;
+    }
+    const newVotes = [...filteredVotes, voteObj];
 
     const updates: any = {
       votes: newVotes,
@@ -768,13 +844,13 @@ export const voteOnExpense = async (expenseId: string, voterId: string, vote: 'a
     transaction.update(expenseRef, updates);
   });
 
-  await logActivity('VOTE_EXPENSE', voterId, expenseId, `Voted ${vote} on expense`);
+  await logActivity('VOTE_EXPENSE', voterId, expenseId, `Voted ${vote} on expense${trimmedReason ? `. Reason: ${trimmedReason}` : ''}`);
 
   if (resultingStatus && creatorId) {
     const statusText = resultingStatus === "approved" ? "Approved" : "Rejected";
     await notifyUser(creatorId, {
       title: `Expense ${statusText}`,
-      body: `Your expense request for "${expenseReason}" has been ${resultingStatus}.`,
+      body: `Your expense request for "${expenseReasonText}" has been ${resultingStatus}.`,
       type: 'welfare',
       targetId: expenseId,
       targetUrl: '/expenses'
@@ -798,12 +874,6 @@ export const initiateExpenseDisbursement = async (
   const amount = expenseData.amount;
   const network = expenseData.recipientNetwork || 'MTN'; // fallback
   
-  // Set to processing
-  await updateDoc(expenseRef, {
-    disbursementStatus: "processing",
-    updatedAt: Date.now()
-  });
-
   await logActivity('INITIATE_EXPENSE_DISBURSEMENT', treasurerId, expenseId, `Initiated mobile money disbursement of UGX ${amount}`);
 
   const currentUser = auth.currentUser;
@@ -823,13 +893,6 @@ export const initiateExpenseDisbursement = async (
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    
-    // Revert status on immediate failure
-    await updateDoc(expenseRef, {
-      disbursementStatus: "failed",
-      updatedAt: Date.now()
-    });
-    
     throw new Error(errorData.message || errorData.error || "Failed to initiate mobile money disbursement.");
   }
   

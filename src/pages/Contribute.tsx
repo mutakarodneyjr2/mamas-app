@@ -5,15 +5,16 @@ import { Heart, Target, Lock, Loader2, Check, Smartphone, RefreshCw, AlertCircle
 import { db } from '../firebase';
 import { collection, query, where, getDocs, addDoc, doc, onSnapshot, getDoc, serverTimestamp } from 'firebase/firestore';
 import { SelectDropdown } from '../components/SelectDropdown';
-import { normalizePhoneNumber } from '../lib/utils';
+import { normalizePhoneNumber, formatUGX } from '../lib/utils';
 
 export default function Contribute() {
-  const { currentUser, userProfile } = useAuth();
+  const { currentUser, userProfile, isUnverified } = useAuth();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   
   const initialCampaignId = searchParams.get('campaignId') || '';
-  const [purpose, setPurpose] = useState<'welfare' | 'campaign'>(initialCampaignId ? 'campaign' : 'welfare');
+  const [purpose, setPurpose] = useState<'welfare' | 'campaign'>(initialCampaignId || isUnverified ? 'campaign' : 'welfare');
+  const [isAnonymous, setIsAnonymous] = useState(false);
   const [amount, setAmount] = useState('');
   const [phone, setPhone] = useState(userProfile?.phoneNumber || '');
   const [network, setNetwork] = useState('MTN');
@@ -61,6 +62,8 @@ export default function Contribute() {
     }
   }, [currentUser, purpose]);
 
+  const [confirmedAmount, setConfirmedAmount] = useState<number | null>(null);
+
   // Realtime listener for pending payment status
   useEffect(() => {
     if (!promptSent || !pendingDocId) return;
@@ -70,13 +73,14 @@ export default function Contribute() {
       const data = docSnap.data();
 
       if (data?.status === 'verified') {
+        setConfirmedAmount(data.amount || parseInt(amount, 10));
         setSuccess(true);
         setPromptSent(false);
         setTimeout(() => {
           navigate('/statement');
-        }, 1500);
+        }, 3000); // Wait 3s so user sees the verified state
       } else if (data?.status === 'failed') {
-        setError('Payment not completed or was declined on your phone. Please try again.');
+        setError('Payment cancelled or failed. No money was taken.');
         setPromptSent(false);
       }
     }, (err) => {
@@ -85,14 +89,14 @@ export default function Contribute() {
 
     // Fallback polling timer (stop after 60s)
     const timeoutTimer = setTimeout(() => {
-      setPollingMessage('Payment is taking longer than usual. If you entered your PIN, click Refresh Status below.');
+      setPollingMessage('Still confirming payment. You will be updated. You may close this screen if you entered your PIN.');
     }, 30000);
 
     return () => {
       unsubscribe();
       clearTimeout(timeoutTimer);
     };
-  }, [promptSent, pendingDocId, navigate]);
+  }, [promptSent, pendingDocId, navigate, amount]);
 
   const handleManualRefresh = async () => {
     if (!pendingDocId) return;
@@ -102,13 +106,14 @@ export default function Contribute() {
       if (docSnap.exists()) {
         const data = docSnap.data();
         if (data?.status === 'verified') {
+          setConfirmedAmount(data.amount || parseInt(amount, 10));
           setSuccess(true);
           setPromptSent(false);
           setTimeout(() => {
             navigate('/statement');
-          }, 1500);
+          }, 3000);
         } else if (data?.status === 'failed') {
-          setError('Payment not completed or was declined on Mobile Money. Please try again.');
+          setError('Payment cancelled or failed. No money was taken.');
           setPromptSent(false);
         } else {
           setPollingMessage('Still waiting for payment verification. Ensure you have entered your PIN.');
@@ -125,6 +130,11 @@ export default function Contribute() {
     e.preventDefault();
     if (!currentUser) {
       setError('You must be logged in to contribute.');
+      return;
+    }
+    
+    if (!navigator.onLine) {
+      setError('No connection. Check internet and try again.');
       return;
     }
 
@@ -154,11 +164,15 @@ export default function Contribute() {
 
     try {
       const contribType = purpose === 'campaign' ? 'school_support' : 'welfare';
+      const actualUserName = userProfile?.fullName || 'Anonymous User';
+      const displayName = isAnonymous ? 'Anonymous' : actualUserName;
 
       // 1. Create Firestore contribution doc
       const docRef = await addDoc(collection(db, 'contributions'), {
         userId: currentUser.uid,
-        userName: userProfile?.fullName || 'Anonymous',
+        userName: actualUserName,
+        displayName: displayName,
+        isAnonymous: isAnonymous,
         amount: numericAmount,
         purpose: purpose,
         type: contribType,
@@ -193,7 +207,9 @@ export default function Contribute() {
           metadata: {
             contributionId: docRef.id,
             reference: docRef.id,
-            userName: userProfile?.fullName || 'Anonymous',
+            userName: actualUserName,
+            displayName: displayName,
+            isAnonymous: String(isAnonymous),
             campaignId: purpose === 'campaign' ? campaignId : null
           }
         })
@@ -204,7 +220,12 @@ export default function Contribute() {
       const resData = await response.json().catch(() => ({}));
 
       if (!response.ok || !resData.success) {
-        throw new Error(resData.message || 'Failed to initiate Mobile Money prompt. Please try again.');
+        const errorMsg = resData.message || resData.error || '';
+        if (errorMsg.includes('Server configuration error')) {
+          throw new Error('Payment service temporarily unavailable.');
+        } else {
+          throw new Error('Payment could not be started. Try again.');
+        }
       }
 
       // 4. Success initiating prompt - Show Mobile Money check phone card
@@ -217,7 +238,7 @@ export default function Contribute() {
       if (err.name === 'AbortError') {
         setError('Payment request timed out after 30 seconds. Please try again.');
       } else {
-        setError(err.message || 'Contribution failed to process. Please try again.');
+        setError(err.message || 'Payment could not be started. Try again.');
       }
     } finally {
       setLoading(false);
@@ -253,7 +274,14 @@ export default function Contribute() {
         <div className="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 p-6 rounded-3xl text-sm font-bold border border-emerald-200 dark:border-emerald-900/50 flex items-center gap-3 mb-6 shadow-xs">
           <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0" />
           <div>
-            <div className="text-base font-extrabold text-emerald-900 dark:text-emerald-200">Payment Verified!</div>
+            <div className="text-base font-extrabold text-emerald-900 dark:text-emerald-200 flex items-center gap-2">
+              Payment Verified 
+              {confirmedAmount !== null && (
+                <span className="bg-emerald-200/50 dark:bg-emerald-800/50 text-emerald-800 dark:text-emerald-200 px-2 py-0.5 rounded-full text-sm">
+                  {formatUGX(confirmedAmount)}
+                </span>
+              )}
+            </div>
             <div className="text-emerald-700 dark:text-emerald-400 text-xs mt-0.5">Your contribution was successfully recorded. Redirecting to your statement...</div>
           </div>
         </div>
@@ -319,26 +347,28 @@ export default function Contribute() {
         <form onSubmit={handlePay} className="space-y-6">
           {/* PURPOSE SELECTION */}
           <div className="grid grid-cols-2 gap-4">
-            <button
-              type="button"
-              onClick={() => setPurpose('welfare')}
-              className={`p-5 rounded-3xl flex flex-col items-center justify-center text-center transition-all cursor-pointer ${
-                purpose === 'welfare' 
-                  ? 'bg-blue-50 dark:bg-blue-950/40 border-2 border-blue-600 shadow-md text-blue-950 dark:text-blue-200' 
-                  : 'bg-white dark:bg-[#0c1731] border border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/40 text-slate-700 dark:text-slate-300'
-              }`}
-            >
-              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-3 transition-colors ${purpose === 'welfare' ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}`}>
-                <Heart className="w-6 h-6" fill={purpose === 'welfare' ? 'currentColor' : 'none'} />
-              </div>
-              <span className="font-bold text-sm">Welfare Relief Fund</span>
-              <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Monthly dues & aid</span>
-            </button>
+            {!isUnverified && (
+              <button
+                type="button"
+                onClick={() => setPurpose('welfare')}
+                className={`p-5 rounded-3xl flex flex-col items-center justify-center text-center transition-all cursor-pointer ${
+                  purpose === 'welfare' 
+                    ? 'bg-blue-50 dark:bg-blue-950/40 border-2 border-blue-600 shadow-md text-blue-950 dark:text-blue-200' 
+                    : 'bg-white dark:bg-[#0c1731] border border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/40 text-slate-700 dark:text-slate-300'
+                }`}
+              >
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-3 transition-colors ${purpose === 'welfare' ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}`}>
+                  <Heart className="w-6 h-6" fill={purpose === 'welfare' ? 'currentColor' : 'none'} />
+                </div>
+                <span className="font-bold text-sm">Welfare Relief Fund</span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Monthly dues & aid</span>
+              </button>
+            )}
             
             <button
               type="button"
               onClick={() => setPurpose('campaign')}
-              className={`p-5 rounded-3xl flex flex-col items-center justify-center text-center transition-all cursor-pointer ${
+              className={`p-5 rounded-3xl flex flex-col items-center justify-center text-center transition-all cursor-pointer ${isUnverified ? 'col-span-2' : ''} ${
                 purpose === 'campaign' 
                   ? 'bg-blue-50 dark:bg-blue-950/40 border-2 border-blue-600 shadow-md text-blue-950 dark:text-blue-200' 
                   : 'bg-white dark:bg-[#0c1731] border border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/40 text-slate-700 dark:text-slate-300'
@@ -435,6 +465,17 @@ export default function Contribute() {
                 />
               </div>
             </div>
+            {purpose === 'campaign' && (
+              <label className="flex items-center gap-2 mt-4 cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  checked={isAnonymous}
+                  onChange={(e) => setIsAnonymous(e.target.checked)}
+                  className="w-4 h-4 text-blue-600 rounded-md border-slate-300 focus:ring-blue-500" 
+                />
+                <span className="text-sm text-slate-600 dark:text-slate-400 font-medium">Keep my contribution anonymous publicly</span>
+              </label>
+            )}
           </div>
 
           {/* PAY BUTTON */}

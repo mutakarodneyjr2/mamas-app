@@ -3,7 +3,7 @@ import { collection, query, onSnapshot, doc, getDoc, getDocs } from 'firebase/fi
 import { db } from '../firebase';
 import { Expense, User, AppSettings, SchoolCampaign } from '../types';
 import { useAuth } from '../contexts/AuthContext';
-import { submitExpense, voteOnExpense, payExpense, initiateExpenseDisbursement, logActivity } from '../lib/services';
+import { submitExpense, voteOnExpense, payExpense, initiateExpenseDisbursement, logActivity, reverseExpenseDecision } from '../lib/services';
 import { formatUGX } from '../lib/utils';
 import { Receipt, Plus, CheckCircle2, XCircle, Clock, Banknote, Shield, Search, Filter, Calendar, User as UserIcon, Phone, Building2, AlertCircle } from 'lucide-react';
 
@@ -29,6 +29,17 @@ export default function Expenses() {
   // Pay modal state
   const [payModalExpenseId, setPayModalExpenseId] = useState<string | null>(null);
   const [isPaying, setIsPaying] = useState(false);
+
+  // Voting modal state
+  const [votingModal, setVotingModal] = useState<{
+    expenseId: string;
+    vote: 'approve' | 'reject';
+    creatorId: string;
+    reason: string;
+    amount: number;
+  } | null>(null);
+  const [voteReason, setVoteReason] = useState('');
+  const [votingLoading, setVotingLoading] = useState(false);
 
   // Filters & Search
   const [searchTerm, setSearchTerm] = useState('');
@@ -148,11 +159,11 @@ export default function Expenses() {
     }
   };
 
-  const handleVote = async (expenseId: string, vote: 'approve' | 'reject', creatorId: string) => {
+  const handleVote = (expenseId: string, vote: 'approve' | 'reject', creatorId: string, reason: string, amount: number) => {
     setErrorMsg('');
     setSuccessMsg('');
     if (creatorId === currentUser.uid) {
-      setErrorMsg("Conflict of Interest: You cannot vote on an expense you created.");
+      setErrorMsg("Conflict of Interest: You cannot act on your own request.");
       setTimeout(() => setErrorMsg(''), 5000);
       return;
     }
@@ -161,14 +172,60 @@ export default function Expenses() {
       setTimeout(() => setErrorMsg(''), 5000);
       return;
     }
+    setVoteReason('');
+    setVotingModal({ expenseId, vote, creatorId, reason, amount });
+  };
 
+  // Reverse Decision Modal state
+  const [reverseModalId, setReverseModalId] = useState<string | null>(null);
+  const [reverseReason, setReverseReason] = useState('');
+  const [reverseLoading, setReverseLoading] = useState(false);
+
+  const openReverseModal = (expenseId: string) => {
+    if (userProfile?.role !== 'super_admin') {
+      setErrorMsg("Only a Super Admin can reverse decisions.");
+      setTimeout(() => setErrorMsg(''), 5000);
+      return;
+    }
+    setReverseReason('');
+    setReverseModalId(expenseId);
+  };
+
+  const submitReverseDecision = async () => {
+    if (!reverseModalId || !reverseReason.trim()) return;
+    setReverseLoading(true);
+    setErrorMsg('');
+    setSuccessMsg('');
     try {
-      await voteOnExpense(expenseId, currentUser.uid, vote);
-      setSuccessMsg(`Successfully voted to ${vote} expense.`);
+      await reverseExpenseDecision(reverseModalId, currentUser.uid, reverseReason);
+      setSuccessMsg('Decision reversed. Expense is now pending.');
+      setReverseModalId(null);
+      setReverseReason('');
+      setTimeout(() => setSuccessMsg(''), 3000);
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Failed to reverse decision.');
+      setTimeout(() => setErrorMsg(''), 5000);
+    } finally {
+      setReverseLoading(false);
+    }
+  };
+
+  const submitVote = async () => {
+    if (!votingModal) return;
+    setVotingLoading(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+    try {
+      await voteOnExpense(votingModal.expenseId, currentUser.uid, votingModal.vote, voteReason);
+      setSuccessMsg(`Successfully voted to ${votingModal.vote} expense.`);
+      setVotingModal(null);
+      setVoteReason('');
       setTimeout(() => setSuccessMsg(''), 3000);
     } catch (err: any) {
       setErrorMsg(err.message || 'Failed to cast vote.');
       setTimeout(() => setErrorMsg(''), 5000);
+    } finally {
+      setVotingLoading(false);
     }
   };
 
@@ -393,7 +450,7 @@ export default function Expenses() {
                               <div className="text-[11px] font-bold text-slate-400 text-center uppercase">Executive Vote</div>
                               <div className="grid grid-cols-2 gap-2">
                                 <button
-                                  onClick={() => handleVote(exp.id, 'approve', exp.userId)}
+                                  onClick={() => handleVote(exp.id!, 'approve', exp.userId, exp.reason, exp.amount)}
                                   className={`py-2 px-3 rounded-2xl font-bold text-xs transition-colors flex items-center justify-center gap-1 cursor-pointer ${
                                     userVote === 'approve' ? 'bg-teal-600 text-white shadow-sm' : 'bg-teal-50 dark:bg-teal-950/40 hover:bg-teal-100 dark:hover:bg-teal-900/50 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800'
                                   }`}
@@ -401,7 +458,7 @@ export default function Expenses() {
                                   <CheckCircle2 className="w-3.5 h-3.5" /> Approve
                                 </button>
                                 <button
-                                  onClick={() => handleVote(exp.id, 'reject', exp.userId)}
+                                  onClick={() => handleVote(exp.id!, 'reject', exp.userId, exp.reason, exp.amount)}
                                   className={`py-2 px-3 rounded-2xl font-bold text-xs transition-colors flex items-center justify-center gap-1 cursor-pointer ${
                                     userVote === 'reject' ? 'bg-rose-600 text-white shadow-sm' : 'bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800'
                                   }`}
@@ -451,6 +508,18 @@ export default function Expenses() {
                       {exp.status === 'rejected' && (
                         <div className="bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 p-3 rounded-2xl text-xs font-bold border border-rose-200 dark:border-rose-900/60 text-center">
                           Rejected
+                        </div>
+                      )}
+
+                      {/* Reverse Decision Trigger */}
+                      {exp.status !== 'pending' && exp.status !== 'paid' && exp.disbursementStatus !== 'successful' && exp.disbursementStatus !== 'in_progress' && userProfile?.role === 'super_admin' && (
+                        <div className="text-center mt-1">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); openReverseModal(exp.id!); }}
+                            className="text-[10px] font-bold uppercase tracking-wider text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 underline transition-colors cursor-pointer"
+                          >
+                            Reverse Decision
+                          </button>
                         </div>
                       )}
                     </div>
@@ -581,6 +650,123 @@ export default function Expenses() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Reverse Decision Modal */}
+      {reverseModalId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs animate-in fade-in duration-200" onClick={() => !reverseLoading && setReverseModalId(null)}>
+          <div 
+            className="bg-white dark:bg-[#0c1731] rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col gap-4 animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3.5">
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border bg-amber-50 text-amber-600 border-amber-200">
+                <AlertCircle className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-slate-900 dark:text-white text-base sm:text-lg">
+                  Reverse Decision
+                </h3>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5">
+                Reason for Reversal (Required)
+              </label>
+              <textarea
+                value={reverseReason}
+                onChange={(e) => setReverseReason(e.target.value)}
+                placeholder="Provide clear justification for reversing this decision..."
+                rows={3}
+                className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl p-3.5 text-xs text-slate-900 dark:text-white outline-none focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-blue-500 transition-all resize-none font-medium placeholder:text-slate-400"
+              />
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => setReverseModalId(null)}
+                disabled={reverseLoading}
+                className="flex-1 py-3 px-4 rounded-2xl font-bold text-xs sm:text-sm text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors disabled:opacity-50 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitReverseDecision}
+                disabled={reverseLoading || !reverseReason.trim()}
+                className="flex-1 py-3 px-4 rounded-2xl font-bold text-xs sm:text-sm text-white bg-amber-600 hover:bg-amber-500 shadow-md shadow-amber-500/25 transition-all disabled:opacity-50 cursor-pointer"
+              >
+                {reverseLoading ? 'Submitting...' : 'Confirm Reversal'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Voting Modal */}
+      {votingModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs animate-in fade-in duration-200" onClick={() => !votingLoading && setVotingModal(null)}>
+          <div 
+            className="bg-white dark:bg-[#0c1731] rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col gap-4 animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3.5">
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border ${
+                votingModal.vote === 'approve' 
+                  ? 'bg-teal-50 dark:bg-teal-950/60 text-teal-600 dark:text-teal-400 border-teal-200 dark:border-teal-800' 
+                  : 'bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-800'
+              }`}>
+                {votingModal.vote === 'approve' ? <CheckCircle2 className="w-6 h-6" /> : <XCircle className="w-6 h-6" />}
+              </div>
+              <div>
+                <h3 className="font-extrabold text-slate-900 dark:text-white text-base sm:text-lg">
+                  {votingModal.vote === 'approve' ? 'Approve Expense' : 'Reject Expense'}
+                </h3>
+                <p className="text-xs font-bold text-slate-500 dark:text-slate-400">
+                  <span className="font-mono text-slate-900 dark:text-white">{formatUGX(votingModal.amount)}</span>
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-3.5 border border-slate-100 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-400">
+              Reason: <span className="font-bold text-slate-900 dark:text-white">{votingModal.reason}</span>
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5">
+                Committee Reason & Feedback {votingModal.vote === 'reject' ? '(Required)' : '(Optional)'}
+              </label>
+              <textarea
+                value={voteReason}
+                onChange={(e) => setVoteReason(e.target.value)}
+                placeholder={votingModal.vote === 'approve' ? "Add approval notes..." : "Provide clear justification for rejection..."}
+                rows={3}
+                className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl p-3.5 text-xs text-slate-900 dark:text-white outline-none focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-blue-500 transition-all resize-none font-medium placeholder:text-slate-400"
+              />
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => setVotingModal(null)}
+                disabled={votingLoading}
+                className="flex-1 py-3 px-4 rounded-2xl font-bold text-xs sm:text-sm text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors disabled:opacity-50 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitVote}
+                disabled={votingLoading || (votingModal.vote === 'reject' && !voteReason.trim())}
+                className={`flex-1 py-3 px-4 rounded-2xl font-bold text-xs sm:text-sm text-white shadow-md transition-all disabled:opacity-50 cursor-pointer ${
+                  votingModal.vote === 'approve' 
+                    ? 'bg-teal-600 hover:bg-teal-500 shadow-teal-500/25' 
+                    : 'bg-rose-600 hover:bg-rose-500 shadow-rose-500/25'
+                }`}
+              >
+                {votingLoading ? 'Submitting...' : `Confirm ${votingModal.vote === 'approve' ? 'Approval' : 'Rejection'}`}
+              </button>
+            </div>
           </div>
         </div>
       )}

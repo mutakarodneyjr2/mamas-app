@@ -391,15 +391,64 @@ export default function PendingApproval() {
             </div>
 
             {/* Actions Grid */}
-            <div className="space-y-3 pt-2">
+            <div className="space-y-4 pt-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* School Campaigns Quick Link */}
+                <div className="p-4 bg-blue-50 dark:bg-blue-950/40 rounded-2xl border border-blue-200 dark:border-blue-900 flex flex-col justify-between h-full">
+                  <div>
+                    <h4 className="font-bold text-blue-900 dark:text-blue-100 flex items-center gap-2 mb-2">
+                      <School className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                      School Campaigns
+                    </h4>
+                    <p className="text-[11px] text-blue-700 dark:text-blue-300/80 leading-relaxed mb-4">
+                      While waiting for approval, you can still support active school development campaigns.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => navigate('/campaigns')}
+                    className="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer"
+                  >
+                    View & Contribute
+                  </button>
+                </div>
+
+                {/* Profile Edit Quick Link */}
+                <div className="p-4 bg-indigo-50 dark:bg-indigo-950/40 rounded-2xl border border-indigo-200 dark:border-indigo-900 flex flex-col justify-between h-full">
+                  <div>
+                    <h4 className="font-bold text-indigo-900 dark:text-indigo-100 flex items-center gap-2 mb-2">
+                      <User className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                      Complete Profile
+                    </h4>
+                    <p className="text-[11px] text-indigo-700 dark:text-indigo-300/80 leading-relaxed mb-4">
+                      Ensure your batch, location, and profession are up to date to help classmates reconnect once approved.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => navigate('/profile')}
+                    className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer"
+                  >
+                    Edit Profile & Privacy
+                  </button>
+                </div>
+              </div>
+
+              {/* Note on unlocked features */}
+              <div className="bg-slate-100 dark:bg-slate-800/40 p-4 rounded-xl text-center text-xs text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-800">
+                <span className="font-semibold text-slate-700 dark:text-slate-300">Note:</span> Full member directory, welfare contributions, grants, and member contacts will unlock immediately upon approval.
+              </div>
+            </div>
+
+            {/* Support Actions */}
+            <div className="pt-6 border-t border-slate-200/80 dark:border-slate-800">
+              <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 text-center">Contact Support</h4>
               <div className="flex flex-col sm:flex-row gap-3">
                 {/* Contact Support via Phone Call */}
                 {supportPhone && (
                   <a
                     href={`tel:${supportPhone}`}
-                    className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 text-white font-bold text-sm shadow-md transition-all active:scale-[0.99]"
+                    className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 text-white font-bold text-xs shadow-md transition-all active:scale-[0.99]"
                   >
-                    <Phone className="w-4 h-4 text-emerald-400" />
+                    <Phone className="w-3.5 h-3.5 text-emerald-400" />
                     <span>Call Admin</span>
                   </a>
                 )}
@@ -410,9 +459,9 @@ export default function PendingApproval() {
                     href={whatsappUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-md transition-all active:scale-[0.99]"
+                    className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition-all active:scale-[0.99]"
                   >
-                    <MessageSquare className="w-4 h-4" />
+                    <MessageSquare className="w-3.5 h-3.5" />
                     <span>WhatsApp</span>
                   </a>
                 )}
@@ -421,48 +470,35 @@ export default function PendingApproval() {
                 {supportEmail && (
                   <a
                     href={mailtoUrl}
-                    className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-sm border border-slate-200 dark:border-slate-700 transition-all active:scale-[0.99]"
+                    className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs border border-slate-200 dark:border-slate-700 transition-all active:scale-[0.99]"
                   >
-                    <Mail className="w-4 h-4 text-mamas-primary dark:text-mamas-accent" />
+                    <Mail className="w-3.5 h-3.5 text-mamas-primary dark:text-mamas-accent" />
                     <span>Email Admin</span>
                   </a>
                 )}
               </div>
-
-              {/* Status Action Row */}
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
-                <button
-                  onClick={() => checkStatus(true)}
-                  disabled={isRefreshing}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-all disabled:opacity-50"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-mamas-accent' : ''}`} />
-                  <span>{isRefreshing ? 'Checking Firestore...' : 'Re-check Status Now'}</span>
-                </button>
-
-                {/* Go to Dashboard button (Disabled until active/approved) */}
-                <button
-                  onClick={() => isApproved && navigate('/dashboard')}
-                  disabled={!isApproved}
-                  className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-bold text-xs transition-all ${
-                    isApproved
-                      ? 'bg-mamas-accent text-mamas-primary hover:bg-mamas-accent-hover shadow-lg cursor-pointer'
-                      : 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed opacity-60'
-                  }`}
-                  title={isApproved ? 'Go to Dashboard' : 'Dashboard locked until account is approved'}
-                >
-                  <span>Go to Dashboard</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
             </div>
 
+            {/* Status Action Row */}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4">
+              <button
+                onClick={() => checkStatus(true)}
+                disabled={isRefreshing}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-all disabled:opacity-50 cursor-pointer"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-mamas-accent' : ''}`} />
+                <span>{isRefreshing ? 'Checking Firestore...' : 'Re-check Status Now'}</span>
+              </button>
+            </div>
           </div>
 
           {/* Footer note */}
-          <div className="px-6 py-4 bg-slate-100/60 dark:bg-slate-900/80 border-t border-slate-200/80 dark:border-slate-800 text-center text-[11px] text-slate-400 dark:text-slate-500 flex items-center justify-between">
-            <span>MAMAS Member Directory & Welfare</span>
-            <span>Auto-refreshing live state</span>
+          <div className="px-6 py-4 bg-slate-100/60 dark:bg-slate-900/80 border-t border-slate-200/80 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-500 font-medium">
+            <div className="flex gap-4">
+              <button onClick={() => navigate('/terms')} className="hover:text-blue-600 dark:hover:text-blue-400">Terms of Service</button>
+              <button onClick={() => navigate('/privacy')} className="hover:text-blue-600 dark:hover:text-blue-400">Privacy Policy</button>
+            </div>
+            <span>Auto-refreshing state</span>
           </div>
 
         </div>

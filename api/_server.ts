@@ -143,9 +143,17 @@ export async function handleCollectionWebhook(payload: any) {
             paymentStatus: status === 'successful' ? 'verified' : status === 'failed' ? 'failed' : 'pending_payment',
             gatewayResponse: payload, relworxTransactionId: transactionId || null, updatedAt: Date.now()
           };
+          
+          if (amount !== undefined && amount !== null) {
+            updateData.amount = Number(amount);
+          }
+
           if (status === 'successful') {
             updateData.paidAt = Date.now(); updateData.status = 'verified';
             updateData.verifiedBy = 'RELWORX_WEBHOOK'; updateData.verifiedAt = Date.now();
+            
+            const confirmedAmount = Number(amount || contribData.amount || 0);
+
             if (contribData.userId) {
               const userRef = getDb().collection('users').doc(contribData.userId);
               const userDoc = await transaction.get(userRef);
@@ -155,10 +163,10 @@ export async function handleCollectionWebhook(payload: any) {
                   const isWelfare = contribData.purpose === 'welfare' || contribData.type === 'welfare';
                   const isCampaign = contribData.purpose === 'campaign' || contribData.type === 'school_support' || contribData.type === 'campaign';
                   const newTotalContributed = isWelfare || !isCampaign
-                    ? (userData.totalContributed || 0) + (contribData.amount || 0)
+                    ? (userData.totalContributed || 0) + confirmedAmount
                     : (userData.totalContributed || 0);
                   const newCampaignContributed = isCampaign
-                    ? (userData.totalCampaignContributed || 0) + (contribData.amount || 0)
+                    ? (userData.totalCampaignContributed || 0) + confirmedAmount
                     : (userData.totalCampaignContributed || 0);
                   transaction.update(userRef, {
                     totalContributed: newTotalContributed, totalCampaignContributed: newCampaignContributed,
@@ -175,7 +183,7 @@ export async function handleCollectionWebhook(payload: any) {
               if (campaignDoc.exists) {
                 const campaignData = campaignDoc.data();
                 if (campaignData) {
-                  const newRaisedAmount = (campaignData.raisedAmount || 0) + (contribData.amount || 0);
+                  const newRaisedAmount = (campaignData.raisedAmount || 0) + confirmedAmount;
                   const campUpdates: any = { raisedAmount: newRaisedAmount, updatedAt: Date.now() };
                   if (campaignData.targetAmount > 0 && newRaisedAmount >= campaignData.targetAmount && campaignData.status === 'active') {
                     campUpdates.status = 'fully_funded';
@@ -379,6 +387,20 @@ app.post(['/api/relworx/initiate-collection', '/relworx/initiate-collection'], r
     const { amount, phoneNumber, network, userId, purpose, metadata } = req.body || {};
     if (!amount || !phoneNumber || !network || !userId) return res.status(400).json({ success: false, message: 'Missing required parameters' });
     if (decodedToken.uid !== userId) return res.status(403).json({ success: false, message: 'User ID mismatch' });
+
+    // Enforce MAMAS visibility and eligibility rules:
+    // Welfare contributions remain VERIFIED-ONLY. School campaigns allow unverified users.
+    const isWelfare = purpose === 'welfare' || metadata?.purpose === 'welfare' || metadata?.type === 'welfare';
+    if (isWelfare) {
+      const userSnap = await getFirestore().collection('users').doc(userId).get();
+      if (!userSnap.exists || userSnap.data()?.status !== 'approved') {
+        return res.status(403).json({ 
+          success: false, 
+          message: 'Welfare contributions are reserved for verified alumni members. Please support our School Campaigns while your application is under review.' 
+        });
+      }
+    }
+
     const result = await initiateCollection(amount, phoneNumber, network, userId, metadata || { purpose });
     const relworxReference = result.relworxReference || result.reference || result.data?.reference;
     const contribDocId = metadata?.contributionId || metadata?.reference;
@@ -424,11 +446,20 @@ app.post(webhookPaths, async (req, res) => {
       return res.status(200).json({ success: true, status: 'success', message: 'Webhook endpoint active.' });
     }
 
-    const secret = process.env.RELWORX_WEBHOOK_SECRET || '';
+    const secret = process.env.RELWORX_WEBHOOK_SECRET;
+    if (!secret) {
+      console.error('[Webhook] RELWORX_WEBHOOK_SECRET not configured. Rejecting request.');
+      return res.status(500).json({ success: false, message: 'Server configuration error' });
+    }
     const signature = (req.headers['x-signature'] || req.headers['signature']) as string;
-    if (secret && signature) {
-      const isValid = verifyWebhookSignature(signature, rawBody, secret);
-      if (!isValid) return res.status(401).json({ success: false, message: 'Invalid webhook signature' });
+    if (!signature) {
+      console.warn('[Webhook] Missing signature in request.');
+      return res.status(401).json({ success: false, message: 'Missing signature' });
+    }
+    const isValid = verifyWebhookSignature(signature, rawBody, secret);
+    if (!isValid) {
+      console.warn('[Webhook] Invalid signature detected.');
+      return res.status(401).json({ success: false, message: 'Invalid webhook signature' });
     }
 
     if (payload.transaction_type === 'disbursement' || payload.type === 'disbursement' || (payload.reference && payload.reference.startsWith('DISB'))) {
@@ -446,41 +477,67 @@ app.post(webhookPaths, async (req, res) => {
 app.post(['/api/relworx/initiate-disbursement', '/relworx/initiate-disbursement'], requireFirebaseAdmin, async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
-    if (!authHeader || typeof authHeader !== 'string' || !authHeader.startsWith('Bearer ')) return res.status(401).json({ success: false, message: 'Unauthorized' });
+    if (!authHeader || typeof authHeader !== 'string' || !authHeader.startsWith('Bearer ')) return res.status(401).json({ success: false, message: 'Not allowed to payout' });
     const token = authHeader.split('Bearer ')[1];
     let decodedToken;
     try { decodedToken = await getAuth().verifyIdToken(token); }
-    catch (authErr: any) { return res.status(401).json({ success: false, message: 'Invalid token' }); }
+    catch (authErr: any) { return res.status(401).json({ success: false, message: 'Not allowed to payout' }); }
     const firestore = getFirestore();
     const userDoc = await firestore.collection('users').doc(decodedToken.uid).get();
-    if (!userDoc.exists) return res.status(403).json({ success: false, message: 'User profile not found' });
+    if (!userDoc.exists) return res.status(403).json({ success: false, message: 'Not allowed to payout' });
     const userData = userDoc.data();
     const allowedRoles = ['super_admin', 'treasurer', 'chairperson', 'vice_chairperson'];
-    if (!userData?.role || !allowedRoles.includes(userData.role)) return res.status(403).json({ success: false, message: 'Insufficient permissions' });
+    if (!userData?.role || !allowedRoles.includes(userData.role)) return res.status(403).json({ success: false, message: 'Not allowed to payout' });
     const { type, documentId, note } = req.body || {};
-    if (!type || !documentId) return res.status(400).json({ success: false, message: 'Missing type or documentId' });
-    if (type !== 'welfare' && type !== 'expense') return res.status(400).json({ success: false, message: 'Invalid type' });
+    if (!type || !documentId) return res.status(400).json({ success: false, message: 'Request not found' });
+    if (type !== 'welfare' && type !== 'expense') return res.status(400).json({ success: false, message: 'Request not found' });
 
     let amount: number, phoneNum: string, network: string, beneficiaryName: string | undefined;
     if (type === 'welfare') {
       const docSnap = await firestore.collection('welfareRequests').doc(documentId).get();
-      if (!docSnap.exists) return res.status(400).json({ success: false, message: 'Welfare request not found' });
+      if (!docSnap.exists) return res.status(404).json({ success: false, message: 'Request not found' });
       const data = docSnap.data();
-      if (data?.status !== 'approved' && data?.status !== 'accepted') return res.status(409).json({ success: false, message: 'Not approved' });
-      if (data?.disbursementStatus === 'pending' || data?.disbursementStatus === 'successful' || data?.status === 'paid') return res.status(409).json({ success: false, message: 'Already processing/paid' });
-      if (!data?.amountRequested || !data?.recipientPhoneNumber) return res.status(400).json({ success: false, message: 'Missing amount or phone' });
+      if (data?.userId === decodedToken.uid) return res.status(409).json({ success: false, message: 'You cannot payout your own request' });
+      if (data?.status !== 'approved' && data?.status !== 'accepted') return res.status(409).json({ success: false, message: 'Only approved requests can be paid' });
+      if (data?.disbursementStatus === 'in_progress') return res.status(409).json({ success: false, message: 'Payout already in progress' });
+      if (data?.disbursementStatus === 'successful' || data?.status === 'paid') return res.status(409).json({ success: false, message: 'Already paid' });
+      if (!data?.amountRequested || !data?.recipientPhoneNumber) return res.status(400).json({ success: false, message: 'Recipient number missing. Update request before payout' });
       amount = data.amountRequested; phoneNum = data.recipientPhoneNumber; network = data.recipientNetwork || 'MTN'; beneficiaryName = data.recipientName || data.personName;
     } else {
       const docSnap = await firestore.collection('expenses').doc(documentId).get();
-      if (!docSnap.exists) return res.status(400).json({ success: false, message: 'Expense not found' });
+      if (!docSnap.exists) return res.status(404).json({ success: false, message: 'Request not found' });
       const data = docSnap.data();
-      if (data?.status !== 'approved' && data?.approvalStatus !== 'approved') return res.status(409).json({ success: false, message: 'Not approved' });
-      if (data?.disbursementStatus === 'pending' || data?.disbursementStatus === 'successful' || data?.status === 'paid') return res.status(409).json({ success: false, message: 'Already processing/paid' });
-      if (!data?.amount || !data?.recipientPhoneNumber) return res.status(400).json({ success: false, message: 'Missing amount or phone' });
+      if (data?.userId === decodedToken.uid) return res.status(409).json({ success: false, message: 'You cannot payout your own request' });
+      if (data?.status !== 'approved' && data?.approvalStatus !== 'approved') return res.status(409).json({ success: false, message: 'Only approved requests can be paid' });
+      if (data?.disbursementStatus === 'in_progress') return res.status(409).json({ success: false, message: 'Payout already in progress' });
+      if (data?.disbursementStatus === 'successful' || data?.status === 'paid') return res.status(409).json({ success: false, message: 'Already paid' });
+      if (!data?.amount || !data?.recipientPhoneNumber) return res.status(400).json({ success: false, message: 'Recipient number missing. Update request before payout' });
       amount = data.amount; phoneNum = data.recipientPhoneNumber; network = data.recipientNetwork || 'MTN'; beneficiaryName = data.recipientName;
     }
+    
+    // Mark as in_progress to prevent double-clicks
+    const inProgressUpdate = { disbursementStatus: "in_progress", updatedAt: Date.now() };
+    if (type === 'welfare') await firestore.collection('welfareRequests').doc(documentId).update(inProgressUpdate);
+    else await firestore.collection('expenses').doc(documentId).update(inProgressUpdate);
+
     const metadata = { type, documentId, note, beneficiaryName };
-    const result = await initiateDisbursement(amount, phoneNum, network, documentId, metadata);
+    let result;
+    try {
+      result = await initiateDisbursement(amount, phoneNum, network, documentId, metadata);
+    } catch (apiError: any) {
+      const errMsg = apiError.message || '';
+      // Revert status on failure
+      const revertUpdate = { disbursementStatus: "failed", updatedAt: Date.now() };
+      if (type === 'welfare') await firestore.collection('welfareRequests').doc(documentId).update(revertUpdate);
+      else await firestore.collection('expenses').doc(documentId).update(revertUpdate);
+      
+      if (errMsg.toLowerCase().includes('insufficient')) {
+        return res.status(503).json({ success: false, message: 'Insufficient confirmed funds' });
+      } else {
+        return res.status(503).json({ success: false, message: 'Payout failed. Recipient not paid. You can retry after fixing details' });
+      }
+    }
+
     const updateData = { disbursementStatus: "pending", relworxDisbursementId: result.reference || result.data?.reference || null, updatedAt: Date.now() };
     if (type === 'welfare') await firestore.collection('welfareRequests').doc(documentId).update(updateData);
     else await firestore.collection('expenses').doc(documentId).update(updateData);

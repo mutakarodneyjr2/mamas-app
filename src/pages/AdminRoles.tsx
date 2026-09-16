@@ -65,12 +65,12 @@ export default function AdminRoles() {
     setError('');
 
     try {
-      await updateUserRole(targetUid, newRole);
-      await logActivity('ASSIGN_ROLE', currentUser.uid, targetUid, `Changed role of ${targetName} to ${newRole}`);
+      await updateUserRole(targetUid, newRole, currentUser.uid);
       setMessage(`Updated role for ${targetName} to ${newRole.replace('_', ' ')}.`);
       setTimeout(() => setMessage(''), 3000);
     } catch (err: any) {
       setError(err.message || "Failed to update role");
+      setTimeout(() => setError(''), 5000);
     } finally {
       setSavingUid(null);
     }

@@ -56,7 +56,14 @@ function Layout() {
                 </span>
               </Link>
             )}
-            <button onClick={logout} className="text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition-colors px-3 py-1.5 rounded-full hover:bg-rose-50 dark:hover:bg-rose-950/30 cursor-pointer">Log Out</button>
+            {userProfile ? (
+              <button onClick={logout} className="text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition-colors px-3 py-1.5 rounded-full hover:bg-rose-50 dark:hover:bg-rose-950/30 cursor-pointer">Log Out</button>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Link to="/login" className="text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors px-3 py-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">Log In</Link>
+                <Link to="/register" className="text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 transition-colors px-4 py-1.5 rounded-full shadow-md shadow-blue-500/20 cursor-pointer">Join MAMAS</Link>
+              </div>
+            )}
           </div>
         </div>
       </header>
@@ -72,13 +79,14 @@ import PendingApproval from './pages/PendingApproval';
 
 function ProtectedRoute({ children, requiredRole, allowPending = false }: { children: React.ReactNode, requiredRole?: string[], allowPending?: boolean }) {
   const { currentUser, userProfile, loading } = useAuth();
+  const location = useLocation();
 
   if (loading) return <div className="p-8 text-center text-mamas-text-muted">Loading...</div>;
 
-  if (!currentUser) return <Navigate to="/login" replace />;
-  if (!userProfile) return <Navigate to="/register" replace />;
+  if (!currentUser) return <Navigate to="/login" state={{ from: location.pathname + location.search }} replace />;
+  if (!userProfile) return <Navigate to="/register" state={{ from: location.pathname + location.search }} replace />;
 
-  if (!allowPending && (userProfile?.status === "pending" || userProfile?.status === "rejected")) {
+  if (!allowPending && (userProfile?.status === "pending" || userProfile?.status === "rejected" || userProfile?.status === "unverified" || userProfile?.status === "awaiting_approval")) {
     return <PendingApproval />;
   }
 
@@ -183,19 +191,22 @@ export default function App() {
             <Route path="/terms" element={<TermsOfService />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />
             
+            <Route element={<Layout />}>
+              <Route path="/campaigns" element={<Campaigns />} />
+            </Route>
+
             <Route element={<ProtectedRoute allowPending><Layout /></ProtectedRoute>}>
               <Route path="/setup" element={<SetupSuperAdmin />} />
+              <Route path="/contribute" element={<Contribute />} />
+              <Route path="/profile" element={<Profile />} />
             </Route>
 
             <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
               <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/contribute" element={<Contribute />} />
               <Route path="/statement" element={<Statement />} />
               <Route path="/welfare" element={<Welfare />} />
               <Route path="/welfare/apply" element={<ApplyWelfare />} />
               <Route path="/directory" element={<Directory />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/campaigns" element={<Campaigns />} />
               <Route path="/help" element={<Help />} />
               <Route path="/money-out" element={<MoneyOut />} />
               <Route path="/expenses" element={<Expenses />} />

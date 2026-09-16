@@ -3,7 +3,7 @@ import { collection, query, onSnapshot, doc, getDoc, getDocs } from 'firebase/fi
 import { db } from '../firebase';
 import { WelfareRequest, User, AppSettings } from '../types';
 import { useAuth } from '../contexts/AuthContext';
-import { castWelfareVote, markWelfareAsPaid, logActivity, initiateWelfareDisbursement } from '../lib/services';
+import { castWelfareVote, logActivity, initiateWelfareDisbursement, reverseWelfareDecision } from '../lib/services';
 import { formatUGX, exportToCSV } from '../lib/utils';
 import { Heart, FileText, CheckCircle, XCircle, Clock, Banknote, Shield, Search, Filter, Download, ChevronDown, ChevronUp, Calendar, DollarSign, AlertCircle, CheckCircle2 } from 'lucide-react';
 
@@ -34,6 +34,9 @@ export default function AdminWelfare() {
   } | null>(null);
   const [voteReason, setVoteReason] = useState('');
   const [votingLoading, setVotingLoading] = useState(false);
+  // Pay Confirmation Modal state
+  const [payModalWelfareId, setPayModalWelfareId] = useState<string | null>(null);
+  const [isPaying, setIsPaying] = useState(false);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -148,6 +151,40 @@ export default function AdminWelfare() {
     setVotingModal({ requestId, vote, requestUserId, category, personName, amountRequested });
   };
 
+  // Reverse Decision Modal state
+  const [reverseModalId, setReverseModalId] = useState<string | null>(null);
+  const [reverseReason, setReverseReason] = useState('');
+  const [reverseLoading, setReverseLoading] = useState(false);
+
+  const openReverseModal = (requestId: string) => {
+    if (!isSuperAdmin) {
+      setErrorMsg("Only a Super Admin can reverse decisions.");
+      setTimeout(() => setErrorMsg(''), 5000);
+      return;
+    }
+    setReverseReason('');
+    setReverseModalId(requestId);
+  };
+
+  const submitReverseDecision = async () => {
+    if (!reverseModalId || !reverseReason.trim()) return;
+    setReverseLoading(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+    try {
+      await reverseWelfareDecision(reverseModalId, currentUser.uid, reverseReason);
+      setSuccessMsg('Decision reversed. Request is now pending.');
+      setReverseModalId(null);
+      setReverseReason('');
+      setTimeout(() => setSuccessMsg(''), 3000);
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Failed to reverse decision.');
+      setTimeout(() => setErrorMsg(''), 5000);
+    } finally {
+      setReverseLoading(false);
+    }
+  };
+
   const submitVote = async () => {
     if (!votingModal) return;
     setVotingLoading(true);
@@ -167,7 +204,7 @@ export default function AdminWelfare() {
     }
   };
 
-  const handlePay = async (requestId: string) => {
+  const openPayModal = (requestId: string) => {
     setErrorMsg('');
     setSuccessMsg('');
     if (!isTreasurer && !isSuperAdmin) {
@@ -175,14 +212,31 @@ export default function AdminWelfare() {
       setTimeout(() => setErrorMsg(''), 5000);
       return;
     }
-    
+    setPayModalWelfareId(requestId);
+  };
+
+  const handlePaySubmit = async (e: React.FormEvent, request: WelfareRequest) => {
+    e.preventDefault();
+    setErrorMsg('');
+    setSuccessMsg('');
+
+    if (request.userId === currentUser.uid) {
+      setErrorMsg("Conflict of Interest: You cannot issue a payout for your own request.");
+      setTimeout(() => setErrorMsg(''), 5000);
+      return;
+    }
+
+    setIsPaying(true);
     try {
-      await initiateWelfareDisbursement(requestId, currentUser.uid);
-      setSuccessMsg("Disbursement initiated via Mobile Money.");
-      setTimeout(() => setSuccessMsg(''), 3000);
+      await initiateWelfareDisbursement(request.id!, currentUser.uid);
+      setPayModalWelfareId(null);
+      setSuccessMsg(`Mobile money disbursement of ${formatUGX(request.amountRequested)} initiated for ${request.recipientPhoneNumber}.`);
+      setTimeout(() => setSuccessMsg(''), 5000);
     } catch (err: any) {
       setErrorMsg(err.message || 'Failed to initiate disbursement.');
       setTimeout(() => setErrorMsg(''), 5000);
+    } finally {
+      setIsPaying(false);
     }
   };
 
@@ -365,7 +419,7 @@ export default function AdminWelfare() {
                         </div>
                       ) : (
                         <button
-                          onClick={(e) => { e.stopPropagation(); handlePay(request.id!); }}
+                          onClick={(e) => { e.stopPropagation(); openPayModal(request.id!); }}
                           className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-2xl py-3 text-xs font-extrabold uppercase tracking-wider shadow-xs transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
                         >
                           <Banknote className="w-4 h-4" /> Issue Mobile Money Payout ({formatUGX(request.amountRequested)})
@@ -373,6 +427,18 @@ export default function AdminWelfare() {
                       )}
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* Reverse Decision Trigger */}
+              {request.status !== 'pending' && request.status !== 'paid' && request.disbursementStatus !== 'successful' && request.disbursementStatus !== 'in_progress' && isSuperAdmin && (
+                <div className="mt-2 text-center">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); openReverseModal(request.id!); }}
+                    className="text-[10px] font-bold uppercase tracking-wider text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 underline transition-colors cursor-pointer"
+                  >
+                    Reverse Decision
+                  </button>
                 </div>
               )}
 
@@ -515,6 +581,57 @@ export default function AdminWelfare() {
         )}
       </div>
 
+      {/* Reverse Decision Modal */}
+      {reverseModalId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs animate-in fade-in duration-200" onClick={() => !reverseLoading && setReverseModalId(null)}>
+          <div 
+            className="bg-white dark:bg-[#0c1731] rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col gap-4 animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3.5">
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border bg-amber-50 text-amber-600 border-amber-200">
+                <AlertCircle className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-slate-900 dark:text-white text-base sm:text-lg">
+                  Reverse Decision
+                </h3>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5">
+                Reason for Reversal (Required)
+              </label>
+              <textarea
+                value={reverseReason}
+                onChange={(e) => setReverseReason(e.target.value)}
+                placeholder="Provide clear justification for reversing this decision..."
+                rows={3}
+                className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl p-3.5 text-xs text-slate-900 dark:text-white outline-none focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-blue-500 transition-all resize-none font-medium placeholder:text-slate-400"
+              />
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => setReverseModalId(null)}
+                disabled={reverseLoading}
+                className="flex-1 py-3 px-4 rounded-2xl font-bold text-xs sm:text-sm text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors disabled:opacity-50 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitReverseDecision}
+                disabled={reverseLoading || !reverseReason.trim()}
+                className="flex-1 py-3 px-4 rounded-2xl font-bold text-xs sm:text-sm text-white bg-amber-600 hover:bg-amber-500 shadow-md shadow-amber-500/25 transition-all disabled:opacity-50 cursor-pointer"
+              >
+                {reverseLoading ? 'Submitting...' : 'Confirm Reversal'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Vote Confirmation Modal */}
       {votingModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs animate-in fade-in duration-200" onClick={() => !votingLoading && setVotingModal(null)}>
@@ -583,6 +700,52 @@ export default function AdminWelfare() {
                 )}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* Pay Confirmation Modal */}
+      {payModalWelfareId && (
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#0c1731] rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-200/80 dark:border-slate-800">
+            <h3 className="text-xl font-extrabold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
+              <Banknote className="w-5 h-5 text-blue-600 dark:text-blue-400" /> Process Relworx Disbursement
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-6">
+              Disbursing funds to the saved recipient mobile money number.
+            </p>
+
+            {(() => {
+              const req = requests.find(r => r.id === payModalWelfareId);
+              if (!req) return null;
+              return (
+                <form onSubmit={e => handlePaySubmit(e, req)} className="space-y-4">
+                  <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-700/70 space-y-1.5 text-xs">
+                    <p className="font-bold text-slate-900 dark:text-white">Category: {req.category}</p>
+                    <p className="text-slate-600 dark:text-slate-300">Amount: <span className="font-bold text-blue-600 dark:text-blue-400">{formatUGX(req.amountRequested)}</span></p>
+                    <p className="text-slate-600 dark:text-slate-300">Recipient Phone: <span className="font-mono font-bold text-slate-900 dark:text-white">{req.recipientPhoneNumber} ({req.recipientNetwork || 'MTN'})</span></p>
+                    <p className="text-slate-600 dark:text-slate-300">Beneficiary: <span className="font-bold text-slate-900 dark:text-white">{req.personName || 'N/A'}</span></p>
+                  </div>
+
+                  <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+                    <button
+                      type="button"
+                      onClick={() => setPayModalWelfareId(null)}
+                      className="px-5 py-2.5 text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-2xl transition-colors cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isPaying}
+                      className="px-6 py-2.5 text-xs sm:text-sm font-extrabold bg-blue-600 hover:bg-blue-500 text-white rounded-2xl shadow-md shadow-blue-500/25 disabled:opacity-50 transition-all flex items-center gap-2 cursor-pointer"
+                    >
+                      <Banknote className="w-4 h-4" />
+                      {isPaying ? 'Processing...' : 'Pay via Mobile Money'}
+                    </button>
+                  </div>
+                </form>
+              );
+            })()}
           </div>
         </div>
       )}

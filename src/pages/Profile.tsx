@@ -1,23 +1,49 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { 
-  Camera, Mail, MapPin, Briefcase, Phone, User, Shield, ChevronRight, LogOut, SunMoon, Sparkles, Check, Edit3, X, Save, Bell, BellRing, GraduationCap
+  Camera, Mail, MapPin, Briefcase, Phone, User, Shield, ChevronRight, LogOut, SunMoon, Sparkles, Check, Edit3, X, Save, Bell, BellRing, GraduationCap, Eye, EyeOff, Lock
 } from 'lucide-react';
 import { db } from '../firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import { registerFCMToken } from '../lib/fcmService';
 import { uploadImage } from '../lib/storage';
+import { PrivacyLevel } from '../types';
 
 export default function Profile() {
   const { userProfile, logout } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [showPhone, setShowPhone] = useState(userProfile?.privacySettings?.showPhone ?? true);
-  const [showEmail, setShowEmail] = useState(userProfile?.privacySettings?.showEmail ?? false);
+  
+  // Initialize with new structure or fallback to legacy booleans
+  const getInitialPrivacy = (field: keyof typeof userProfile.privacySettings, defaultVal: PrivacyLevel): PrivacyLevel => {
+    if (!userProfile?.privacySettings) return defaultVal;
+    
+    // Check new structured settings
+    if (typeof userProfile.privacySettings[field] === 'string') {
+      return userProfile.privacySettings[field] as PrivacyLevel;
+    }
+    
+    // Fallback for legacy boolean data
+    if (field === 'phone' && 'showPhone' in userProfile.privacySettings) {
+      return userProfile.privacySettings.showPhone ? 'visible_to_verified_members' : 'committee_only';
+    }
+    if (field === 'email' && 'showEmail' in userProfile.privacySettings) {
+      return userProfile.privacySettings.showEmail ? 'visible_to_verified_members' : 'hidden';
+    }
+    
+    return defaultVal;
+  };
+
+  const [privacyPhone, setPrivacyPhone] = useState<PrivacyLevel>(getInitialPrivacy('phone', 'committee_only'));
+  const [privacyEmail, setPrivacyEmail] = useState<PrivacyLevel>(getInitialPrivacy('email', 'visible_to_verified_members'));
+  const [privacyWhatsapp, setPrivacyWhatsapp] = useState<PrivacyLevel>(getInitialPrivacy('whatsapp', 'committee_only'));
+  const [privacyLocation, setPrivacyLocation] = useState<PrivacyLevel>(getInitialPrivacy('location', 'visible_to_verified_members'));
+  const [privacyProfession, setPrivacyProfession] = useState<PrivacyLevel>(getInitialPrivacy('profession', 'visible_to_verified_members'));
 
   const [isEditing, setIsEditing] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState(userProfile?.phoneNumber || '');
   const [occupation, setOccupation] = useState(userProfile?.occupation || '');
   const [district, setDistrict] = useState(userProfile?.district || '');
+  const [yearLeftSchool, setYearLeftSchool] = useState(userProfile?.yearLeftSchool || '');
   const [nextOfKinName, setNextOfKinName] = useState(userProfile?.nextOfKinName || '');
   const [nextOfKinPhone, setNextOfKinPhone] = useState(userProfile?.nextOfKinPhone || '');
   
@@ -97,20 +123,6 @@ export default function Profile() {
     }
   };
 
-  const handleTogglePrivacy = async (field: 'showPhone' | 'showEmail', value: boolean) => {
-    if (!userProfile?.uid) return;
-    try {
-      if (field === 'showPhone') setShowPhone(value);
-      if (field === 'showEmail') setShowEmail(value);
-      
-      await updateDoc(doc(db, 'users', userProfile.uid), {
-        [`privacySettings.${field}`]: value
-      });
-    } catch (err) {
-      console.error("Error updating privacy", err);
-    }
-  };
-
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!userProfile?.uid) return;
@@ -124,11 +136,19 @@ export default function Profile() {
         phoneNumber,
         occupation,
         district,
+        yearLeftSchool,
         nextOfKinName,
-        nextOfKinPhone
+        nextOfKinPhone,
+        privacySettings: {
+          phone: privacyPhone,
+          email: privacyEmail,
+          whatsapp: privacyWhatsapp,
+          location: privacyLocation,
+          profession: privacyProfession
+        }
       });
 
-      setSuccessMsg('Profile updated successfully!');
+      setSuccessMsg('Profile and privacy settings updated successfully!');
       setIsEditing(false);
       setTimeout(() => setSuccessMsg(''), 4000);
     } catch (err: any) {
@@ -245,6 +265,16 @@ export default function Profile() {
             </div>
 
             <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">Year Left School</label>
+              <input
+                type="text"
+                value={yearLeftSchool}
+                onChange={e => setYearLeftSchool(e.target.value)}
+                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-2xl text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">District / Residence</label>
               <input
                 type="text"
@@ -273,9 +303,21 @@ export default function Profile() {
                 className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-2xl text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
+
+            <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-4">Directory Privacy Settings</h3>
+              
+              <div className="space-y-4">
+                <PrivacySelect label="Phone Number" value={privacyPhone} onChange={setPrivacyPhone} />
+                <PrivacySelect label="WhatsApp Button" value={privacyWhatsapp} onChange={setPrivacyWhatsapp} />
+                <PrivacySelect label="Email Address" value={privacyEmail} onChange={setPrivacyEmail} />
+                <PrivacySelect label="Location / District" value={privacyLocation} onChange={setPrivacyLocation} />
+                <PrivacySelect label="Profession / Occupation" value={privacyProfession} onChange={setPrivacyProfession} />
+              </div>
+            </div>
           </div>
 
-          <div className="flex gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+          <div className="flex gap-3 pt-6 border-t border-slate-100 dark:border-slate-800">
             <button
               type="button"
               onClick={() => setIsEditing(false)}
@@ -329,22 +371,19 @@ export default function Profile() {
             </div>
           </section>
 
-          {/* PRIVACY SETTINGS */}
+          {/* PRIVACY SETTINGS VIEW */}
           <section className="bg-white dark:bg-[#0c1731] rounded-3xl shadow-xs border border-slate-200/80 dark:border-slate-800 overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40">
-              <h2 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Directory Privacy</h2>
+              <h2 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                <Lock className="w-4 h-4" /> Directory Privacy
+              </h2>
             </div>
             <div className="divide-y divide-slate-100 dark:divide-slate-800">
-              <ToggleRow 
-                label="Show Phone in Directory" 
-                checked={showPhone} 
-                onChange={(val) => handleTogglePrivacy('showPhone', val)} 
-              />
-              <ToggleRow 
-                label="Show Email in Directory" 
-                checked={showEmail} 
-                onChange={(val) => handleTogglePrivacy('showEmail', val)} 
-              />
+              <PrivacyDisplayRow label="Phone Number" value={privacyPhone} />
+              <PrivacyDisplayRow label="WhatsApp Button" value={privacyWhatsapp} />
+              <PrivacyDisplayRow label="Email Address" value={privacyEmail} />
+              <PrivacyDisplayRow label="Location / District" value={privacyLocation} />
+              <PrivacyDisplayRow label="Profession / Occupation" value={privacyProfession} />
             </div>
           </section>
 
@@ -427,19 +466,46 @@ function InfoRow({ icon: Icon, label, value }: { icon: any, label: string, value
   );
 }
 
-function ToggleRow({ label, checked, onChange }: { label: string, checked: boolean, onChange: (val: boolean) => void }) {
+function PrivacySelect({ label, value, onChange }: { label: string, value: PrivacyLevel, onChange: (val: PrivacyLevel) => void }) {
   return (
-    <div className="px-6 py-4 flex items-center justify-between">
-      <span className="text-slate-900 dark:text-white font-medium text-sm">{label}</span>
-      <button 
-        type="button"
-        role="switch"
-        aria-checked={checked}
-        onClick={() => onChange(!checked)}
-        className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors cursor-pointer ${checked ? 'bg-blue-600' : 'bg-slate-200 dark:bg-slate-700'}`}
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-100 dark:border-slate-800/60">
+      <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{label}</span>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value as PrivacyLevel)}
+        className="w-full sm:w-auto px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold text-slate-700 dark:text-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none cursor-pointer"
       >
-        <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform shadow-xs ${checked ? 'translate-x-6' : 'translate-x-1'}`} />
-      </button>
+        <option value="visible_to_verified_members">Visible to Verified Members</option>
+        <option value="committee_only">Visible to Committee Only</option>
+        <option value="hidden">Hidden completely</option>
+      </select>
+    </div>
+  );
+}
+
+function PrivacyDisplayRow({ label, value }: { label: string, value: PrivacyLevel }) {
+  const getDisplay = (val: PrivacyLevel) => {
+    switch (val) {
+      case 'visible_to_verified_members':
+        return { text: 'Visible to Members', icon: Eye, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-950/40' };
+      case 'committee_only':
+        return { text: 'Committee Only', icon: Shield, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-950/40' };
+      case 'hidden':
+        return { text: 'Hidden', icon: EyeOff, color: 'text-slate-600 dark:text-slate-400', bg: 'bg-slate-100 dark:bg-slate-800' };
+      default:
+        return { text: 'Visible to Members', icon: Eye, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-950/40' };
+    }
+  };
+
+  const display = getDisplay(value);
+  const Icon = display.icon;
+
+  return (
+    <div className="px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <span className="text-slate-900 dark:text-white font-medium text-sm">{label}</span>
+      <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg ${display.bg} ${display.color} text-xs font-bold w-fit`}>
+        <Icon className="w-3.5 h-3.5" /> {display.text}
+      </div>
     </div>
   );
 }

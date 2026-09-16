@@ -5,8 +5,10 @@ import { db } from '../firebase';
 import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
 import { Search, MapPin, Briefcase, Phone, Mail, MessageSquare, X, ChevronRight, School, User as UserIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Directory() {
+  const { userProfile, isAdminOrCommittee } = useAuth();
   const [members, setMembers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -66,6 +68,29 @@ export default function Directory() {
     { label: 'All Years', value: '' },
     ...years.map(y => ({ label: String(y), value: String(y) }))
   ];
+
+  const canViewField = (member: User, field: keyof User['privacySettings']) => {
+    // If it's the current user, they can always view their own fields
+    if (userProfile?.uid === member.uid) return true;
+    
+    const setting = member.privacySettings?.[field];
+    
+    // Legacy support for boolean settings
+    if (typeof setting === 'boolean') {
+      return setting;
+    }
+
+    // Default privacy if undefined is 'visible_to_verified_members' for most fields except contact info
+    const effectiveSetting = setting || (
+      (field === 'phone' || field === 'email' || field === 'whatsapp') ? 'committee_only' : 'visible_to_verified_members'
+    );
+
+    if (effectiveSetting === 'hidden') return false;
+    if (effectiveSetting === 'committee_only') return !!isAdminOrCommittee;
+    if (effectiveSetting === 'visible_to_verified_members') return userProfile?.status === 'approved';
+    
+    return false;
+  };
 
   return (
     <div className="space-y-6 pb-28 animate-in fade-in duration-300">
@@ -158,8 +183,8 @@ export default function Directory() {
                     <p className="text-xs font-medium text-slate-500 dark:text-slate-400 truncate flex items-center gap-1.5 mt-1">
                       <School className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400" /> 
                       {member.yearLeftSchool ? `Class of ${member.yearLeftSchool}` : 'Alumni'}
-                      {member.district && <span className="opacity-50 mx-0.5">•</span>}
-                      {member.district && <span className="truncate">{member.district}</span>}
+                      {member.district && canViewField(member, 'location') && <span className="opacity-50 mx-0.5">•</span>}
+                      {member.district && canViewField(member, 'location') && <span className="truncate">{member.district}</span>}
                     </p>
                   </div>
                   <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600 shrink-0" />
@@ -211,13 +236,13 @@ export default function Directory() {
                 </div>
                 
                 <div className="space-y-2 mb-6">
-                  {selectedMember.district && (
+                  {selectedMember.district && canViewField(selectedMember, 'location') && (
                     <div className="flex items-center gap-3 text-sm font-medium text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-2xl border border-slate-100 dark:border-slate-800">
                       <MapPin className="w-4 h-4 text-blue-500 dark:text-blue-400 shrink-0" />
                       <span className="truncate">{selectedMember.district}</span>
                     </div>
                   )}
-                  {selectedMember.occupation && (
+                  {selectedMember.occupation && canViewField(selectedMember, 'profession') && (
                     <div className="flex items-center gap-3 text-sm font-medium text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-2xl border border-slate-100 dark:border-slate-800">
                       <Briefcase className="w-4 h-4 text-blue-500 dark:text-blue-400 shrink-0" />
                       <span className="truncate">{selectedMember.occupation}</span>
@@ -229,20 +254,22 @@ export default function Directory() {
                 <div className="space-y-3 pt-2">
                   <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-3 px-1">Contact Details</h4>
                   
-                  {(selectedMember.privacySettings?.showPhone || selectedMember.privacySettings?.showEmail) ? (
+                  {(canViewField(selectedMember, 'phone') || canViewField(selectedMember, 'email') || canViewField(selectedMember, 'whatsapp')) ? (
                     <div className="flex flex-col gap-2.5">
-                      {selectedMember.privacySettings?.showPhone && selectedMember.phoneNumber && (
-                        <div className="flex gap-2.5">
+                      <div className="flex gap-2.5">
+                        {canViewField(selectedMember, 'phone') && selectedMember.phoneNumber && (
                           <a href={`tel:${selectedMember.phoneNumber}`} className="flex-1 flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-900 dark:text-white py-3 rounded-2xl text-sm font-bold transition-all active:scale-[0.98]">
                             <Phone className="w-4 h-4 text-blue-600 dark:text-blue-400" /> Call
                           </a>
+                        )}
+                        {canViewField(selectedMember, 'whatsapp') && selectedMember.phoneNumber && (
                           <a href={`https://wa.me/${selectedMember.phoneNumber.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded-2xl text-sm font-bold shadow-xs transition-all active:scale-[0.98]">
                             <MessageSquare className="w-4 h-4" /> WhatsApp
                           </a>
-                        </div>
-                      )}
+                        )}
+                      </div>
                       
-                      {selectedMember.privacySettings?.showEmail && selectedMember.email && (
+                      {canViewField(selectedMember, 'email') && selectedMember.email && (
                          <a href={`mailto:${selectedMember.email}`} className="w-full flex items-center justify-center gap-2 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/40 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 py-3 rounded-2xl text-sm font-bold transition-all border border-slate-200 dark:border-slate-700/80 active:scale-[0.98]">
                            <Mail className="w-4 h-4 text-blue-500 dark:text-blue-400" /> {selectedMember.email}
                          </a>

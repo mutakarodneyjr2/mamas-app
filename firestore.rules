@@ -22,6 +22,10 @@ service cloud.firestore {
     function isSuperAdmin() {
       return getUserRole() == 'super_admin';
     }
+
+    function isVerifiedMember() {
+      return isAuthenticated() && userExists() && getUserData().get('status', 'pending') == 'approved';
+    }
     
     function hasRole(allowedRoles) {
       return getUserRole() in allowedRoles;
@@ -54,14 +58,14 @@ service cloud.firestore {
 
     // =========================================
     // 1. Users Collection
-    // Read: All authenticated members (for Directory and profile checks)
+    // Read: A user can read their own profile; verified members & committee can read alumni profiles
     // Create: Users on registration
-    // Update: User can update own profile (excluding role); Super Admin can change roles/status
+    // Update: User can update own profile (excluding role and status); Super Admin can change roles/status
     // =========================================
     match /users/{userId} {
-      allow read: if isAuthenticated();
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isVerifiedMember() || hasRole(['super_admin', 'chairperson', 'vice_chairperson', 'secretary', 'treasurer', 'auditor', 'mobiliser']));
       allow create: if isAuthenticated() && request.auth.uid == userId;
-      allow update: if (isAuthenticated() && request.auth.uid == userId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role'])) 
+      allow update: if (isAuthenticated() && request.auth.uid == userId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'status'])) 
                     || isSuperAdmin() 
                     || (isApprovalAdmin() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'rejectionReason', 'rejectedAt', 'rejectedBy', 'updatedAt']));
       allow delete: if isSuperAdmin();
@@ -70,31 +74,40 @@ service cloud.firestore {
     // =========================================
     // 2. Contributions Collection
     // Read: Authenticated members can view contribution records
-    // Create: Authenticated members can log their own contributions
+    // Create:
+    //  - School campaigns: Any authenticated user (including unverified members)
+    //  - Welfare: Verified members only
+    //  - Client cannot write verified payment status directly
     // Update: Super Admin, Chairperson, Treasurer can verify/update status
     // Delete: Strictly disabled (financial audit trail integrity)
     // =========================================
     match /contributions/{contributionId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid && (
+        (request.resource.data.get('type', '') in ['school_support', 'campaign'] || request.resource.data.get('purpose', '') == 'campaign') ||
+        isVerifiedMember()
+      ) && (
+        request.resource.data.get('status', 'pending') in ['pending', 'pending_payment']
+      ) && (
+        request.resource.data.get('paymentStatus', 'pending') in ['pending', 'pending_payment', 'initiated']
+      );
       allow update: if isPayoutAdmin() && (
-        !(request.resource.data.diff(resource.data).affectedKeys().hasAny(['paymentStatus', 'status'])) || 
-        request.resource.data.status != 'verified' || 
-        request.auth.uid != resource.data.userId
+        !(request.resource.data.diff(resource.data).affectedKeys().hasAny(['amount', 'paymentStatus', 'status'])) || 
+        (resource.data.status != 'verified' && resource.data.status != 'success')
       );
       allow delete: if false;
     }
 
     // =========================================
     // 3. Welfare Requests Collection
-    // Read: Authenticated members can view requests
-    // Create: Authenticated members can submit requests
+    // Read: Verified members & committee only (no unverified or visitor access to sensitive welfare evidence)
+    // Create: Verified members only
     // Update: Executive Committee (Super Admin, Chairperson, Secretary, Treasurer)
     // Delete: Strictly disabled
     // =========================================
     match /welfareRequests/{requestId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid && request.resource.data.recipientPhoneNumber is string;
+      allow read: if isVerifiedMember() || hasRole(['super_admin', 'chairperson', 'vice_chairperson', 'secretary', 'treasurer', 'auditor']);
+      allow create: if isVerifiedMember() && request.resource.data.userId == request.auth.uid && request.resource.data.recipientPhoneNumber is string;
       allow update: if (
         (isPayoutAdmin() && (
           !(request.resource.data.diff(resource.data).affectedKeys().hasAny(['paidAt', 'disbursementStatus', 'paidAmount'])) || 
@@ -134,11 +147,11 @@ service cloud.firestore {
 
     // =========================================
     // 4. School Campaigns Collection
-    // Read: All approved members can view active & past school campaigns
+    // Read: Public read for everyone (visitors & unverified members can view campaigns)
     // Write: Super Admin and Chairperson can create/edit campaigns
     // =========================================
     match /schoolCampaigns/{campaignId} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow write: if hasRole(['super_admin', 'chairperson']);
     }
 

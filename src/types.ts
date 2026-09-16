@@ -1,6 +1,20 @@
 export type UserRole = "super_admin" | "chairperson" | "vice_chairperson" | "treasurer" | "secretary" | "auditor" | "mobiliser" | "member";
-export type UserStatus = "pending" | "approved" | "rejected" | "suspended";
+export type UserStatus = "pending" | "approved" | "rejected" | "suspended" | "unverified" | "awaiting_approval";
 export type ContributionStatus = "active" | "inactive";
+
+export type PrivacyLevel = "visible_to_verified_members" | "committee_only" | "hidden";
+
+export interface UserPrivacySettings {
+  phone?: PrivacyLevel | boolean;
+  email?: PrivacyLevel | boolean;
+  whatsapp?: PrivacyLevel | boolean;
+  location?: PrivacyLevel | boolean;
+  profession?: PrivacyLevel | boolean;
+  showPhone?: boolean;
+  showEmail?: boolean;
+}
+
+export type AccessTier = "visitor" | "unverified" | "verified" | "admin";
 
 export interface User {
   uid: string;
@@ -13,16 +27,14 @@ export interface User {
   placeOfResidence: string;
   occupation: string;
   otherOccupation?: string;
+  workplace?: string;
   university?: string;
   course?: string;
   nextOfKinName: string;
   nextOfKinPhone: string;
   role: UserRole;
   status: UserStatus;
-  privacySettings: {
-    showPhone: boolean;
-    showEmail: boolean;
-  };
+  privacySettings: UserPrivacySettings;
   contributionStatus: ContributionStatus;
   hasCompletedOnboarding?: boolean;
   recoveryEmail?: string;
@@ -79,6 +91,10 @@ export interface Contribution {
   gatewayResponse?: any;
   paymentStatus?: RelworxPaymentStatus;
   paidAt?: number;
+  userName?: string;
+  isAnonymous?: boolean;
+  displayName?: string;
+  purpose?: 'welfare' | 'campaign';
 }
 
 export type WelfareRequestStatus = "pending" | "accepted" | "declined" | "paid";

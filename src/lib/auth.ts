@@ -1,4 +1,4 @@
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp, runTransaction, getDocs, collection, query, where } from "firebase/firestore";
 import { db } from "../firebase";
 import { User, UserRole, UserStatus } from "../types";
 import { uploadImage } from "./storage";
@@ -92,13 +92,25 @@ export const completeProfile = async (
   await setDoc(doc(db, "users", uid), userDoc);
 };
 
-export const approveMember = async (targetUid: string) => {
-  await updateDoc(doc(db, "users", targetUid), {
-    status: "approved",
-    updatedAt: Date.now()
+export const approveMember = async (targetUid: string, adminUid?: string) => {
+  if (adminUid && adminUid === targetUid) {
+    throw new Error("You cannot approve your own membership request.");
+  }
+  await runTransaction(db, async (transaction) => {
+    const userRef = doc(db, "users", targetUid);
+    const userDoc = await transaction.get(userRef);
+    if (!userDoc.exists()) throw new Error("User not found.");
+    if (userDoc.data().status !== "pending") {
+      throw new Error(`User is already ${userDoc.data().status}. No further action needed.`);
+    }
+    transaction.update(userRef, {
+      status: "approved",
+      updatedAt: Date.now()
+    });
   });
+  
   const { logActivity } = await import('./services');
-  await logActivity('APPROVE_MEMBER', 'admin', targetUid, 'Approved member registration');
+  await logActivity('APPROVE_MEMBER', adminUid || 'admin', targetUid, 'Approved member registration');
 
   const { notifyUser } = await import('./fcmService');
   await notifyUser(targetUid, {
@@ -111,34 +123,87 @@ export const approveMember = async (targetUid: string) => {
 };
 
 export const rejectMember = async (targetUid: string, reason: string, adminUid?: string) => {
-  const updateData: any = {
-    status: "rejected",
-    rejectionReason: reason,
-    rejectedAt: Date.now(),
-    updatedAt: Date.now()
-  };
-  if (adminUid) {
-    updateData.rejectedBy = adminUid;
+  if (adminUid && adminUid === targetUid) {
+    throw new Error("You cannot reject your own membership request.");
   }
-  await updateDoc(doc(db, "users", targetUid), updateData);
+  const trimmedReason = reason?.trim();
+  if (!trimmedReason) {
+    throw new Error("A reason is required when rejecting a member.");
+  }
+  
+  await runTransaction(db, async (transaction) => {
+    const userRef = doc(db, "users", targetUid);
+    const userDoc = await transaction.get(userRef);
+    if (!userDoc.exists()) throw new Error("User not found.");
+    if (userDoc.data().status !== "pending") {
+      throw new Error(`User is already ${userDoc.data().status}. No further action needed.`);
+    }
+    const updateData: any = {
+      status: "rejected",
+      rejectionReason: trimmedReason,
+      rejectedAt: Date.now(),
+      updatedAt: Date.now()
+    };
+    if (adminUid) {
+      updateData.rejectedBy = adminUid;
+    }
+    transaction.update(userRef, updateData);
+  });
+  
   const { logActivity } = await import('./services');
-  await logActivity('REJECT_MEMBER', adminUid || 'admin', targetUid, `Rejected member registration. Reason: ${reason}`);
+  await logActivity('REJECT_MEMBER', adminUid || 'admin', targetUid, `Rejected member registration. Reason: ${trimmedReason}`);
 
   const { notifyUser } = await import('./fcmService');
   await notifyUser(targetUid, {
     title: 'Registration Update',
-    body: `Your membership registration was declined. Reason: ${reason}`,
+    body: `Your membership registration was declined. Reason: ${trimmedReason}`,
     type: 'approval',
     targetId: targetUid,
     targetUrl: '/'
   }).catch(err => console.error("Notification error:", err));
 };
 
-export const updateUserRole = async (targetUid: string, newRole: UserRole) => {
-  await updateDoc(doc(db, "users", targetUid), {
+export const updateUserRole = async (targetUid: string, newRole: UserRole, adminUid?: string) => {
+  if (adminUid && adminUid === targetUid) {
+     throw new Error("You cannot change your own role.");
+  }
+  
+  const targetRef = doc(db, "users", targetUid);
+  const targetSnap = await getDoc(targetRef);
+  if (!targetSnap.exists()) throw new Error("User not found.");
+  
+  const currentRole = targetSnap.data().role;
+  if (currentRole === newRole) return;
+  
+  if (targetSnap.data().status !== "approved" && newRole !== "member" && newRole !== "suspended") {
+    throw new Error("Privileged roles can only be assigned to approved members.");
+  }
+  
+  if (currentRole === "super_admin") {
+    const allAdminsQuery = query(collection(db, "users"), where("role", "==", "super_admin"));
+    const allAdmins = await getDocs(allAdminsQuery);
+    if (allAdmins.size <= 1) {
+      throw new Error("Cannot remove the last Super Admin. Please grant Super Admin to another user first.");
+    }
+  }
+
+  await updateDoc(targetRef, {
     role: newRole,
     updatedAt: Date.now()
   });
+  
   const { logActivity } = await import('./services');
-  await logActivity('UPDATE_USER_ROLE', 'admin', targetUid, `Updated role to ${newRole}`);
+  await logActivity('UPDATE_USER_ROLE', adminUid || 'admin', targetUid, `Updated role from ${currentRole} to ${newRole}`);
+  
+  // Notify user
+  const { notifyUser } = await import('./fcmService');
+  let roleName = newRole.replace('_', ' ');
+  roleName = roleName.charAt(0).toUpperCase() + roleName.slice(1);
+  await notifyUser(targetUid, {
+    title: 'Role Updated',
+    body: `Your account role has been updated to ${roleName}.`,
+    type: 'approval',
+    targetId: targetUid,
+    targetUrl: '/dashboard'
+  }).catch(err => console.error("Notification error:", err));
 };

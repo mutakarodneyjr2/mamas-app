@@ -53,10 +53,7 @@ export default function AdminUsers() {
     setErrorMsg(''); setSuccessMsg('');
     setActionLoading(uid);
     try {
-      await approveMember(uid);
-      if (currentUser) {
-        await logActivity('APPROVE_MEMBER', currentUser.uid, uid, `Approved member registration for ${name}`);
-      }
+      await approveMember(uid, currentUser?.uid);
       setSuccessMsg(`Approved member ${name}.`);
       setTimeout(() => setSuccessMsg(''), 3000);
     } catch (error: any) {
@@ -97,10 +94,7 @@ export default function AdminUsers() {
     setErrorMsg(''); setSuccessMsg('');
     setActionLoading(uid);
     try {
-      await updateUserRole(uid, newRole);
-      if (currentUser) {
-        await logActivity('UPDATE_USER_ROLE', currentUser.uid, uid, `Changed role of ${name} to ${newRole}`);
-      }
+      await updateUserRole(uid, newRole, currentUser?.uid);
       setSuccessMsg(`Changed role to ${newRole.replace('_', ' ')}.`);
       setTimeout(() => setSuccessMsg(''), 3000);
     } catch (error: any) {
