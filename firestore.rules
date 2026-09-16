@@ -58,17 +58,32 @@ service cloud.firestore {
 
     // =========================================
     // 1. Users Collection
-    // Read: A user can read their own profile; verified members & committee can read alumni profiles
+    // Read: Owner or authorized committee/admin roles only (protecting PII from raw member scraping)
     // Create: Users on registration
-    // Update: User can update own profile (excluding role and status); Super Admin can change roles/status
+    // Update: Owner (with restrictions) or Admins
+    // Delete: Strictly disabled (CRIT-04)
     // =========================================
     match /users/{userId} {
-      allow read: if isAuthenticated() && (request.auth.uid == userId || isVerifiedMember() || hasRole(['super_admin', 'chairperson', 'vice_chairperson', 'secretary', 'treasurer', 'auditor', 'mobiliser']));
+      allow read: if isAuthenticated() && (request.auth.uid == userId || hasRole(['super_admin', 'chairperson', 'vice_chairperson', 'secretary', 'treasurer', 'auditor', 'mobiliser']));
       allow create: if isAuthenticated() && request.auth.uid == userId;
-      allow update: if (isAuthenticated() && request.auth.uid == userId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'status'])) 
+      allow update: if (isAuthenticated() && request.auth.uid == userId && (
+                        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'status'])
+                        || (request.resource.data.status in ['pending_deletion', 'approved', 'active'] && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']))
+                      ))
                     || isSuperAdmin() 
                     || (isApprovalAdmin() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'rejectionReason', 'rejectedAt', 'rejectedBy', 'updatedAt']));
-      allow delete: if isSuperAdmin();
+      allow delete: if false;
+    }
+
+    // =========================================
+    // 1b. Directory Profiles Collection (Safe Projection for CRIT-01)
+    // Read: Verified members & committee
+    // Write: Owner or Admins
+    // =========================================
+    match /directoryProfiles/{userId} {
+      allow read: if isVerifiedMember() || hasRole(['super_admin', 'chairperson', 'vice_chairperson', 'secretary', 'treasurer', 'auditor', 'mobiliser']);
+      allow create, update: if isAuthenticated() && (request.auth.uid == userId || hasRole(['super_admin', 'chairperson']));
+      allow delete: if isAuthenticated() && (request.auth.uid == userId || isSuperAdmin());
     }
 
     // =========================================
@@ -76,7 +91,7 @@ service cloud.firestore {
     // Read: Authenticated members can view contribution records
     // Create:
     //  - School campaigns: Any authenticated user (including unverified members)
-    //  - Welfare: Verified members only
+    //  - Welfare & Solidarity Support: Verified members only
     //  - Client cannot write verified payment status directly
     // Update: Super Admin, Chairperson, Treasurer can verify/update status
     // Delete: Strictly disabled (financial audit trail integrity)
@@ -99,24 +114,38 @@ service cloud.firestore {
     }
 
     // =========================================
-    // 3. Welfare Requests Collection
-    // Read: Verified members & committee only (no unverified or visitor access to sensitive welfare evidence)
+    // 3. Welfare Requests Collection (Private Case Data - CRIT-02)
+    // Read: Applicant OR authorized committee/admin roles only (evidence & phone numbers protected)
     // Create: Verified members only
-    // Update: Executive Committee (Super Admin, Chairperson, Secretary, Treasurer)
+    // Update: Executive Committee / Applicant
     // Delete: Strictly disabled
     // =========================================
     match /welfareRequests/{requestId} {
-      allow read: if isVerifiedMember() || hasRole(['super_admin', 'chairperson', 'vice_chairperson', 'secretary', 'treasurer', 'auditor']);
+      allow read: if isAuthenticated() && ((resource.data.userId == request.auth.uid) || hasRole(['super_admin', 'chairperson', 'vice_chairperson', 'secretary', 'treasurer', 'auditor']));
       allow create: if isVerifiedMember() && request.resource.data.userId == request.auth.uid && request.resource.data.recipientPhoneNumber is string;
       allow update: if (
         (isPayoutAdmin() && (
-          !(request.resource.data.diff(resource.data).affectedKeys().hasAny(['paidAt', 'disbursementStatus', 'paidAmount'])) || 
+          !(request.resource.data.diff(resource.data).affectedKeys().hasAny(['paidAt', 'disbursementStatus', 'paidAmount', 'isPublishedToFeed'])) || 
           request.auth.uid != resource.data.userId
         )) ||
-        (hasRole(['vice_chairperson', 'secretary', 'auditor']) && notUpdatingRelworxFields()) ||
-        (isAuthenticated() && resource.data.userId == request.auth.uid && resource.data.status == 'pending' && notUpdatingRelworxFields())
+        (hasRole(['vice_chairperson', 'secretary', 'auditor']) && (
+          !(request.resource.data.diff(resource.data).affectedKeys().hasAny(['isPublishedToFeed'])) || 
+          request.auth.uid != resource.data.userId
+        ) && notUpdatingRelworxFields()) ||
+        (isAuthenticated() && resource.data.userId == request.auth.uid && resource.data.status == 'pending' && notUpdatingRelworxFields() && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['isPublishedToFeed', 'supportRaisedAmount', 'supportStatus', 'votes', 'status']))
       );
       allow delete: if false;
+    }
+
+    // =========================================
+    // 3b. Published Welfare Feed Collection (Public-Safe Feed - CRIT-02)
+    // Read: Verified members & committee
+    // Write: Executive Committee admins only
+    // =========================================
+    match /publishedWelfareFeed/{feedId} {
+      allow read: if isVerifiedMember() || hasRole(['super_admin', 'chairperson', 'vice_chairperson', 'secretary', 'treasurer', 'auditor', 'mobiliser']);
+      allow write: if hasRole(['super_admin', 'chairperson', 'vice_chairperson', 'secretary', 'treasurer']);
+      allow delete: if hasRole(['super_admin', 'chairperson', 'treasurer']);
     }
 
     // =========================================

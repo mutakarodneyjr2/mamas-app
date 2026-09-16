@@ -175,7 +175,7 @@ export const updateUserRole = async (targetUid: string, newRole: UserRole, admin
   const currentRole = targetSnap.data().role;
   if (currentRole === newRole) return;
   
-  if (targetSnap.data().status !== "approved" && newRole !== "member" && newRole !== "suspended") {
+  if (targetSnap.data().status !== "approved" && newRole !== "member") {
     throw new Error("Privileged roles can only be assigned to approved members.");
   }
   
@@ -207,3 +207,284 @@ export const updateUserRole = async (targetUid: string, newRole: UserRole, admin
     targetUrl: '/dashboard'
   }).catch(err => console.error("Notification error:", err));
 };
+
+// ==========================================
+// MEMBER SELF-SERVICE ACCOUNT DELETION
+// ==========================================
+
+export const scheduleAccountDeletion = async (userId: string, reason?: string, _currentUser?: any) => {
+  const userRef = doc(db, "users", userId);
+  const userSnap = await getDoc(userRef);
+  if (!userSnap.exists()) throw new Error("User account not found.");
+  
+  const userData = userSnap.data() as User;
+
+  if (userData.status === "pending_deletion") {
+    const effectiveDate = userData.deletionEffectiveAt 
+      ? new Date(userData.deletionEffectiveAt).toLocaleDateString()
+      : 'in 30 days';
+    throw new Error(`Deletion already scheduled. Effective date: ${effectiveDate}`);
+  }
+
+  if (userData.status === "deleted") {
+    throw new Error("This account is already deleted.");
+  }
+
+  // BLOCKER 1: Last SuperAdmin Check
+  if (userData.role === "super_admin") {
+    const superAdminsSnap = await getDocs(query(collection(db, "users"), where("role", "==", "super_admin")));
+    const activeSuperAdmins = superAdminsSnap.docs.filter(d => {
+      const u = d.data() as User;
+      return d.id !== userId && u.status !== "deleted" && u.status !== "suspended" && u.status !== "pending_deletion";
+    });
+    if (activeSuperAdmins.length === 0) {
+      throw new Error("Transfer SuperAdmin authority to another administrator before deleting your account.");
+    }
+  }
+
+  // BLOCKER 2: Unsettled / In-Progress Payouts Check
+  try {
+    const welfareSnap = await getDocs(query(collection(db, "welfareRequests"), where("userId", "==", userId)));
+    const hasUnsettledPayout = welfareSnap.docs.some(d => {
+      const w = d.data();
+      return w.disbursementStatus === "in_progress" || w.disbursementStatus === "processing" || (w.status === "accepted" && w.disbursementStatus === "pending");
+    });
+    if (hasUnsettledPayout) {
+      throw new Error("Finish or resolve in-progress payouts before deleting your account.");
+    }
+  } catch (err: any) {
+    if (err.message && err.message.includes("payouts")) throw err;
+    console.warn("Could not check welfare payouts during deletion schedule:", err);
+  }
+
+  // BLOCKER 3: Pending Contributions Check
+  try {
+    const contribsSnap = await getDocs(query(collection(db, "contributions"), where("userId", "==", userId)));
+    const hasPendingContrib = contribsSnap.docs.some(d => {
+      const c = d.data();
+      return c.status === "pending" || c.status === "pending_payment" || (c as any).paymentStatus === "pending_payment";
+    });
+    if (hasPendingContrib) {
+      throw new Error("You have pending mobile-money contributions awaiting settlement. Please wait for them to settle or expire before deleting your account.");
+    }
+  } catch (err: any) {
+    if (err.message && err.message.includes("contributions")) throw err;
+    console.warn("Could not check pending contributions during deletion schedule:", err);
+  }
+
+  const now = Date.now();
+  const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+  const deletionEffectiveAt = now + thirtyDaysMs;
+  const historicalName = userData.fullName || "Former Member";
+
+  await updateDoc(userRef, {
+    status: "pending_deletion",
+    statusPrevious: userData.status || "approved",
+    deletionScheduledAt: now,
+    deletionEffectiveAt: deletionEffectiveAt,
+    deletionType: "self",
+    deletionReason: reason || null,
+    historicalDisplayName: historicalName,
+    updatedAt: now
+  });
+
+  const { logActivity } = await import('./services');
+  await logActivity('SCHEDULE_ACCOUNT_DELETION', userId, userId, `Scheduled account deletion with 30-day grace period (Effective: ${new Date(deletionEffectiveAt).toLocaleDateString()})${reason ? ` - Reason: ${reason}` : ''}`);
+
+  const { notifyUser } = await import('./fcmService');
+  await notifyUser(userId, {
+    title: 'Account Deletion Scheduled',
+    body: `Your account is scheduled for deletion on ${new Date(deletionEffectiveAt).toLocaleDateString()}. You can cancel this anytime before the date by logging in.`,
+    type: 'approval',
+    targetId: userId,
+    targetUrl: '/profile'
+  }).catch(err => console.error("Notification error:", err));
+
+  return { deletionEffectiveAt };
+};
+
+export const cancelAccountDeletion = async (userId: string, _currentUser?: any) => {
+  const userRef = doc(db, "users", userId);
+  const userSnap = await getDoc(userRef);
+  if (!userSnap.exists()) throw new Error("User account not found.");
+  
+  const userData = userSnap.data() as User;
+
+  if (userData.status !== "pending_deletion") {
+    throw new Error("Account is not currently scheduled for deletion.");
+  }
+
+  const now = Date.now();
+  if (userData.deletionEffectiveAt && now >= userData.deletionEffectiveAt) {
+    throw new Error("The 30-day grace period has expired. Account deletion has finalized.");
+  }
+
+  const restoredStatus = userData.statusPrevious && userData.statusPrevious !== "pending_deletion" && userData.statusPrevious !== "deleted"
+    ? userData.statusPrevious
+    : "approved";
+
+  await updateDoc(userRef, {
+    status: restoredStatus,
+    deletionScheduledAt: null as any,
+    deletionEffectiveAt: null as any,
+    deletionType: null as any,
+    deletionCancelledAt: now,
+    updatedAt: now
+  });
+
+  const { logActivity } = await import('./services');
+  await logActivity('CANCEL_ACCOUNT_DELETION', userId, userId, 'Cancelled scheduled account deletion and restored member access');
+
+  const { notifyUser } = await import('./fcmService');
+  await notifyUser(userId, {
+    title: 'Account Deletion Cancelled',
+    body: 'Your account deletion request has been cancelled. Your full member access has been restored.',
+    type: 'approval',
+    targetId: userId,
+    targetUrl: '/profile'
+  }).catch(err => console.error("Notification error:", err));
+};
+
+export const finalizeAccountDeletion = async (userId: string) => {
+  const userRef = doc(db, "users", userId);
+  const userSnap = await getDoc(userRef);
+  if (!userSnap.exists()) return;
+  
+  const userData = userSnap.data() as User;
+  if (userData.status === "deleted") return; // Safe no-op
+
+  const now = Date.now();
+  const historicalName = userData.historicalDisplayName || userData.fullName || "Former Member";
+
+  await updateDoc(userRef, {
+    status: "deleted",
+    historicalDisplayName: historicalName,
+    fullName: historicalName,
+    phoneNumber: "REDACTED",
+    email: `deleted_${userId.slice(0, 8)}@anonymized.mamas`,
+    profilePictureUrl: "",
+    placeOfResidence: "",
+    district: "",
+    workplace: "",
+    university: "",
+    course: "",
+    nextOfKinName: "",
+    nextOfKinPhone: "",
+    recoveryEmail: "",
+    fcmTokens: [],
+    anonymizedAt: now,
+    updatedAt: now
+  });
+
+  const { logActivity } = await import('./services');
+  await logActivity('FINALIZE_ACCOUNT_DELETION', 'system', userId, `Finalized account deletion and anonymized personal profile while preserving financial history for ${historicalName}`);
+};
+
+// ==========================================
+// SUPER ADMIN-ONLY SUSPEND / UNSUSPEND
+// ==========================================
+
+export const suspendUser = async (targetUid: string, adminUid: string, reason: string) => {
+  if (!adminUid) throw new Error("Admin ID required.");
+  
+  const adminSnap = await getDoc(doc(db, "users", adminUid));
+  if (!adminSnap.exists()) throw new Error("Administrator account not found.");
+  const adminRole = adminSnap.data().role;
+  if (adminRole !== "super_admin") {
+    throw new Error("Only Super Admin can suspend accounts.");
+  }
+
+  const trimmedReason = reason?.trim();
+  if (!trimmedReason || trimmedReason.length < 5) {
+    throw new Error("A specific suspension reason (minimum 5 characters) is required.");
+  }
+
+  const targetRef = doc(db, "users", targetUid);
+  const targetSnap = await getDoc(targetRef);
+  if (!targetSnap.exists()) throw new Error("Target user account not found.");
+  const targetData = targetSnap.data() as User;
+
+  if (targetData.status === "suspended") {
+    throw new Error("User account is already suspended.");
+  }
+
+  // Check last SuperAdmin protection
+  if (targetData.role === "super_admin") {
+    const superAdminsSnap = await getDocs(query(collection(db, "users"), where("role", "==", "super_admin")));
+    const activeSuperAdmins = superAdminsSnap.docs.filter(d => {
+      const u = d.data() as User;
+      return d.id !== targetUid && u.status !== "deleted" && u.status !== "suspended";
+    });
+    if (activeSuperAdmins.length === 0) {
+      throw new Error("Cannot suspend the last Super Admin. The association requires at least one active Super Admin.");
+    }
+  }
+
+  const now = Date.now();
+  await updateDoc(targetRef, {
+    status: "suspended",
+    statusPrevious: targetData.status || "approved",
+    suspendedAt: now,
+    suspendedBy: adminUid,
+    suspendReason: trimmedReason,
+    updatedAt: now
+  });
+
+  const { logActivity } = await import('./services');
+  await logActivity('SUSPEND_USER', adminUid, targetUid, `Suspended member account (${targetData.fullName}). Reason: ${trimmedReason}`);
+
+  const { notifyUser } = await import('./fcmService');
+  await notifyUser(targetUid, {
+    title: 'Account Suspended',
+    body: `Your MAMAS account has been suspended by the Super Administrator. Reason: ${trimmedReason}`,
+    type: 'approval',
+    targetId: targetUid,
+    targetUrl: '/'
+  }).catch(err => console.error("Notification error:", err));
+};
+
+export const unsuspendUser = async (targetUid: string, adminUid: string) => {
+  if (!adminUid) throw new Error("Admin ID required.");
+  
+  const adminSnap = await getDoc(doc(db, "users", adminUid));
+  if (!adminSnap.exists()) throw new Error("Administrator account not found.");
+  const adminRole = adminSnap.data().role;
+  if (adminRole !== "super_admin") {
+    throw new Error("Only Super Admin can unsuspend accounts.");
+  }
+
+  const targetRef = doc(db, "users", targetUid);
+  const targetSnap = await getDoc(targetRef);
+  if (!targetSnap.exists()) throw new Error("Target user account not found.");
+  const targetData = targetSnap.data() as User;
+
+  if (targetData.status !== "suspended") {
+    throw new Error("User account is not currently suspended.");
+  }
+
+  const restoredStatus = targetData.statusPrevious && targetData.statusPrevious !== "suspended" && targetData.statusPrevious !== "deleted"
+    ? targetData.statusPrevious
+    : "approved";
+
+  const now = Date.now();
+  await updateDoc(targetRef, {
+    status: restoredStatus,
+    suspendedAt: null as any,
+    suspendedBy: null as any,
+    suspendReason: null as any,
+    updatedAt: now
+  });
+
+  const { logActivity } = await import('./services');
+  await logActivity('UNSUSPEND_USER', adminUid, targetUid, `Unsuspended member account (${targetData.fullName}) and restored access`);
+
+  const { notifyUser } = await import('./fcmService');
+  await notifyUser(targetUid, {
+    title: 'Account Restored',
+    body: 'Your account suspension has been lifted by the Super Administrator.',
+    type: 'approval',
+    targetId: targetUid,
+    targetUrl: '/dashboard'
+  }).catch(err => console.error("Notification error:", err));
+};
+

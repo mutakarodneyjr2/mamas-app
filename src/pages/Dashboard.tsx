@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
-  Wallet, Users, Target, Shield, ArrowRight, Bell, BellOff, ArrowUpRight, TrendingUp, ShieldCheck, Trophy, ChevronRight, MessageCircle
+  Wallet, Users, Target, Shield, ArrowRight, Bell, BellOff, ArrowUpRight, TrendingUp, ShieldCheck, Trophy, ChevronRight, MessageCircle, HeartHandshake, AlertCircle, Sparkles, CheckCircle2, PauseCircle, XCircle
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../firebase';
 import { collection, query, where, getDocs, doc, onSnapshot } from 'firebase/firestore';
 import { formatUGX, DEFAULT_CAMPAIGN_PLACEHOLDER } from '../lib/utils';
+import { WelfareRequest } from '../types';
 
 export default function Dashboard() {
   const { currentUser, userProfile } = useAuth();
@@ -25,11 +26,13 @@ export default function Dashboard() {
   });
 
   const [activeCampaigns, setActiveCampaigns] = useState<any[]>([]);
+  const [publishedWelfareCases, setPublishedWelfareCases] = useState<WelfareRequest[]>([]);
   const [notices, setNotices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const isAdmin = ['super_admin', 'chairperson', 'vice_chairperson', 'treasurer', 'secretary'].includes(userProfile?.role || '');
   const isExecutive = ['super_admin', 'chairperson', 'vice_chairperson', 'treasurer', 'secretary', 'auditor', 'mobiliser'].includes(userProfile?.role || '');
+  const isVerified = (userProfile?.status || '').toLowerCase() === 'approved';
 
   useEffect(() => {
     let isSubscribed = true;
@@ -99,7 +102,18 @@ export default function Dashboard() {
         }
       }
 
-      // 4. Fetch Latest Notices (notices)
+      // 4. Fetch Published Welfare Cases (Solidarity Feed - CRIT-02)
+      let welfareList: WelfareRequest[] = [];
+      try {
+        const wSnap = await getDocs(collection(db, 'publishedWelfareFeed'));
+        welfareList = wSnap.docs
+          .map(d => ({ id: d.id, ...d.data() } as WelfareRequest))
+          .sort((a, b) => (b.publishedAt || b.createdAt || 0) - (a.publishedAt || a.createdAt || 0));
+      } catch (wErr) {
+        console.warn("Could not load published welfare cases:", wErr);
+      }
+
+      // 5. Fetch Latest Notices (notices)
       let noticeList: any[] = [];
       try {
         const noticesSnap = await getDocs(collection(db, 'notices'));
@@ -111,7 +125,7 @@ export default function Dashboard() {
         console.warn("Could not load notices:", err);
       }
 
-      // 5. Fetch Top Contributors (for leaderboard)
+      // 6. Fetch Top Contributors (for leaderboard)
       let topContributorsList: any[] = [];
       try {
         const usersSnap = await getDocs(collection(db, 'users'));
@@ -132,6 +146,7 @@ export default function Dashboard() {
           campaigns: campaignsCountStr,
         });
         setActiveCampaigns(campsList);
+        setPublishedWelfareCases(welfareList);
         setNotices(noticeList);
         setTopContributors(topContributorsList);
         setLoading(false);
@@ -380,6 +395,167 @@ export default function Dashboard() {
           </Link>
         </section>
       )}
+
+      {/* SOLIDARITY WELFARE FEED (PUBLIC WELFARE APPEALS) */}
+      <section className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800/60 flex items-center justify-center">
+              <HeartHandshake className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white tracking-tight">Solidarity Welfare Appeals</h3>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">Direct member-to-member solidarity for approved emergency cases</p>
+            </div>
+          </div>
+          {isAdmin && (
+            <Link to="/admin/welfare" className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
+              Manage Appeals <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          )}
+        </div>
+
+        {publishedWelfareCases.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+            {publishedWelfareCases.map(wCase => {
+              const targetAmount = Number(wCase.supportTargetAmount) || 0;
+              const raisedAmount = Number(wCase.supportRaisedAmount) || 0;
+              const contributorCount = Number(wCase.supportContributorCount) || 0;
+              const hasTarget = targetAmount > 0;
+              const pct = hasTarget ? Math.min(100, Math.round((raisedAmount / targetAmount) * 100)) : 0;
+              const isSupportOpen = (wCase.supportStatus === 'open' || (!wCase.supportStatus && wCase.supportEnabled !== false));
+              const isSupportPaused = wCase.supportStatus === 'paused';
+              const isSupportClosed = wCase.supportStatus === 'closed' || wCase.supportEnabled === false;
+
+              return (
+                <div 
+                  key={wCase.id} 
+                  className="bg-white dark:bg-[#0c1731] rounded-3xl shadow-xs border border-rose-100 dark:border-rose-900/30 p-4 sm:p-5 flex flex-col justify-between hover:border-rose-300 dark:hover:border-rose-700/60 transition-all relative overflow-hidden"
+                >
+                  {/* Subtle top accent highlight */}
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-rose-500 via-amber-500 to-rose-400"></div>
+
+                  <div>
+                    {/* Header badges */}
+                    <div className="flex items-center justify-between gap-2 mb-2 pt-1">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800/60 px-2.5 py-0.5 rounded-full">
+                        {wCase.category || 'Welfare Support'}
+                      </span>
+
+                      {isSupportOpen && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/60 px-2 py-0.5 rounded-full">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                          Appeal Active
+                        </span>
+                      )}
+                      {isSupportPaused && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800/60 px-2 py-0.5 rounded-full">
+                          <PauseCircle className="w-3 h-3" />
+                          Support Paused
+                        </span>
+                      )}
+                      {isSupportClosed && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded-full">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                          Appeal Concluded
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Title & Privacy-Safe Summary */}
+                    <h4 className="font-extrabold text-slate-900 dark:text-white text-base tracking-tight mb-1">
+                      {wCase.publicTitle || `${wCase.category} Solidarity Support`}
+                    </h4>
+
+                    <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed mb-3 line-clamp-3">
+                      {wCase.publicSummary || wCase.reason}
+                    </p>
+
+                    {/* Beneficiary Meta Info (Privacy-safe: No phone, no sensitive attachments) */}
+                    <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 mb-3 bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-2xl border border-slate-100 dark:border-slate-800">
+                      <span>Beneficiary: <strong className="text-slate-800 dark:text-slate-200">{wCase.personName || 'Alumni Member'}</strong></span>
+                      {wCase.district && (
+                        <>
+                          <span className="text-slate-300 dark:text-slate-700">•</span>
+                          <span>Location: <strong className="text-slate-800 dark:text-slate-200">{wCase.district}</strong></span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    {/* Financial Progress */}
+                    <div className="flex justify-between items-baseline text-xs font-bold mb-1.5">
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-rose-600 dark:text-rose-400 font-extrabold text-sm">{formatUGX(raisedAmount)}</span>
+                        <span className="text-[10px] text-slate-400 dark:text-slate-500">raised</span>
+                      </div>
+                      <div className="text-right text-[11px]">
+                        {hasTarget ? (
+                          <span className="text-slate-500 dark:text-slate-400">Target: {formatUGX(targetAmount)} ({pct}%)</span>
+                        ) : (
+                          <span className="text-slate-500 dark:text-slate-400">{contributorCount} {contributorCount === 1 ? 'supporter' : 'supporters'}</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {hasTarget ? (
+                      <div className="w-full h-2.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden mb-3.5 border border-slate-200/50 dark:border-slate-700/50">
+                        <div 
+                          className="h-full bg-gradient-to-r from-rose-500 to-amber-500 rounded-full transition-all duration-500" 
+                          style={{ width: `${pct}%` }}
+                        ></div>
+                      </div>
+                    ) : (
+                      <div className="h-1 mb-3"></div>
+                    )}
+
+                    {/* Action Button */}
+                    {isSupportOpen ? (
+                      isVerified ? (
+                        <Link 
+                          to={`/contribute?type=welfare_support&welfareId=${wCase.id}`}
+                          className="flex items-center justify-center gap-1.5 w-full py-2.5 rounded-2xl bg-rose-600 hover:bg-rose-500 active:scale-[0.99] text-white font-bold text-xs text-center transition-all shadow-sm shadow-rose-600/25 cursor-pointer"
+                        >
+                          <HeartHandshake className="w-4 h-4" />
+                          Stand With Member (Send Support)
+                        </Link>
+                      ) : (
+                        <div className="p-2.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-center">
+                          <p className="text-[11px] font-semibold text-amber-800 dark:text-amber-300 flex items-center justify-center gap-1">
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                            Alumni verification required to contribute solidarity funds
+                          </p>
+                        </div>
+                      )
+                    ) : isSupportPaused ? (
+                      <button 
+                        disabled 
+                        className="w-full py-2.5 rounded-2xl bg-slate-100 dark:bg-slate-800/80 text-slate-400 dark:text-slate-500 font-bold text-xs text-center cursor-not-allowed border border-slate-200 dark:border-slate-700"
+                      >
+                        Support Temporarily Paused
+                      </button>
+                    ) : (
+                      <button 
+                        disabled 
+                        className="w-full py-2.5 rounded-2xl bg-slate-100 dark:bg-slate-800/80 text-slate-400 dark:text-slate-500 font-bold text-xs text-center cursor-not-allowed border border-slate-200 dark:border-slate-700"
+                      >
+                        Solidarity Appeal Concluded
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="bg-white dark:bg-[#0c1731] rounded-3xl shadow-xs border border-slate-200/80 dark:border-slate-800/80 p-5 text-center flex flex-col items-center">
+            <HeartHandshake className="w-6 h-6 text-slate-300 dark:text-slate-600 mb-1" strokeWidth={1.5} />
+            <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">No active welfare solidarity appeals at the moment</p>
+            <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">Approved emergency requests published by the executive committee will appear here.</p>
+          </div>
+        )}
+      </section>
 
       {/* ACTIVE SCHOOL CAMPAIGNS */}
       <section className="space-y-3">

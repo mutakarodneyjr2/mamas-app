@@ -22,8 +22,8 @@ export default function Directory() {
   useEffect(() => {
     const fetchMembers = async () => {
       try {
-        const [usersSnap, settingsSnap] = await Promise.all([
-          getDocs(collection(db, 'users')),
+        const [profilesSnap, settingsSnap] = await Promise.all([
+          getDocs(collection(db, 'directoryProfiles')),
           getDoc(doc(db, 'appSettings', 'main'))
         ]);
         
@@ -32,9 +32,9 @@ export default function Directory() {
         }
 
         const fetchedMembers: User[] = [];
-        usersSnap.docs.forEach(doc => {
+        profilesSnap.docs.forEach(doc => {
           const data = doc.data() as User;
-          const st = (data.status || '').toLowerCase();
+          const st = (data.status || 'approved').toLowerCase();
           if (['approved', 'active'].includes(st)) {
             fetchedMembers.push({ ...data, uid: doc.id });
           }
@@ -43,7 +43,7 @@ export default function Directory() {
         fetchedMembers.sort((a, b) => (a.fullName || '').localeCompare(b.fullName || ''));
         setMembers(fetchedMembers);
       } catch (err) {
-        console.error("Error fetching members:", err);
+        console.error("Error fetching members directory:", err);
       } finally {
         setLoading(false);
       }

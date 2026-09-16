@@ -29,6 +29,14 @@ import {
   ExpenseStatus
 } from '../types';
 
+export { 
+  scheduleAccountDeletion, 
+  cancelAccountDeletion, 
+  finalizeAccountDeletion, 
+  suspendUser, 
+  unsuspendUser 
+} from './auth';
+
 // ==========================================
 // UTILS
 // ==========================================
@@ -109,6 +117,7 @@ export const initiateMobileMoneyContribution = async (
   network: string,
   type: ContributionType,
   campaignId: string | null = null,
+  welfareRequestId: string | null = null,
 ) => {
   if (amount <= 0) throw new Error("Amount must be greater than 0");
 
@@ -120,19 +129,23 @@ export const initiateMobileMoneyContribution = async (
     currency: "UGX",
     type,
     campaignId,
+    welfareRequestId: welfareRequestId || null,
     transactionReference: "MM-PENDING", // Keeps backward compatibility with manual UI fallback
     status: "pending",
-    note: `Initiated via Mobile Money (${phoneNumber})`,
+    note: type === 'welfare_support' 
+      ? `Solidarity Support via Mobile Money (${phoneNumber})`
+      : `Initiated via Mobile Money (${phoneNumber})`,
     createdAt: Date.now(),
     // Relworx fields
     relworxReference: reference,
     network,
     paymentMethod: "mobile_money",
-    paymentStatus: "pending_payment"
+    paymentStatus: "pending_payment",
+    purpose: type === 'welfare_support' ? 'welfare_support' : type === 'school_support' ? 'campaign' : 'welfare'
   };
 
   const docRef = await addDoc(collection(db, 'contributions'), contributionData);
-  await logActivity('INITIATE_MM_CONTRIBUTION', userId, docRef.id, `Initiated mobile money payment for UGX ${amount}`);
+  await logActivity('INITIATE_MM_CONTRIBUTION', userId, docRef.id, `Initiated mobile money payment for UGX ${amount} (${type})`);
   
   // Call backend API
   const idToken = await auth.currentUser?.getIdToken();
@@ -149,18 +162,20 @@ export const initiateMobileMoneyContribution = async (
       phoneNumber,
       network,
       userId,
+      purpose: type === 'welfare_support' ? 'welfare_support' : type === 'school_support' ? 'campaign' : 'welfare',
       metadata: {
         reference,
         contributionId: docRef.id,
         type,
-        campaignId
+        campaignId,
+        welfareRequestId: welfareRequestId || null
       }
     })
   });
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error || "Failed to initiate mobile money prompt.");
+    throw new Error(errorData.error || errorData.message || "Failed to initiate mobile money prompt.");
   }
 
   return docRef.id;
@@ -172,7 +187,8 @@ export const recordContribution = async (
   transactionReference: string, 
   type: ContributionType = "welfare", 
   campaignId: string | null = null, 
-  note: string = ""
+  note: string = "",
+  welfareRequestId: string | null = null
 ) => {
   if (amount <= 0) throw new Error("Amount must be greater than 0");
 
@@ -182,10 +198,12 @@ export const recordContribution = async (
     currency: "UGX",
     type,
     campaignId,
+    welfareRequestId: welfareRequestId || null,
     transactionReference,
     status: "pending",
     note,
-    createdAt: Date.now()
+    createdAt: Date.now(),
+    purpose: type === 'welfare_support' ? 'welfare_support' : type === 'school_support' ? 'campaign' : 'welfare'
   };
 
   const docRef = await addDoc(collection(db, 'contributions'), contributionData);
@@ -260,14 +278,31 @@ export const verifyContribution = async (contributionId: string, adminId: string
         transaction.update(campaignRef, updates);
       }
     }
+
+    // If welfare solidarity support, update welfare request raised total
+    if (contribution.type === 'welfare_support' && contribution.welfareRequestId) {
+      const welfareRef = doc(db, 'welfareRequests', contribution.welfareRequestId);
+      const welfareDoc = await transaction.get(welfareRef);
+      if (welfareDoc.exists()) {
+        const welfareData = welfareDoc.data();
+        const newSupportRaised = (welfareData.supportRaisedAmount || 0) + contribution.amount;
+        const newContributorCount = (welfareData.supportContributorCount || 0) + 1;
+        transaction.update(welfareRef, {
+          supportRaisedAmount: newSupportRaised,
+          supportContributorCount: newContributorCount,
+          updatedAt: Date.now()
+        });
+      }
+    }
   });
 
   await logActivity('VERIFY_CONTRIBUTION', adminId, contributionId, `Verified contribution`);
 
   if (targetUserId) {
+    const label = contType === 'welfare' ? 'Welfare' : contType === 'welfare_support' ? 'Solidarity Support' : 'Campaign';
     await notifyUser(targetUserId, {
       title: 'Contribution Verified',
-      body: `Your ${contType === 'welfare' ? 'Welfare' : 'Campaign'} contribution of UGX ${contAmount.toLocaleString()} has been verified.`,
+      body: `Your ${label} contribution of UGX ${contAmount.toLocaleString()} has been verified.`,
       type: 'contribution',
       targetId: contributionId,
       targetUrl: '/statement'
@@ -322,6 +357,21 @@ export const rejectContribution = async (contributionId: string, adminId: string
             updates.status = 'active';
           }
           transaction.update(campaignRef, updates);
+        }
+      }
+
+      if (contribution.type === 'welfare_support' && contribution.welfareRequestId) {
+        const welfareRef = doc(db, 'welfareRequests', contribution.welfareRequestId);
+        const welfareDoc = await transaction.get(welfareRef);
+        if (welfareDoc.exists()) {
+          const welfareData = welfareDoc.data();
+          const newSupportRaised = Math.max(0, (welfareData.supportRaisedAmount || 0) - contribution.amount);
+          const newContributorCount = Math.max(0, (welfareData.supportContributorCount || 1) - 1);
+          transaction.update(welfareRef, {
+            supportRaisedAmount: newSupportRaised,
+            supportContributorCount: newContributorCount,
+            updatedAt: Date.now()
+          });
         }
       }
     }
@@ -1168,6 +1218,20 @@ export const transferCampaignExcessFunds = async (campaignId: string, adminId: s
 };
 
 export const deleteSchoolCampaign = async (campaignId: string, adminId: string) => {
+  const adminDoc = await getDoc(doc(db, 'users', adminId));
+  if (!adminDoc.exists()) throw new Error("Admin user not found");
+  const adminRole = adminDoc.data().role;
+  if (!['super_admin', 'chairperson', 'vice_chairperson'].includes(adminRole)) {
+    throw new Error("Only authorized executives can delete campaigns.");
+  }
+
+  // HARDENING CHECK: Check if any contributions exist for this campaign
+  const contribsQuery = query(collection(db, 'contributions'), where('campaignId', '==', campaignId));
+  const contribsSnap = await getDocs(contribsQuery);
+  if (!contribsSnap.empty) {
+    throw new Error("Cannot delete campaign with recorded contributions. Please pause, close, or archive it instead to protect financial ledger integrity.");
+  }
+
   const campaignRef = doc(db, 'schoolCampaigns', campaignId);
   try {
     const docSnap = await getDoc(campaignRef);
@@ -1192,6 +1256,370 @@ export const deleteSchoolCampaign = async (campaignId: string, adminId: string) 
   }
 
   await deleteDoc(campaignRef);
-  await logActivity('DELETE_CAMPAIGN', adminId, campaignId, `Deleted campaign`);
+  await logActivity('DELETE_CAMPAIGN', adminId, campaignId, `Deleted campaign ${campaignId}`);
 };
+
+// ==========================================
+// PUBLIC WELFARE FEED & SOLIDARITY SUPPORT
+// ==========================================
+
+export interface PublishWelfareParams {
+  publicTitle: string;
+  publicSummary: string;
+  supportEnabled?: boolean;
+  supportTargetAmount?: number;
+  supportStartAt?: number;
+  supportEndAt?: number | null;
+}
+
+export const publishWelfareRequest = async (
+  requestId: string,
+  adminId: string,
+  params: PublishWelfareParams
+) => {
+  const adminDoc = await getDoc(doc(db, 'users', adminId));
+  if (!adminDoc.exists()) throw new Error("Admin user not found");
+  const adminRole = adminDoc.data().role;
+  const allowedRoles = ['super_admin', 'chairperson', 'vice_chairperson', 'secretary', 'treasurer'];
+  if (!allowedRoles.includes(adminRole)) {
+    throw new Error("Only authorized committee members can publish welfare cases to the feed.");
+  }
+
+  const title = params.publicTitle?.trim();
+  const summary = params.publicSummary?.trim();
+
+  if (!title || title.length < 5) {
+    throw new Error("Public title must be at least 5 characters long.");
+  }
+  if (!summary || summary.length < 15) {
+    throw new Error("Public summary must be at least 15 characters long.");
+  }
+
+  const requestRef = doc(db, 'welfareRequests', requestId);
+  const pubFeedRef = doc(db, 'publishedWelfareFeed', requestId);
+  let beneficiaryName = "";
+  let welfareCategory = "";
+  let applicantUserId = "";
+
+  await runTransaction(db, async (transaction) => {
+    const requestDoc = await transaction.get(requestRef);
+    if (!requestDoc.exists()) throw new Error("Welfare request not found");
+    const requestData = requestDoc.data() as WelfareRequest;
+
+    if (requestData.userId === adminId) {
+      throw new Error("Conflict of Interest: You cannot publish or moderate your own welfare case.");
+    }
+
+    if (requestData.isPublishedToFeed) {
+      throw new Error("Already published. Edit publication instead.");
+    }
+
+    if (requestData.status !== "accepted" && requestData.status !== "paid") {
+      throw new Error("Only approved welfare requests can be published to the public feed.");
+    }
+
+    applicantUserId = requestData.userId;
+    beneficiaryName = requestData.personName || "Member";
+    welfareCategory = requestData.category;
+
+    const updates: Partial<WelfareRequest> & Record<string, any> = {
+      isPublishedToFeed: true,
+      publishedAt: Date.now(),
+      publishedBy: adminId,
+      publicTitle: title,
+      publicSummary: summary,
+      supportEnabled: params.supportEnabled !== false,
+      supportStatus: (params.supportEnabled !== false) ? 'open' : 'closed',
+      supportTargetAmount: Number(params.supportTargetAmount) || 0,
+      supportRaisedAmount: requestData.supportRaisedAmount || 0,
+      supportContributorCount: requestData.supportContributorCount || 0,
+      supportStartAt: params.supportStartAt || Date.now(),
+      supportEndAt: params.supportEndAt || null,
+      publicationVersion: (requestData.publicationVersion || 0) + 1,
+      updatedAt: Date.now()
+    };
+
+    transaction.update(requestRef, updates);
+
+    // CRIT-02: Write public-safe projection to publishedWelfareFeed
+    transaction.set(pubFeedRef, {
+      id: requestId,
+      requestId: requestId,
+      publicTitle: title,
+      publicSummary: summary,
+      supportEnabled: params.supportEnabled !== false,
+      supportStatus: (params.supportEnabled !== false) ? 'open' : 'closed',
+      supportTargetAmount: Number(params.supportTargetAmount) || 0,
+      supportRaisedAmount: requestData.supportRaisedAmount || 0,
+      supportContributorCount: requestData.supportContributorCount || 0,
+      category: welfareCategory,
+      amountRequested: requestData.amountRequested,
+      status: requestData.status,
+      isPublishedToFeed: true,
+      publishedAt: Date.now(),
+      publishedBy: adminId,
+      beneficiaryName: beneficiaryName,
+      userId: applicantUserId,
+      publicationVersion: (requestData.publicationVersion || 0) + 1,
+      updatedAt: Date.now()
+    });
+  });
+
+  await logActivity(
+    'PUBLISH_WELFARE_FEED',
+    adminId,
+    requestId,
+    `Published approved welfare case to member feed: "${title}" (Target: UGX ${Number(params.supportTargetAmount || 0).toLocaleString()})`
+  );
+
+  // Notify applicant specifically
+  if (applicantUserId) {
+    await notifyUser(applicantUserId, {
+      title: "Welfare Appeal Published",
+      body: `Your approved welfare case "${title}" has been published to the member solidarity feed.`,
+      type: "welfare",
+      targetId: requestId,
+      targetUrl: "/"
+    }).catch(err => console.error("Notification to applicant error:", err));
+  }
+
+  // Broadcast notification to all approved members
+  await notifyUser("ALL_APPROVED", {
+    title: "Solidarity Appeal: " + title,
+    body: `A solidarity support appeal has been published for ${beneficiaryName} (${welfareCategory}). Members are invited to stand with them.`,
+    type: "welfare",
+    targetId: requestId,
+    targetUrl: "/"
+  }).catch(err => console.error("Notification broadcast error:", err));
+};
+
+export const updateWelfarePublication = async (
+  requestId: string,
+  adminId: string,
+  params: {
+    publicTitle: string;
+    publicSummary: string;
+    supportEnabled?: boolean;
+    supportTargetAmount?: number;
+    supportEndAt?: number | null;
+  }
+) => {
+  const adminDoc = await getDoc(doc(db, 'users', adminId));
+  if (!adminDoc.exists()) throw new Error("Admin user not found");
+  const adminRole = adminDoc.data().role;
+  const allowedRoles = ['super_admin', 'chairperson', 'vice_chairperson', 'secretary', 'treasurer'];
+  if (!allowedRoles.includes(adminRole)) {
+    throw new Error("Only authorized committee members can edit published welfare cases.");
+  }
+
+  const title = params.publicTitle?.trim();
+  const summary = params.publicSummary?.trim();
+
+  if (!title || title.length < 5) throw new Error("Public title must be at least 5 characters.");
+  if (!summary || summary.length < 15) throw new Error("Public summary must be at least 15 characters.");
+
+  const requestRef = doc(db, 'welfareRequests', requestId);
+  const pubFeedRef = doc(db, 'publishedWelfareFeed', requestId);
+  let applicantUserId = "";
+
+  await runTransaction(db, async (transaction) => {
+    const requestDoc = await transaction.get(requestRef);
+    if (!requestDoc.exists()) throw new Error("Welfare request not found");
+    const requestData = requestDoc.data() as WelfareRequest;
+
+    if (requestData.userId === adminId) {
+      throw new Error("Conflict of Interest: You cannot moderate your own welfare case.");
+    }
+
+    if (!requestData.isPublishedToFeed) {
+      throw new Error("This case is not currently published on the feed.");
+    }
+
+    applicantUserId = requestData.userId;
+
+    const updates: any = {
+      publicTitle: title,
+      publicSummary: summary,
+      supportTargetAmount: Number(params.supportTargetAmount) || 0,
+      supportEndAt: params.supportEndAt || null,
+      publicationVersion: (requestData.publicationVersion || 1) + 1,
+      lastPublicationEditAt: Date.now(),
+      lastPublicationEditBy: adminId,
+      updatedAt: Date.now()
+    };
+
+    if (typeof params.supportEnabled === 'boolean') {
+      updates.supportEnabled = params.supportEnabled;
+      updates.supportStatus = params.supportEnabled ? 'open' : 'closed';
+    }
+
+    transaction.update(requestRef, updates);
+
+    transaction.set(pubFeedRef, {
+      publicTitle: title,
+      publicSummary: summary,
+      supportTargetAmount: Number(params.supportTargetAmount) || 0,
+      supportEndAt: params.supportEndAt || null,
+      ...(typeof params.supportEnabled === 'boolean' ? { supportEnabled: params.supportEnabled, supportStatus: params.supportEnabled ? 'open' : 'closed' } : {}),
+      publicationVersion: (requestData.publicationVersion || 1) + 1,
+      updatedAt: Date.now()
+    }, { merge: true });
+  });
+
+  await logActivity(
+    'UPDATE_WELFARE_PUBLICATION',
+    adminId,
+    requestId,
+    `Updated published feed details for "${title}"`
+  );
+};
+
+export const setWelfareSupportStatus = async (
+  requestId: string,
+  adminId: string,
+  newStatus: 'open' | 'paused' | 'closed',
+  closeReason?: string
+) => {
+  const adminDoc = await getDoc(doc(db, 'users', adminId));
+  if (!adminDoc.exists()) throw new Error("Admin user not found");
+  const adminRole = adminDoc.data().role;
+  const allowedRoles = ['super_admin', 'chairperson', 'vice_chairperson', 'secretary', 'treasurer'];
+  if (!allowedRoles.includes(adminRole)) {
+    throw new Error("Only authorized committee members can change solidarity support status.");
+  }
+
+  const requestRef = doc(db, 'welfareRequests', requestId);
+  const pubFeedRef = doc(db, 'publishedWelfareFeed', requestId);
+  let applicantUserId = "";
+  let publicTitle = "";
+
+  await runTransaction(db, async (transaction) => {
+    const requestDoc = await transaction.get(requestRef);
+    if (!requestDoc.exists()) throw new Error("Welfare request not found");
+    const requestData = requestDoc.data() as WelfareRequest;
+
+    if (requestData.userId === adminId) {
+      throw new Error("Conflict of Interest: You cannot modify support status on your own case.");
+    }
+
+    applicantUserId = requestData.userId;
+    publicTitle = requestData.publicTitle || requestData.category;
+
+    const updates: any = {
+      supportStatus: newStatus,
+      updatedAt: Date.now()
+    };
+
+    if (newStatus === 'closed' && closeReason?.trim()) {
+      updates.closeReason = closeReason.trim();
+    }
+
+    transaction.update(requestRef, updates);
+
+    transaction.set(pubFeedRef, {
+      supportStatus: newStatus,
+      ...(newStatus === 'closed' && closeReason?.trim() ? { closeReason: closeReason.trim() } : {}),
+      updatedAt: Date.now()
+    }, { merge: true });
+  });
+
+  await logActivity(
+    'SET_WELFARE_SUPPORT_STATUS',
+    adminId,
+    requestId,
+    `Set support status to ${newStatus}${closeReason ? ` (${closeReason})` : ''}`
+  );
+
+  if (applicantUserId) {
+    const statusText = newStatus === 'open' ? 're-opened' : newStatus === 'paused' ? 'paused' : 'closed';
+    await notifyUser(applicantUserId, {
+      title: `Solidarity Support ${newStatus.toUpperCase()}`,
+      body: `Solidarity funding for "${publicTitle}" has been ${statusText} by the executive committee.`,
+      type: "welfare",
+      targetId: requestId,
+      targetUrl: "/"
+    }).catch(err => console.error("Notification error:", err));
+  }
+};
+
+export const unpublishWelfareRequest = async (
+  requestId: string,
+  adminId: string,
+  reason?: string
+) => {
+  const adminDoc = await getDoc(doc(db, 'users', adminId));
+  if (!adminDoc.exists()) throw new Error("Admin user not found");
+  const adminRole = adminDoc.data().role;
+  const allowedRoles = ['super_admin', 'chairperson', 'vice_chairperson', 'secretary', 'treasurer'];
+  if (!allowedRoles.includes(adminRole)) {
+    throw new Error("Only authorized committee members can unpublish welfare cases.");
+  }
+
+  const finalReason = reason?.trim() || "Unpublished by committee administrator";
+
+  const requestRef = doc(db, 'welfareRequests', requestId);
+  const pubFeedRef = doc(db, 'publishedWelfareFeed', requestId);
+  let applicantUserId = "";
+  let publicTitle = "";
+
+  await runTransaction(db, async (transaction) => {
+    const requestDoc = await transaction.get(requestRef);
+    if (!requestDoc.exists()) throw new Error("Welfare request not found");
+    const requestData = requestDoc.data() as WelfareRequest;
+
+    if (requestData.userId === adminId) {
+      throw new Error("Conflict of Interest: You cannot moderate your own welfare case.");
+    }
+
+    applicantUserId = requestData.userId;
+    publicTitle = requestData.publicTitle || requestData.category;
+
+    transaction.update(requestRef, {
+      isPublishedToFeed: false,
+      supportStatus: 'closed',
+      closeReason: finalReason,
+      updatedAt: Date.now()
+    });
+
+    // Delete or remove from publishedWelfareFeed
+    transaction.delete(pubFeedRef);
+  });
+
+  await logActivity(
+    'UNPUBLISH_WELFARE_FEED',
+    adminId,
+    requestId,
+    `Unpublished welfare case from member feed: ${finalReason}`
+  );
+
+  if (applicantUserId) {
+    await notifyUser(applicantUserId, {
+      title: "Welfare Appeal Unpublished",
+      body: `Your solidarity appeal "${publicTitle}" has been removed from the public feed. Reason: ${finalReason}`,
+      type: "welfare",
+      targetId: requestId,
+      targetUrl: "/"
+    }).catch(err => console.error("Notification error:", err));
+  }
+};
+
+export const reconcileContribution = async (contributionId: string) => {
+  const user = auth.currentUser;
+  if (!user) throw new Error("Authentication required");
+  const token = await user.getIdToken();
+  const response = await fetch('/api/relworx/reconcile-contribution', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ contributionId })
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.success) {
+    throw new Error(data.message || 'Failed to reconcile contribution');
+  }
+  return data;
+};
+
 

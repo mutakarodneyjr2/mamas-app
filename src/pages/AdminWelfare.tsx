@@ -3,9 +3,41 @@ import { collection, query, onSnapshot, doc, getDoc, getDocs } from 'firebase/fi
 import { db } from '../firebase';
 import { WelfareRequest, User, AppSettings } from '../types';
 import { useAuth } from '../contexts/AuthContext';
-import { castWelfareVote, logActivity, initiateWelfareDisbursement, reverseWelfareDecision } from '../lib/services';
+import { 
+  castWelfareVote, 
+  logActivity, 
+  initiateWelfareDisbursement, 
+  reverseWelfareDecision,
+  publishWelfareRequest,
+  updateWelfarePublication,
+  setWelfareSupportStatus,
+  unpublishWelfareRequest
+} from '../lib/services';
 import { formatUGX, exportToCSV } from '../lib/utils';
-import { Heart, FileText, CheckCircle, XCircle, Clock, Banknote, Shield, Search, Filter, Download, ChevronDown, ChevronUp, Calendar, DollarSign, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { 
+  Heart, 
+  FileText, 
+  CheckCircle, 
+  XCircle, 
+  Clock, 
+  Banknote, 
+  Shield, 
+  Search, 
+  Filter, 
+  Download, 
+  ChevronDown, 
+  ChevronUp, 
+  Calendar, 
+  DollarSign, 
+  AlertCircle, 
+  CheckCircle2,
+  HeartHandshake,
+  Globe,
+  PauseCircle,
+  PlayCircle,
+  EyeOff,
+  Edit3
+} from 'lucide-react';
 
 export default function AdminWelfare() {
   const { currentUser, userProfile } = useAuth();
@@ -21,7 +53,7 @@ export default function AdminWelfare() {
 
   // Search & Filters
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'accepted' | 'declined' | 'paid'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'accepted' | 'paid' | 'published' | 'declined'>('all');
 
   // Vote Confirmation Modal state
   const [votingModal, setVotingModal] = useState<{
@@ -37,6 +69,27 @@ export default function AdminWelfare() {
   // Pay Confirmation Modal state
   const [payModalWelfareId, setPayModalWelfareId] = useState<string | null>(null);
   const [isPaying, setIsPaying] = useState(false);
+
+  // Publish to Feed Modal
+  const [publishModal, setPublishModal] = useState<WelfareRequest | null>(null);
+  const [pubTitle, setPubTitle] = useState('');
+  const [pubSummary, setPubSummary] = useState('');
+  const [pubSupportEnabled, setPubSupportEnabled] = useState(true);
+  const [pubTargetAmount, setPubTargetAmount] = useState('');
+  const [pubLoading, setPubLoading] = useState(false);
+
+  // Edit Publication Modal
+  const [editPubModal, setEditPubModal] = useState<WelfareRequest | null>(null);
+  const [editPubTitle, setEditPubTitle] = useState('');
+  const [editPubSummary, setEditPubSummary] = useState('');
+  const [editPubSupportEnabled, setEditPubSupportEnabled] = useState(true);
+  const [editPubTargetAmount, setEditPubTargetAmount] = useState('');
+  const [editPubLoading, setEditPubLoading] = useState(false);
+
+  // Reversal Modal
+  const [reverseModalId, setReverseModalId] = useState<string | null>(null);
+  const [reverseReason, setReverseReason] = useState('');
+  const [reverseLoading, setReverseLoading] = useState(false);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -103,6 +156,8 @@ export default function AdminWelfare() {
     );
   }
 
+  const isExecutive = isSuperAdmin || isChairperson || isViceChairperson || isSecretary || isTreasurer;
+
   const filteredRequests = (Array.isArray(requests) ? requests : []).filter(r => {
     if (!r) return false;
     const member = usersCache?.[r.userId];
@@ -113,7 +168,12 @@ export default function AdminWelfare() {
     const phone = String(member?.phoneNumber || '');
 
     const matchesSearch = memberName.includes(search) || cat.includes(search) || desc.includes(search) || phone.includes(search);
-    const matchesStatus = statusFilter === 'all' || r.status === statusFilter;
+    const matchesStatus = 
+      statusFilter === 'all' 
+        ? true 
+        : statusFilter === 'published' 
+        ? r.isPublishedToFeed === true 
+        : r.status === statusFilter;
 
     return matchesSearch && matchesStatus;
   });
@@ -128,6 +188,9 @@ export default function AdminWelfare() {
         Category: r.category,
         AmountRequested: r.amountRequested,
         Status: r.status,
+        IsPublishedToFeed: r.isPublishedToFeed ? 'Yes' : 'No',
+        SupportRaisedAmount: r.supportRaisedAmount || 0,
+        SupportStatus: r.supportStatus || 'N/A',
         Relationship: r.relationship || '',
         BeneficiaryName: r.personName || ''
       };
@@ -150,11 +213,6 @@ export default function AdminWelfare() {
     setVoteReason('');
     setVotingModal({ requestId, vote, requestUserId, category, personName, amountRequested });
   };
-
-  // Reverse Decision Modal state
-  const [reverseModalId, setReverseModalId] = useState<string | null>(null);
-  const [reverseReason, setReverseReason] = useState('');
-  const [reverseLoading, setReverseLoading] = useState(false);
 
   const openReverseModal = (requestId: string) => {
     if (!isSuperAdmin) {
@@ -182,6 +240,138 @@ export default function AdminWelfare() {
       setTimeout(() => setErrorMsg(''), 5000);
     } finally {
       setReverseLoading(false);
+    }
+  };
+
+  const handleOpenPublish = (request: WelfareRequest) => {
+    setErrorMsg('');
+    setSuccessMsg('');
+    if (!isExecutive) {
+      setErrorMsg("Only executive committee members can publish welfare cases.");
+      return;
+    }
+    if (request.userId === currentUser.uid) {
+      setErrorMsg("Conflict of Interest: You cannot publish your own welfare request.");
+      return;
+    }
+    setPubTitle(`${request.category} Solidarity Support`);
+    setPubSummary(request.reason || `${request.category} emergency relief for member.`);
+    setPubSupportEnabled(true);
+    setPubTargetAmount(String(request.amountRequested || ''));
+    setPublishModal(request);
+  };
+
+  const submitPublish = async () => {
+    if (!publishModal) return;
+    if (!pubTitle.trim() || !pubSummary.trim()) {
+      setErrorMsg("Public Title and Privacy-safe Summary are required.");
+      return;
+    }
+    setPubLoading(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+    try {
+      await publishWelfareRequest(publishModal.id!, currentUser.uid, {
+        publicTitle: pubTitle.trim(),
+        publicSummary: pubSummary.trim(),
+        supportEnabled: pubSupportEnabled,
+        supportTargetAmount: Number(pubTargetAmount) || 0,
+      });
+      setSuccessMsg("Welfare case published to Member Feed.");
+      setPublishModal(null);
+      setTimeout(() => setSuccessMsg(''), 4000);
+    } catch (err: any) {
+      setErrorMsg(err.message || "Failed to publish welfare case.");
+      setTimeout(() => setErrorMsg(''), 5000);
+    } finally {
+      setPubLoading(false);
+    }
+  };
+
+  const handleOpenEditPublish = (request: WelfareRequest) => {
+    setErrorMsg('');
+    setSuccessMsg('');
+    if (!isExecutive) {
+      setErrorMsg("Only executive committee members can edit published appeals.");
+      return;
+    }
+    if (request.userId === currentUser.uid) {
+      setErrorMsg("Conflict of Interest: You cannot moderate your own published case.");
+      return;
+    }
+    setEditPubTitle(request.publicTitle || '');
+    setEditPubSummary(request.publicSummary || '');
+    setEditPubSupportEnabled(request.supportEnabled !== false);
+    setEditPubTargetAmount(String(request.supportTargetAmount || ''));
+    setEditPubModal(request);
+  };
+
+  const submitEditPublish = async () => {
+    if (!editPubModal) return;
+    if (!editPubTitle.trim() || !editPubSummary.trim()) {
+      setErrorMsg("Public Title and Privacy-safe Summary are required.");
+      return;
+    }
+    setEditPubLoading(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+    try {
+      await updateWelfarePublication(editPubModal.id!, currentUser.uid, {
+        publicTitle: editPubTitle.trim(),
+        publicSummary: editPubSummary.trim(),
+        supportEnabled: editPubSupportEnabled,
+        supportTargetAmount: Number(editPubTargetAmount) || 0,
+      });
+      setSuccessMsg("Public appeal details updated.");
+      setEditPubModal(null);
+      setTimeout(() => setSuccessMsg(''), 4000);
+    } catch (err: any) {
+      setErrorMsg(err.message || "Failed to update public appeal.");
+      setTimeout(() => setErrorMsg(''), 5000);
+    } finally {
+      setEditPubLoading(false);
+    }
+  };
+
+  const handleSetStatus = async (request: WelfareRequest, status: 'open' | 'paused' | 'closed') => {
+    setErrorMsg('');
+    setSuccessMsg('');
+    if (!isExecutive) {
+      setErrorMsg("Only executive committee members can change solidarity support status.");
+      return;
+    }
+    if (request.userId === currentUser.uid) {
+      setErrorMsg("Conflict of Interest: You cannot change status for your own case.");
+      return;
+    }
+    try {
+      await setWelfareSupportStatus(request.id!, currentUser.uid, status);
+      setSuccessMsg(`Solidarity support status set to ${status}.`);
+      setTimeout(() => setSuccessMsg(''), 3000);
+    } catch (err: any) {
+      setErrorMsg(err.message || "Failed to update support status.");
+      setTimeout(() => setErrorMsg(''), 5000);
+    }
+  };
+
+  const handleUnpublish = async (request: WelfareRequest) => {
+    setErrorMsg('');
+    setSuccessMsg('');
+    if (!isExecutive) {
+      setErrorMsg("Only executive committee members can unpublish appeals.");
+      return;
+    }
+    if (request.userId === currentUser.uid) {
+      setErrorMsg("Conflict of Interest: You cannot unpublish your own case.");
+      return;
+    }
+    try {
+      await unpublishWelfareRequest(request.id!, currentUser.uid);
+      setSuccessMsg("Case unpublished from Member Feed.");
+      setTimeout(() => setSuccessMsg(''), 3000);
+    } catch (err: any) {
+      setErrorMsg(err.message || "Failed to unpublish case.");
+      setTimeout(() => setErrorMsg(''), 5000);
     }
   };
 
@@ -430,6 +620,126 @@ export default function AdminWelfare() {
                 </div>
               )}
 
+              {/* PUBLIC WELFARE FEED & SOLIDARITY SUPPORT MODERATION */}
+              {(isAccepted || isPaid) && isExecutive && (
+                <div className="mt-4 pt-3 border-t border-slate-200/60 dark:border-slate-800 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-xs font-extrabold text-slate-800 dark:text-slate-200">
+                      <HeartHandshake className="w-4 h-4 text-rose-500" />
+                      <span>Public Member Feed & Solidarity Support</span>
+                    </div>
+
+                    {request.isPublishedToFeed ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900/60">
+                        <Globe className="w-3 h-3" />
+                        Live on Feed
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500">
+                        Not Published
+                      </span>
+                    )}
+                  </div>
+
+                  {request.isPublishedToFeed ? (
+                    <div className="bg-rose-50/50 dark:bg-rose-950/20 rounded-2xl p-4 border border-rose-100 dark:border-rose-900/30 space-y-3">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                          <p className="text-xs font-bold text-slate-900 dark:text-white">
+                            {request.publicTitle || `${request.category} Solidarity Support`}
+                          </p>
+                          <p className="text-[11px] text-slate-600 dark:text-slate-300 line-clamp-2 mt-0.5">
+                            {request.publicSummary || request.reason}
+                          </p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="text-xs font-extrabold text-rose-600 dark:text-rose-400">
+                            {formatUGX(request.supportRaisedAmount || 0)} raised
+                          </p>
+                          <p className="text-[10px] text-slate-400">
+                            {request.supportContributorCount || 0} supporters • Status: <strong className="uppercase">{request.supportStatus || 'open'}</strong>
+                          </p>
+                        </div>
+                      </div>
+
+                      {request.userId === currentUser.uid ? (
+                        <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 p-2 rounded-xl border border-amber-200 dark:border-amber-900">
+                          Conflict of Interest: You cannot moderate or edit the public feed for your own request.
+                        </p>
+                      ) : (
+                        <div className="flex flex-wrap gap-2 pt-1 border-t border-rose-200/50 dark:border-rose-900/40">
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); handleOpenEditPublish(request); }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 text-xs font-bold transition-all cursor-pointer"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                            Edit Details
+                          </button>
+
+                          {request.supportStatus === 'paused' ? (
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); handleSetStatus(request, 'open'); }}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all cursor-pointer"
+                            >
+                              <PlayCircle className="w-3.5 h-3.5" />
+                              Resume Support
+                            </button>
+                          ) : request.supportStatus !== 'closed' ? (
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); handleSetStatus(request, 'paused'); }}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold transition-all cursor-pointer"
+                            >
+                              <PauseCircle className="w-3.5 h-3.5" />
+                              Pause Support
+                            </button>
+                          ) : null}
+
+                          {request.supportStatus !== 'closed' && (
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); handleSetStatus(request, 'closed'); }}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-700 dark:text-slate-200 text-xs font-bold transition-all cursor-pointer"
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              Close Appeal
+                            </button>
+                          )}
+
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); handleUnpublish(request); }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900 text-xs font-bold transition-all cursor-pointer"
+                          >
+                            <EyeOff className="w-3.5 h-3.5" />
+                            Unpublish
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div>
+                      {request.userId === currentUser.uid ? (
+                        <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 p-2.5 rounded-2xl border border-amber-200 dark:border-amber-900 text-center">
+                          Conflict of Interest: Another executive member must publish this case to the public feed.
+                        </p>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); handleOpenPublish(request); }}
+                          className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-2xl bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white font-extrabold text-xs transition-all shadow-xs cursor-pointer"
+                        >
+                          <HeartHandshake className="w-4 h-4" />
+                          Publish to Member Feed (Open Solidarity Support)
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Reverse Decision Trigger */}
               {request.status !== 'pending' && request.status !== 'paid' && request.disbursementStatus !== 'successful' && request.disbursementStatus !== 'in_progress' && isSuperAdmin && (
                 <div className="mt-2 text-center">
@@ -504,13 +814,18 @@ export default function AdminWelfare() {
         <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide no-scrollbar w-full">
           {[
             { id: 'all', label: 'All Requests' },
+            { id: 'published', label: 'Published to Feed' },
             { id: 'pending', label: 'Pending Review' },
             { id: 'accepted', label: 'Approved (Pending Payout)' },
             { id: 'paid', label: 'Paid Out' },
             { id: 'declined', label: 'Declined' }
           ].map(tab => {
             const isActive = statusFilter === tab.id;
-            const count = (requests || []).filter(r => tab.id === 'all' ? true : r.status === tab.id).length;
+            const count = (requests || []).filter(r => {
+              if (tab.id === 'all') return true;
+              if (tab.id === 'published') return r.isPublishedToFeed === true;
+              return r.status === tab.id;
+            }).length;
             return (
               <button
                 key={tab.id}
@@ -746,6 +1061,202 @@ export default function AdminWelfare() {
                 </form>
               );
             })()}
+          </div>
+        </div>
+      )}
+      {/* Publish to Member Feed Modal */}
+      {publishModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs animate-in fade-in duration-200" onClick={() => !pubLoading && setPublishModal(null)}>
+          <div 
+            className="bg-white dark:bg-[#0c1731] rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col gap-4 animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3.5">
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border bg-rose-50 text-rose-600 border-rose-200 dark:bg-rose-950/60 dark:text-rose-400 dark:border-rose-900">
+                <HeartHandshake className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-slate-900 dark:text-white text-base sm:text-lg">
+                  Publish Appeal to Member Feed
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {publishModal.category} • Beneficiary: {publishModal.personName}
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3 bg-amber-50 dark:bg-amber-950/40 rounded-2xl border border-amber-200 dark:border-amber-900/60 text-[11px] text-amber-800 dark:text-amber-300">
+              <strong>Privacy Standard:</strong> Member phone number, evidence documents, and internal vote notes will NOT be exposed on the public card.
+            </div>
+
+            <div className="space-y-3.5">
+              <div>
+                <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">
+                  Public Title (Required)
+                </label>
+                <input
+                  type="text"
+                  value={pubTitle}
+                  onChange={(e) => setPubTitle(e.target.value)}
+                  placeholder="e.g. Bereavement Solidarity Support for Member"
+                  className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl p-3 text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-rose-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">
+                  Public Summary & Call to Support (Required)
+                </label>
+                <textarea
+                  value={pubSummary}
+                  onChange={(e) => setPubSummary(e.target.value)}
+                  placeholder="Write a clear, dignified summary for alumni members to read..."
+                  rows={3}
+                  className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl p-3 text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-rose-500 resize-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">
+                    Support Target (UGX)
+                  </label>
+                  <input
+                    type="number"
+                    value={pubTargetAmount}
+                    onChange={(e) => setPubTargetAmount(e.target.value)}
+                    placeholder="Optional target"
+                    className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl p-3 text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-rose-500 font-mono"
+                  />
+                </div>
+
+                <div className="flex flex-col justify-end">
+                  <label className="flex items-center gap-2 p-3 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-700 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={pubSupportEnabled}
+                      onChange={(e) => setPubSupportEnabled(e.target.checked)}
+                      className="w-4 h-4 text-rose-600 rounded"
+                    />
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Enable Member Support</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setPublishModal(null)}
+                disabled={pubLoading}
+                className="flex-1 py-3 px-4 rounded-2xl border border-slate-200 dark:border-slate-700 text-xs font-extrabold uppercase text-slate-700 dark:text-slate-300 hover:bg-slate-50 transition-colors disabled:opacity-50 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={submitPublish}
+                disabled={pubLoading || !pubTitle.trim() || !pubSummary.trim()}
+                className="flex-1 py-3 px-4 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-extrabold uppercase tracking-wider shadow-md shadow-rose-600/25 transition-all disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+              >
+                {pubLoading ? 'Publishing...' : 'Confirm & Publish'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Public Details Modal */}
+      {editPubModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs animate-in fade-in duration-200" onClick={() => !editPubLoading && setEditPubModal(null)}>
+          <div 
+            className="bg-white dark:bg-[#0c1731] rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col gap-4 animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3.5">
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-950/60 dark:text-blue-400 dark:border-blue-900">
+                <Edit3 className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-slate-900 dark:text-white text-base sm:text-lg">
+                  Edit Public Feed Appeal
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {editPubModal.category} • Beneficiary: {editPubModal.personName}
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-3.5">
+              <div>
+                <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">
+                  Public Title (Required)
+                </label>
+                <input
+                  type="text"
+                  value={editPubTitle}
+                  onChange={(e) => setEditPubTitle(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl p-3 text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">
+                  Public Summary (Required)
+                </label>
+                <textarea
+                  value={editPubSummary}
+                  onChange={(e) => setEditPubSummary(e.target.value)}
+                  rows={3}
+                  className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl p-3 text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">
+                    Support Target (UGX)
+                  </label>
+                  <input
+                    type="number"
+                    value={editPubTargetAmount}
+                    onChange={(e) => setEditPubTargetAmount(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl p-3 text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                  />
+                </div>
+
+                <div className="flex flex-col justify-end">
+                  <label className="flex items-center gap-2 p-3 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-700 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editPubSupportEnabled}
+                      onChange={(e) => setEditPubSupportEnabled(e.target.checked)}
+                      className="w-4 h-4 text-blue-600 rounded"
+                    />
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Enable Member Support</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setEditPubModal(null)}
+                disabled={editPubLoading}
+                className="flex-1 py-3 px-4 rounded-2xl border border-slate-200 dark:border-slate-700 text-xs font-extrabold uppercase text-slate-700 dark:text-slate-300 hover:bg-slate-50 transition-colors disabled:opacity-50 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={submitEditPublish}
+                disabled={editPubLoading || !editPubTitle.trim() || !editPubSummary.trim()}
+                className="flex-1 py-3 px-4 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold uppercase tracking-wider shadow-md shadow-blue-600/25 transition-all disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+              >
+                {editPubLoading ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
           </div>
         </div>
       )}

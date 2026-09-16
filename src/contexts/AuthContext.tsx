@@ -15,6 +15,9 @@ interface AuthContextType {
   isUnverified: boolean;
   isVerified: boolean;
   isAdminOrCommittee: boolean;
+  isPendingDeletion: boolean;
+  isSuspended: boolean;
+  isDeleted: boolean;
   accessTier: AccessTier;
 }
 
@@ -32,7 +35,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Listen to profile changes
         const unsubscribeProfile = onSnapshot(doc(db, "users", user.uid), async (document) => {
           if (document.exists()) {
-            setUserProfile(document.data() as UserProfile);
+            const data = document.data() as UserProfile;
+            
+            // Check if 30-day grace period has expired for pending deletion
+            if (data.status === "pending_deletion" && data.deletionEffectiveAt && Date.now() >= data.deletionEffectiveAt) {
+              try {
+                const { finalizeAccountDeletion } = await import("../lib/auth");
+                await finalizeAccountDeletion(user.uid);
+                data.status = "deleted";
+              } catch (e) {
+                console.error("Error auto-finalizing account deletion:", e);
+              }
+            }
+
+            setUserProfile(data);
             setLoading(false);
           } else {
             setUserProfile(null);
@@ -70,9 +86,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const isVisitor = !currentUser;
+  const isPendingDeletion = Boolean(currentUser && userProfile?.status === 'pending_deletion');
+  const isSuspended = Boolean(currentUser && userProfile?.status === 'suspended');
+  const isDeleted = Boolean(currentUser && userProfile?.status === 'deleted');
   const isVerified = Boolean(currentUser && userProfile?.status === 'approved');
   const isUnverified = Boolean(
-    currentUser && (!userProfile || ['pending', 'unverified', 'awaiting_approval', 'rejected'].includes(userProfile.status))
+    currentUser && (!userProfile || ['pending', 'unverified', 'awaiting_approval', 'rejected', 'pending_deletion', 'suspended', 'deleted'].includes(userProfile.status))
   );
   const isAdminOrCommittee = Boolean(
     currentUser &&
@@ -99,6 +118,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isUnverified,
       isVerified,
       isAdminOrCommittee,
+      isPendingDeletion,
+      isSuspended,
+      isDeleted,
       accessTier
     }}>
       {children}

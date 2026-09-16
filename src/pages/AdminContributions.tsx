@@ -3,10 +3,10 @@ import { collection, query, onSnapshot, doc, getDoc, getDocs, where } from 'fire
 import { db } from '../firebase';
 import { Contribution, User } from '../types';
 import { useAuth } from '../contexts/AuthContext';
-import { verifyContribution, rejectContribution, logActivity } from '../lib/services';
+import { verifyContribution, rejectContribution, logActivity, reconcileContribution } from '../lib/services';
 import { triggerContributionReminders } from '../lib/reminderService';
 import { formatUGX, exportToCSV } from '../lib/utils';
-import { Check, X, FileText, Search, Filter, Download, ChevronDown, Calendar, DollarSign, Bell, Send, Users, Sparkles } from 'lucide-react';
+import { Check, X, FileText, Search, Filter, Download, ChevronDown, Calendar, DollarSign, Bell, Send, Users, Sparkles, RefreshCw } from 'lucide-react';
 import { SelectDropdown } from '../components/SelectDropdown';
 
 export default function AdminContributions() {
@@ -30,13 +30,30 @@ export default function AdminContributions() {
 
   // Filters & Search
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'verified' | 'rejected'>('pending');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'verified' | 'rejected' | 'stuck_pending'>('pending');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [minAmount, setMinAmount] = useState('');
   const [maxAmount, setMaxAmount] = useState('');
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [reconcilingId, setReconcilingId] = useState<string | null>(null);
+
+  const handleRecheck = async (id: string) => {
+    setReconcilingId(id);
+    setErrorMsg('');
+    setSuccessMsg('');
+    try {
+      const res = await reconcileContribution(id);
+      setSuccessMsg(`Reconciliation result: ${res.message || 'Checked successfully'}`);
+      setTimeout(() => setSuccessMsg(''), 5000);
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Reconciliation failed');
+      setTimeout(() => setErrorMsg(''), 5000);
+    } finally {
+      setReconcilingId(null);
+    }
+  };
 
   useEffect(() => {
     if (!currentUser) return;
@@ -164,7 +181,15 @@ export default function AdminContributions() {
     const phone = String(member?.phoneNumber || '');
 
     const matchesSearch = memberName.includes(search) || ref.includes(search) || phone.includes(search);
-    const matchesStatus = statusFilter === 'all' || c.status === statusFilter;
+    const isPendingStatus = ['pending', 'pending_payment', 'initiated'].includes(c.status);
+    const ageMinutes = (Date.now() - (c.createdAt || 0)) / (1000 * 60);
+    const isStuck = isPendingStatus && ageMinutes > 15;
+
+    const matchesStatus = statusFilter === 'all' 
+      ? true 
+      : statusFilter === 'stuck_pending' 
+      ? isStuck 
+      : c.status === statusFilter;
     const matchesCategory = categoryFilter === 'all' || c.type === categoryFilter;
 
     const cDate = typeof c.createdAt === 'number' ? c.createdAt : 0;
@@ -419,6 +444,7 @@ export default function AdminContributions() {
                     options={[
                       { label: 'All Status', value: 'all' },
                       { label: 'Pending', value: 'pending' },
+                      { label: 'Stuck Pending (>15m)', value: 'stuck_pending' },
                       { label: 'Verified', value: 'verified' },
                       { label: 'Rejected', value: 'rejected' }
                     ]}
@@ -572,6 +598,9 @@ export default function AdminContributions() {
                           <div className="flex flex-row md:flex-col gap-2.5 md:w-36 shrink-0">
                             <button onClick={() => handleVerify(contribution.id)} className="flex-1 md:flex-none inline-flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 px-4 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer">
                               <Check className="w-4 h-4" /> Verify
+                            </button>
+                            <button onClick={() => handleRecheck(contribution.id)} disabled={reconcilingId === contribution.id} className="flex-1 md:flex-none inline-flex items-center justify-center gap-1.5 bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 hover:bg-blue-100 py-2.5 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer disabled:opacity-50">
+                              <RefreshCw className={`w-3.5 h-3.5 ${reconcilingId === contribution.id ? 'animate-spin' : ''}`} /> Recheck
                             </button>
                             <button onClick={() => handleReject(contribution.id)} className="flex-1 md:flex-none inline-flex items-center justify-center gap-1.5 bg-white dark:bg-slate-800 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50 py-2.5 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer">
                               <X className="w-4 h-4" /> Reject

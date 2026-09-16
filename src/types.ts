@@ -1,5 +1,5 @@
 export type UserRole = "super_admin" | "chairperson" | "vice_chairperson" | "treasurer" | "secretary" | "auditor" | "mobiliser" | "member";
-export type UserStatus = "pending" | "approved" | "rejected" | "suspended" | "unverified" | "awaiting_approval";
+export type UserStatus = "pending" | "approved" | "rejected" | "suspended" | "unverified" | "awaiting_approval" | "pending_deletion" | "deleted" | "deactivated";
 export type ContributionStatus = "active" | "inactive";
 
 export type PrivacyLevel = "visible_to_verified_members" | "committee_only" | "hidden";
@@ -34,6 +34,7 @@ export interface User {
   nextOfKinPhone: string;
   role: UserRole;
   status: UserStatus;
+  statusPrevious?: UserStatus;
   privacySettings: UserPrivacySettings;
   contributionStatus: ContributionStatus;
   hasCompletedOnboarding?: boolean;
@@ -50,6 +51,16 @@ export interface User {
   rejectionReason?: string;
   rejectedAt?: number;
   rejectedBy?: string;
+  // Account Deletion & Suspension fields
+  deletionScheduledAt?: number;
+  deletionEffectiveAt?: number;
+  deletionType?: 'self' | 'admin';
+  deletionCancelledAt?: number;
+  historicalDisplayName?: string;
+  anonymizedAt?: number;
+  suspendedAt?: number;
+  suspendedBy?: string;
+  suspendReason?: string;
 }
 
 export type NotificationType = "notice" | "welfare" | "campaign" | "contribution" | "approval";
@@ -66,7 +77,7 @@ export interface NotificationItem {
   createdAt: number;
 }
 
-export type ContributionType = "welfare" | "school_support";
+export type ContributionType = "welfare" | "school_support" | "welfare_support";
 export type ContributionTxStatus = "pending" | "verified" | "rejected";
 export type RelworxPaymentStatus = "pending_payment" | "processing" | "verified" | "failed" | "expired";
 
@@ -77,6 +88,7 @@ export interface Contribution {
   currency: "UGX";
   type: ContributionType;
   campaignId: string | null;
+  welfareRequestId?: string | null;
   transactionReference: string;
   status: ContributionTxStatus;
   verifiedBy?: string;
@@ -94,12 +106,13 @@ export interface Contribution {
   userName?: string;
   isAnonymous?: boolean;
   displayName?: string;
-  purpose?: 'welfare' | 'campaign';
+  purpose?: 'welfare' | 'campaign' | 'welfare_support';
 }
 
 export type WelfareRequestStatus = "pending" | "accepted" | "declined" | "paid";
-export type DisbursementStatus = "pending" | "processing" | "paid" | "failed";
+export type DisbursementStatus = "pending" | "processing" | "paid" | "failed" | "successful" | "in_progress";
 export type VoteType = "approve" | "reject";
+export type SupportStatus = "open" | "paused" | "closed";
 
 export interface WelfareVote {
   userId: string;
@@ -117,6 +130,7 @@ export interface WelfareRequest {
   district: string;
   villageTown: string;
   description: string;
+  reason?: string;
   evidenceUrls: string[];
   amountRequested: number;
   recipientPhoneNumber: string;
@@ -136,9 +150,27 @@ export interface WelfareRequest {
   relworxDisbursementId?: string;
   disbursementStatus?: DisbursementStatus;
   gatewayResponse?: any;
+  // Public Feed & Solidarity Support Fields
+  isPublishedToFeed?: boolean;
+  publishedAt?: number;
+  publishedBy?: string;
+  publicTitle?: string;
+  publicSummary?: string;
+  supportEnabled?: boolean;
+  supportStatus?: SupportStatus;
+  supportTargetAmount?: number;
+  supportRaisedAmount?: number;
+  supportContributorCount?: number;
+  supportStartAt?: number;
+  supportEndAt?: number;
+  lastPublicationEditAt?: number;
+  lastPublicationEditBy?: string;
+  publicationVersion?: number;
+  closeReason?: string;
+  disbursedSupportAmount?: number;
 }
 
-export type CampaignStatus = "active" | "completed" | "cancelled" | "fully_funded" | "closed";
+export type CampaignStatus = "active" | "completed" | "cancelled" | "fully_funded" | "closed" | "paused" | "draft";
 
 export interface SchoolCampaign {
   id: string;
@@ -149,6 +181,8 @@ export interface SchoolCampaign {
   imageUrls: string[];
   imageUrl?: string;
   status: CampaignStatus;
+  startDate?: number;
+  endDate?: number;
   actionNotes?: string;
   createdBy: string;
   createdAt: number;

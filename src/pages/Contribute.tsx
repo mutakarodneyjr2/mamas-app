@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Heart, Target, Lock, Loader2, Check, Smartphone, RefreshCw, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Heart, Target, Lock, Loader2, Check, Smartphone, RefreshCw, AlertCircle, CheckCircle2, HeartHandshake, PauseCircle } from 'lucide-react';
 import { db } from '../firebase';
 import { collection, query, where, getDocs, addDoc, doc, onSnapshot, getDoc, serverTimestamp } from 'firebase/firestore';
 import { SelectDropdown } from '../components/SelectDropdown';
@@ -13,7 +13,21 @@ export default function Contribute() {
   const navigate = useNavigate();
   
   const initialCampaignId = searchParams.get('campaignId') || '';
-  const [purpose, setPurpose] = useState<'welfare' | 'campaign'>(initialCampaignId || isUnverified ? 'campaign' : 'welfare');
+  const initialType = searchParams.get('type') || '';
+  const initialWelfareId = searchParams.get('welfareId') || '';
+
+  const [purpose, setPurpose] = useState<'welfare' | 'campaign' | 'welfare_support'>(
+    initialType === 'welfare_support' && initialWelfareId
+      ? 'welfare_support'
+      : initialCampaignId || isUnverified 
+      ? 'campaign' 
+      : 'welfare'
+  );
+
+  const [welfareRequestId, setWelfareRequestId] = useState(initialWelfareId);
+  const [welfareCaseData, setWelfareCaseData] = useState<any>(null);
+  const [fetchingWelfareCase, setFetchingWelfareCase] = useState(false);
+
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [amount, setAmount] = useState('');
   const [phone, setPhone] = useState(userProfile?.phoneNumber || '');
@@ -31,6 +45,35 @@ export default function Contribute() {
   const [normalizedPhoneUsed, setNormalizedPhoneUsed] = useState('');
   const [checkingStatus, setCheckingStatus] = useState(false);
   const [pollingMessage, setPollingMessage] = useState('Waiting for mobile money PIN confirmation...');
+
+  useEffect(() => {
+    async function fetchWelfareCase() {
+      if (!welfareRequestId) return;
+      setFetchingWelfareCase(true);
+      try {
+        const docSnap = await getDoc(doc(db, 'welfareRequests', welfareRequestId));
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setWelfareCaseData(data);
+          if (data.supportStatus === 'paused') {
+            setError('Solidarity support for this welfare case is currently paused by the committee.');
+          } else if (data.supportStatus === 'closed' || data.supportEnabled === false) {
+            setError('Solidarity support for this welfare case has ended.');
+          }
+        } else {
+          setError('Welfare appeal case not found.');
+        }
+      } catch (err: any) {
+        console.error("Error fetching welfare case details:", err);
+      } finally {
+        setFetchingWelfareCase(false);
+      }
+    }
+
+    if (purpose === 'welfare_support' && welfareRequestId) {
+      fetchWelfareCase();
+    }
+  }, [purpose, welfareRequestId]);
 
   useEffect(() => {
     async function fetchCampaigns() {
@@ -149,6 +192,21 @@ export default function Contribute() {
       return;
     }
 
+    if (purpose === 'welfare_support') {
+      if (!welfareRequestId) {
+        setError('Please select a welfare solidarity appeal to support.');
+        return;
+      }
+      if (welfareCaseData?.supportStatus === 'paused') {
+        setError('Solidarity support for this welfare case is currently paused.');
+        return;
+      }
+      if (welfareCaseData?.supportStatus === 'closed' || welfareCaseData?.supportEnabled === false) {
+        setError('Solidarity support for this welfare case is closed.');
+        return;
+      }
+    }
+
     // Phone number normalization and validation
     const normPhone = normalizePhoneNumber(phone);
     const digitsOnly = normPhone.replace(/[^0-9]/g, '');
@@ -163,7 +221,12 @@ export default function Contribute() {
     setSuccess(false);
 
     try {
-      const contribType = purpose === 'campaign' ? 'school_support' : 'welfare';
+      const contribType = purpose === 'campaign' 
+        ? 'school_support' 
+        : purpose === 'welfare_support' 
+        ? 'welfare_support' 
+        : 'welfare';
+
       const actualUserName = userProfile?.fullName || 'Anonymous User';
       const displayName = isAnonymous ? 'Anonymous' : actualUserName;
 
@@ -177,6 +240,7 @@ export default function Contribute() {
         purpose: purpose,
         type: contribType,
         campaignId: purpose === 'campaign' ? campaignId : null,
+        welfareRequestId: purpose === 'welfare_support' ? welfareRequestId : null,
         phoneNumber: normPhone,
         network: network,
         status: 'pending',
@@ -210,7 +274,9 @@ export default function Contribute() {
             userName: actualUserName,
             displayName: displayName,
             isAnonymous: String(isAnonymous),
-            campaignId: purpose === 'campaign' ? campaignId : null
+            type: contribType,
+            campaignId: purpose === 'campaign' ? campaignId : null,
+            welfareRequestId: purpose === 'welfare_support' ? welfareRequestId : null
           }
         })
       });
@@ -346,41 +412,102 @@ export default function Contribute() {
       ) : (
         <form onSubmit={handlePay} className="space-y-6">
           {/* PURPOSE SELECTION */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className={`grid ${isUnverified ? 'grid-cols-1' : welfareRequestId || purpose === 'welfare_support' ? 'grid-cols-3' : 'grid-cols-2'} gap-3`}>
             {!isUnverified && (
               <button
                 type="button"
                 onClick={() => setPurpose('welfare')}
-                className={`p-5 rounded-3xl flex flex-col items-center justify-center text-center transition-all cursor-pointer ${
+                className={`p-4 sm:p-5 rounded-3xl flex flex-col items-center justify-center text-center transition-all cursor-pointer ${
                   purpose === 'welfare' 
                     ? 'bg-blue-50 dark:bg-blue-950/40 border-2 border-blue-600 shadow-md text-blue-950 dark:text-blue-200' 
                     : 'bg-white dark:bg-[#0c1731] border border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/40 text-slate-700 dark:text-slate-300'
                 }`}
               >
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-3 transition-colors ${purpose === 'welfare' ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}`}>
-                  <Heart className="w-6 h-6" fill={purpose === 'welfare' ? 'currentColor' : 'none'} />
+                <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center mb-2.5 transition-colors ${purpose === 'welfare' ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}`}>
+                  <Heart className="w-5 h-5 sm:w-6 sm:h-6" fill={purpose === 'welfare' ? 'currentColor' : 'none'} />
                 </div>
-                <span className="font-bold text-sm">Welfare Relief Fund</span>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Monthly dues & aid</span>
+                <span className="font-bold text-xs sm:text-sm">Welfare Dues</span>
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Association pool</span>
               </button>
             )}
             
             <button
               type="button"
               onClick={() => setPurpose('campaign')}
-              className={`p-5 rounded-3xl flex flex-col items-center justify-center text-center transition-all cursor-pointer ${isUnverified ? 'col-span-2' : ''} ${
+              className={`p-4 sm:p-5 rounded-3xl flex flex-col items-center justify-center text-center transition-all cursor-pointer ${isUnverified ? 'w-full' : ''} ${
                 purpose === 'campaign' 
                   ? 'bg-blue-50 dark:bg-blue-950/40 border-2 border-blue-600 shadow-md text-blue-950 dark:text-blue-200' 
                   : 'bg-white dark:bg-[#0c1731] border border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/40 text-slate-700 dark:text-slate-300'
               }`}
             >
-              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-3 transition-colors ${purpose === 'campaign' ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}`}>
-                <Target className="w-6 h-6" />
+              <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center mb-2.5 transition-colors ${purpose === 'campaign' ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}`}>
+                <Target className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
-              <span className="font-bold text-sm">School Campaign</span>
-              <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Projects & upgrades</span>
+              <span className="font-bold text-xs sm:text-sm">School Campaign</span>
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Projects & upgrades</span>
             </button>
+
+            {(welfareRequestId || purpose === 'welfare_support') && !isUnverified && (
+              <button
+                type="button"
+                onClick={() => setPurpose('welfare_support')}
+                className={`p-4 sm:p-5 rounded-3xl flex flex-col items-center justify-center text-center transition-all cursor-pointer ${
+                  purpose === 'welfare_support' 
+                    ? 'bg-rose-50 dark:bg-rose-950/40 border-2 border-rose-600 shadow-md text-rose-950 dark:text-rose-200' 
+                    : 'bg-white dark:bg-[#0c1731] border border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/40 text-slate-700 dark:text-slate-300'
+                }`}
+              >
+                <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center mb-2.5 transition-colors ${purpose === 'welfare_support' ? 'bg-rose-600 text-white shadow-md shadow-rose-500/25' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}`}>
+                  <HeartHandshake className="w-5 h-5 sm:w-6 sm:h-6" />
+                </div>
+                <span className="font-bold text-xs sm:text-sm">Solidarity Appeal</span>
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Direct member support</span>
+              </button>
+            )}
           </div>
+
+          {/* SOLIDARITY APPEAL INFO BANNER */}
+          {purpose === 'welfare_support' && welfareCaseData && (
+            <div className="bg-white dark:bg-[#0c1731] rounded-3xl p-5 shadow-xs border border-rose-200 dark:border-rose-900/50 space-y-3 relative overflow-hidden">
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-rose-500 to-amber-500"></div>
+              
+              <div className="flex items-center justify-between gap-2 pt-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800/60 px-2.5 py-0.5 rounded-full">
+                  {welfareCaseData.category || 'Welfare Solidarity'}
+                </span>
+
+                {welfareCaseData.supportStatus === 'open' && (
+                  <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/60 px-2 py-0.5 rounded-full">
+                    Appeal Active
+                  </span>
+                )}
+                {welfareCaseData.supportStatus === 'paused' && (
+                  <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800/60 px-2 py-0.5 rounded-full">
+                    Support Paused
+                  </span>
+                )}
+              </div>
+
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
+                  {welfareCaseData.publicTitle || `Solidarity Support for ${welfareCaseData.personName}`}
+                </h3>
+                <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
+                  {welfareCaseData.publicSummary || welfareCaseData.reason}
+                </p>
+              </div>
+
+              <div className="flex justify-between items-center text-xs bg-rose-50/50 dark:bg-rose-950/20 p-3 rounded-2xl border border-rose-100 dark:border-rose-900/30">
+                <span className="font-semibold text-slate-700 dark:text-slate-300">
+                  Beneficiary: <strong>{welfareCaseData.personName}</strong>
+                </span>
+                <span className="font-bold text-rose-600 dark:text-rose-400">
+                  Raised: {formatUGX(welfareCaseData.supportRaisedAmount || 0)}
+                  {welfareCaseData.supportTargetAmount > 0 && ` / ${formatUGX(welfareCaseData.supportTargetAmount)}`}
+                </span>
+              </div>
+            </div>
+          )}
 
           {/* CAMPAIGN SELECTION */}
           {purpose === 'campaign' && (

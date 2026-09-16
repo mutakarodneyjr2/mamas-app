@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { BrowserRouter, Routes, Route, Outlet, Navigate, Link, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -18,12 +18,70 @@ import AdminUsers from './pages/AdminUsers';
 import AdminRoles from './pages/AdminRoles';
 import SetupSuperAdmin from './pages/SetupSuperAdmin';
 import MoneyOut from './pages/MoneyOut';
+import { cancelAccountDeletion } from './lib/auth';
+import { AlertTriangle, Clock, RefreshCw, Undo2 } from 'lucide-react';
+
+function DeletionBanner() {
+  const { userProfile, currentUser } = useAuth();
+  const [cancelling, setCancelling] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  if (!userProfile || userProfile.status !== 'pending_deletion' || !currentUser) {
+    return null;
+  }
+
+  const effectiveDate = userProfile.deletionEffectiveAt 
+    ? new Date(userProfile.deletionEffectiveAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+    : 'in 30 days';
+
+  const daysRemaining = userProfile.deletionEffectiveAt 
+    ? Math.max(0, Math.ceil((userProfile.deletionEffectiveAt - Date.now()) / (1000 * 60 * 60 * 24)))
+    : 30;
+
+  const handleCancel = async () => {
+    setCancelling(true);
+    setMsg(null);
+    try {
+      await cancelAccountDeletion(currentUser.uid);
+      setMsg("Deletion cancelled. Full access restored!");
+    } catch (err: any) {
+      setMsg("Failed: " + (err.message || 'Could not cancel'));
+    } finally {
+      setCancelling(false);
+    }
+  };
+
+  return (
+    <div className="bg-amber-500 text-slate-950 px-4 py-3 border-b border-amber-600 shadow-md">
+      <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs sm:text-sm font-semibold">
+        <div className="flex items-center gap-2.5">
+          <AlertTriangle className="w-5 h-5 text-slate-950 shrink-0" />
+          <span>
+            <strong>Account Scheduled for Deletion:</strong> Permanent deletion on <strong>{effectiveDate}</strong> ({daysRemaining} days left). Member features are paused.
+          </span>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {msg && <span className="text-xs font-bold text-slate-900 bg-white/40 px-2 py-0.5 rounded-lg">{msg}</span>}
+          <button
+            onClick={handleCancel}
+            disabled={cancelling}
+            className="bg-slate-950 hover:bg-slate-900 text-white font-bold px-3.5 py-1.5 rounded-xl transition-all flex items-center gap-1.5 shadow-xs cursor-pointer disabled:opacity-50"
+          >
+            {cancelling ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Undo2 className="w-3.5 h-3.5" />}
+            <span>Cancel Deletion</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function Layout() {
   const { logout, userProfile } = useAuth();
   
   return (
     <div className="min-h-screen bg-mamas-bg flex flex-col font-sans transition-colors duration-200">
+      <DeletionBanner />
       {userProfile && userProfile?.status === 'approved' && userProfile?.hasCompletedOnboarding !== true && (
         <OnboardingTour userProfile={userProfile} onComplete={() => {}} />
       )}
@@ -86,7 +144,21 @@ function ProtectedRoute({ children, requiredRole, allowPending = false }: { chil
   if (!currentUser) return <Navigate to="/login" state={{ from: location.pathname + location.search }} replace />;
   if (!userProfile) return <Navigate to="/register" state={{ from: location.pathname + location.search }} replace />;
 
-  if (!allowPending && (userProfile?.status === "pending" || userProfile?.status === "rejected" || userProfile?.status === "unverified" || userProfile?.status === "awaiting_approval")) {
+  if (userProfile?.status === "deleted") {
+    return <PendingApproval />;
+  }
+
+  if (userProfile?.status === "suspended") {
+    return <PendingApproval />;
+  }
+
+  if (!allowPending && (
+    userProfile?.status === "pending" || 
+    userProfile?.status === "rejected" || 
+    userProfile?.status === "unverified" || 
+    userProfile?.status === "awaiting_approval" ||
+    userProfile?.status === "pending_deletion"
+  )) {
     return <PendingApproval />;
   }
 

@@ -162,7 +162,9 @@ export async function handleCollectionWebhook(payload: any) {
                 if (userData) {
                   const isWelfare = contribData.purpose === 'welfare' || contribData.type === 'welfare';
                   const isCampaign = contribData.purpose === 'campaign' || contribData.type === 'school_support' || contribData.type === 'campaign';
-                  const newTotalContributed = isWelfare || !isCampaign
+                  const isWelfareSupport = contribData.purpose === 'welfare_support' || contribData.type === 'welfare_support';
+                  
+                  const newTotalContributed = (isWelfare || isWelfareSupport || !isCampaign)
                     ? (userData.totalContributed || 0) + confirmedAmount
                     : (userData.totalContributed || 0);
                   const newCampaignContributed = isCampaign
@@ -192,6 +194,26 @@ export async function handleCollectionWebhook(payload: any) {
                 }
               }
             }
+
+            // If solidarity support for a published welfare case
+            const welfareReqId = contribData.welfareRequestId || (contribData.type === 'welfare_support' ? contribData.campaignId : null);
+            const isWelfareSupportType = contribData.type === 'welfare_support' || contribData.purpose === 'welfare_support';
+            if (isWelfareSupportType && welfareReqId) {
+              const welfareRef = getDb().collection('welfareRequests').doc(welfareReqId);
+              const welfareDoc = await transaction.get(welfareRef);
+              if (welfareDoc.exists) {
+                const welfareData = welfareDoc.data();
+                if (welfareData) {
+                  const newSupportRaised = (welfareData.supportRaisedAmount || 0) + confirmedAmount;
+                  const newSupportCount = (welfareData.supportContributorCount || 0) + 1;
+                  transaction.update(welfareRef, {
+                    supportRaisedAmount: newSupportRaised,
+                    supportContributorCount: newSupportCount,
+                    updatedAt: Date.now()
+                  });
+                }
+              }
+            }
           } else if (status === 'failed') {
             updateData.status = 'failed';
           }
@@ -204,9 +226,15 @@ export async function handleCollectionWebhook(payload: any) {
         if (status === 'successful') {
           const contribData = docSnap.data();
           if (contribData?.userId) {
+            const isSolidarity = contribData.type === 'welfare_support' || contribData.purpose === 'welfare_support';
+            const notifTitle = isSolidarity ? "Solidarity Support Received" : "Payment Received";
+            const notifBody = isSolidarity
+              ? `Your solidarity support of UGX ${new Intl.NumberFormat('en-UG').format(contribData.amount || 0)} was received. Thank you for standing with your fellow alumni!`
+              : `Your mobile money payment of UGX ${new Intl.NumberFormat('en-UG').format(contribData.amount || 0)} was successful. Thank you!`;
+
             await getDb().collection('notifications').add({
-              userId: contribData.userId, title: "Payment Received",
-              body: `Your mobile money payment of UGX ${new Intl.NumberFormat('en-UG').format(contribData.amount || 0)} was successful. Thank you!`,
+              userId: contribData.userId, title: notifTitle,
+              body: notifBody,
               type: "system", targetUrl: "/statement", read: false, createdAt: Date.now()
             });
           }
@@ -389,15 +417,38 @@ app.post(['/api/relworx/initiate-collection', '/relworx/initiate-collection'], r
     if (decodedToken.uid !== userId) return res.status(403).json({ success: false, message: 'User ID mismatch' });
 
     // Enforce MAMAS visibility and eligibility rules:
-    // Welfare contributions remain VERIFIED-ONLY. School campaigns allow unverified users.
+    // Welfare contributions and Solidarity Support remain VERIFIED-ONLY. School campaigns allow unverified users.
     const isWelfare = purpose === 'welfare' || metadata?.purpose === 'welfare' || metadata?.type === 'welfare';
-    if (isWelfare) {
+    const isWelfareSupport = purpose === 'welfare_support' || metadata?.purpose === 'welfare_support' || metadata?.type === 'welfare_support';
+    
+    if (isWelfare || isWelfareSupport) {
       const userSnap = await getFirestore().collection('users').doc(userId).get();
       if (!userSnap.exists || userSnap.data()?.status !== 'approved') {
         return res.status(403).json({ 
           success: false, 
-          message: 'Welfare contributions are reserved for verified alumni members. Please support our School Campaigns while your application is under review.' 
+          message: 'Welfare and solidarity contributions are reserved for verified alumni members. Please support our School Campaigns while your application is under review.' 
         });
+      }
+    }
+
+    if (isWelfareSupport) {
+      const welfareId = metadata?.welfareRequestId || metadata?.campaignId;
+      if (!welfareId) {
+        return res.status(400).json({ success: false, message: 'Welfare request ID is required for solidarity support.' });
+      }
+      const welfareSnap = await getFirestore().collection('welfareRequests').doc(welfareId).get();
+      if (!welfareSnap.exists) {
+        return res.status(404).json({ success: false, message: 'Welfare request case not found.' });
+      }
+      const wData = welfareSnap.data();
+      if (!wData?.isPublishedToFeed) {
+        return res.status(400).json({ success: false, message: 'This welfare case is not published to the public feed.' });
+      }
+      if (wData.supportStatus === 'paused') {
+        return res.status(400).json({ success: false, message: 'Solidarity support for this case is currently paused.' });
+      }
+      if (wData.supportStatus === 'closed' || wData.supportEnabled === false) {
+        return res.status(400).json({ success: false, message: 'Solidarity support for this case is now closed.' });
       }
     }
 
@@ -544,6 +595,106 @@ app.post(['/api/relworx/initiate-disbursement', '/relworx/initiate-disbursement'
     return res.json({ success: true, data: result });
   } catch (error: any) {
     console.error('Initiate disbursement error:', error);
+    return res.status(500).json({ success: false, message: error?.message || 'Internal server error' });
+  }
+});
+
+app.post(['/api/relworx/reconcile-contribution', '/relworx/reconcile-contribution'], requireFirebaseAdmin, async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) return res.status(401).json({ success: false, message: 'Unauthorized' });
+    const token = authHeader.split('Bearer ')[1];
+    let decodedToken;
+    try { decodedToken = await getAuth().verifyIdToken(token); }
+    catch { return res.status(401).json({ success: false, message: 'Invalid token' }); }
+
+    const { contributionId } = req.body || {};
+    if (!contributionId) return res.status(400).json({ success: false, message: 'Contribution ID is required' });
+
+    const firestore = getFirestore();
+    const contribRef = firestore.collection('contributions').doc(contributionId);
+    const contribSnap = await contribRef.get();
+    if (!contribSnap.exists) return res.status(404).json({ success: false, message: 'Contribution not found' });
+
+    const contribData = contribSnap.data();
+    if (!contribData) return res.status(404).json({ success: false, message: 'Contribution data missing' });
+
+    const userDoc = await firestore.collection('users').doc(decodedToken.uid).get();
+    const userData = userDoc.exists ? userDoc.data() : null;
+    const allowedRoles = ['super_admin', 'treasurer', 'chairperson', 'auditor', 'vice_chairperson'];
+    const isOwner = contribData.userId === decodedToken.uid;
+    const isAdmin = userData?.role && allowedRoles.includes(userData.role);
+
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ success: false, message: 'Permission denied' });
+    }
+
+    if (['verified', 'success', 'successful', 'failed', 'expired', 'failed_timeout'].includes(contribData.status)) {
+      return res.json({ success: true, status: contribData.status, message: 'Contribution already in terminal state' });
+    }
+
+    const relworxRef = contribData.relworxReference;
+    const now = Date.now();
+    const createdAt = contribData.createdAt || contribData.timestamp?.toMillis?.() || now;
+    const ageMinutes = (now - createdAt) / (1000 * 60);
+
+    let providerStatus = 'unknown';
+
+    if (relworxRef) {
+      const apiKey = process.env.RELWORX_API_KEY;
+      const url = `${process.env.RELWORX_COLLECTION_URL || 'https://api.relworx.com/v1/collections'}/${encodeURIComponent(relworxRef)}`;
+      if (apiKey) {
+        try {
+          const resp = await fetch(url, {
+            method: 'GET',
+            headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' }
+          });
+          if (resp.ok) {
+            const respData = await resp.json().catch(() => ({}));
+            providerStatus = respData?.status || respData?.data?.status || 'unknown';
+          }
+        } catch (apiErr) {
+          console.warn('Relworx status inquiry error:', apiErr);
+        }
+      }
+    }
+
+    const maxWithoutRefMinutes = 30;
+    const maxAgeMinutes = 24 * 60;
+
+    if (providerStatus === 'successful' || providerStatus === 'completed' || providerStatus === 'success') {
+      await handleCollectionWebhook({
+        status: 'successful',
+        reference: relworxRef || contributionId,
+        amount: contribData.amount,
+        transactionId: contribData.relworxTransactionId || `recon_${contributionId}`
+      });
+      await firestore.collection('activityLogs').add({
+        action: 'RECONCILE_CONTRIBUTION', adminId: decodedToken.uid, targetId: contributionId,
+        details: `Contribution ${contributionId} successfully reconciled and verified via provider inquiry.`, createdAt: now
+      });
+      return res.json({ success: true, status: 'verified', message: 'Successfully reconciled and verified via provider' });
+    } else if (providerStatus === 'failed' || providerStatus === 'cancelled') {
+      await contribRef.update({ status: 'failed', paymentStatus: 'failed', updatedAt: now });
+      await firestore.collection('activityLogs').add({
+        action: 'RECONCILE_CONTRIBUTION', adminId: decodedToken.uid, targetId: contributionId,
+        details: `Contribution ${contributionId} marked failed via provider inquiry.`, createdAt: now
+      });
+      return res.json({ success: true, status: 'failed', message: 'Provider reported transaction failed' });
+    } else {
+      if (!relworxRef && ageMinutes > maxWithoutRefMinutes) {
+        await contribRef.update({ status: 'expired', paymentStatus: 'failed', auditNote: 'Expired: No provider reference generated within threshold', updatedAt: now });
+        return res.json({ success: true, status: 'expired', message: 'Contribution expired (no provider reference)' });
+      }
+      if (ageMinutes > maxAgeMinutes) {
+        await contribRef.update({ status: 'expired', paymentStatus: 'failed', auditNote: 'Expired: Max pending age reached', updatedAt: now });
+        return res.json({ success: true, status: 'expired', message: 'Contribution expired (max pending age exceeded)' });
+      }
+
+      return res.json({ success: true, status: contribData.status, message: 'Transaction still pending payment confirmation' });
+    }
+  } catch (error: any) {
+    console.error('Reconciliation error:', error);
     return res.status(500).json({ success: false, message: error?.message || 'Internal server error' });
   }
 });

@@ -1,17 +1,26 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { 
-  Camera, Mail, MapPin, Briefcase, Phone, User, Shield, ChevronRight, LogOut, SunMoon, Sparkles, Check, Edit3, X, Save, Bell, BellRing, GraduationCap, Eye, EyeOff, Lock
+  Camera, Mail, MapPin, Briefcase, Phone, User, Shield, ChevronRight, LogOut, SunMoon, Sparkles, Check, Edit3, X, Save, Bell, BellRing, GraduationCap, Eye, EyeOff, Lock, AlertTriangle, Trash2, ShieldAlert, Clock
 } from 'lucide-react';
 import { db } from '../firebase';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, setDoc } from 'firebase/firestore';
 import { registerFCMToken } from '../lib/fcmService';
 import { uploadImage } from '../lib/storage';
+import { scheduleAccountDeletion, cancelAccountDeletion } from '../lib/auth';
 import { PrivacyLevel } from '../types';
 
 export default function Profile() {
-  const { userProfile, logout } = useAuth();
+  const { currentUser, userProfile, isPendingDeletion, logout } = useAuth();
   const [loading, setLoading] = useState(false);
+  
+  // Account Deletion State
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteReason, setDeleteReason] = useState('');
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deletingAccount, setDeletingAccount] = useState(false);
+  const [cancellingDeletion, setCancellingDeletion] = useState(false);
+  const [deletionError, setDeletionError] = useState('');
   
   // Initialize with new structure or fallback to legacy booleans
   const getInitialPrivacy = (field: keyof typeof userProfile.privacySettings, defaultVal: PrivacyLevel): PrivacyLevel => {
@@ -123,6 +132,47 @@ export default function Profile() {
     }
   };
 
+  const handleScheduleDeletion = async () => {
+    if (!userProfile?.uid || !currentUser) return;
+    if (deleteConfirmText.trim().toUpperCase() !== 'DELETE') {
+      setDeletionError('Please type "DELETE" exactly to confirm account deletion.');
+      return;
+    }
+
+    setDeletingAccount(true);
+    setDeletionError('');
+
+    try {
+      await scheduleAccountDeletion(userProfile.uid, deleteReason.trim(), currentUser);
+      setShowDeleteModal(false);
+      setSuccessMsg('Account scheduled for deletion. You have a 30-day grace period to cancel anytime.');
+    } catch (err: any) {
+      console.error('Failed to schedule account deletion:', err);
+      setDeletionError(err.message || 'Failed to schedule account deletion');
+    } finally {
+      setDeletingAccount(false);
+    }
+  };
+
+  const handleCancelDeletion = async () => {
+    if (!userProfile?.uid || !currentUser) return;
+    setCancellingDeletion(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+
+    try {
+      await cancelAccountDeletion(userProfile.uid, currentUser);
+      setSuccessMsg('Your account deletion request has been cancelled. Your membership is fully active.');
+      setTimeout(() => setSuccessMsg(''), 6000);
+    } catch (err: any) {
+      console.error('Failed to cancel account deletion:', err);
+      setErrorMsg(err.message || 'Failed to cancel deletion request');
+      setTimeout(() => setErrorMsg(''), 6000);
+    } finally {
+      setCancellingDeletion(false);
+    }
+  };
+
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!userProfile?.uid) return;
@@ -147,6 +197,27 @@ export default function Profile() {
           profession: privacyProfession
         }
       });
+
+      // Sync safe directory projection (CRIT-01)
+      await setDoc(doc(db, 'directoryProfiles', userProfile.uid), {
+        uid: userProfile.uid,
+        fullName: userProfile.fullName,
+        yearLeftSchool: Number(yearLeftSchool) || userProfile.yearLeftSchool || null,
+        district: district || '',
+        occupation: occupation || '',
+        university: userProfile.university || '',
+        profilePictureUrl: userProfile.profilePictureUrl || '',
+        status: userProfile.status || 'approved',
+        role: userProfile.role || 'member',
+        privacySettings: {
+          phone: privacyPhone,
+          email: privacyEmail,
+          whatsapp: privacyWhatsapp,
+          location: privacyLocation,
+          profession: privacyProfession
+        },
+        updatedAt: Date.now()
+      }, { merge: true });
 
       setSuccessMsg('Profile and privacy settings updated successfully!');
       setIsEditing(false);
@@ -432,7 +503,7 @@ export default function Profile() {
           </section>
 
           {/* ACCOUNT ACTIONS */}
-          <section className="pt-4 pb-8 space-y-4">
+          <section className="pt-4 pb-4 space-y-4">
             <button 
               onClick={() => setIsEditing(true)}
               className="w-full bg-blue-600 hover:bg-blue-500 text-white rounded-2xl py-4 font-bold shadow-md shadow-blue-500/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer"
@@ -441,15 +512,155 @@ export default function Profile() {
             </button>
             <button 
               onClick={logout}
-              className="w-full flex items-center justify-center gap-2 text-rose-500 hover:text-rose-600 font-bold py-3 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-2xl transition-colors text-sm cursor-pointer"
+              className="w-full flex items-center justify-center gap-2 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white font-bold py-3.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-2xl transition-colors text-sm cursor-pointer"
             >
               <LogOut className="w-4 h-4" />
               Log Out
             </button>
           </section>
 
+          {/* DANGER ZONE - ACCOUNT DELETION */}
+          <section className="bg-rose-50/50 dark:bg-rose-950/20 rounded-3xl border border-rose-200/80 dark:border-rose-900/60 p-6 space-y-4 mb-8">
+            <div className="flex items-center gap-2.5 text-rose-600 dark:text-rose-400">
+              <ShieldAlert className="w-5 h-5" />
+              <h3 className="font-extrabold text-sm uppercase tracking-wider text-rose-900 dark:text-rose-200">Account Management & Deletion</h3>
+            </div>
+
+            {isPendingDeletion ? (
+              <div className="space-y-3">
+                <div className="bg-amber-100/80 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-800 rounded-2xl p-4 text-xs space-y-2">
+                  <div className="flex items-center gap-2 text-amber-800 dark:text-amber-300 font-bold">
+                    <Clock className="w-4 h-4" />
+                    <span>Your account is currently scheduled for deletion</span>
+                  </div>
+                  <p className="text-amber-700 dark:text-amber-400 leading-relaxed">
+                    You have a 30-day grace period ending on {userProfile?.deletionEffectiveAt ? new Date(userProfile.deletionEffectiveAt).toLocaleDateString() : '30 days from request'}. 
+                    You can cancel this deletion request anytime before this date to immediately restore full access.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCancelDeletion}
+                  disabled={cancellingDeletion}
+                  className="w-full py-3.5 px-4 rounded-2xl font-bold text-xs sm:text-sm bg-emerald-600 hover:bg-emerald-500 text-white transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs disabled:opacity-50"
+                >
+                  {cancellingDeletion ? (
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <Check className="w-4 h-4" />
+                  )}
+                  Cancel Deletion Request & Keep Account
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-xs text-rose-700 dark:text-rose-400 leading-relaxed">
+                  Requesting deletion initiates a 30-day grace period during which you can cancel anytime. Once finalized, your personal profile is scrubbed and login is blocked, while verified ledger records remain preserved for association financial integrity.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => { setShowDeleteModal(true); setDeleteConfirmText(''); setDeleteReason(''); setDeletionError(''); }}
+                  className="w-full py-3.5 px-4 rounded-2xl font-bold text-xs sm:text-sm bg-rose-600 hover:bg-rose-700 text-white transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs active:scale-[0.98]"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Delete My Account (30-Day Grace Period)
+                </button>
+              </div>
+            )}
+          </section>
+
         </div>
       )}
+
+      {/* ACCOUNT DELETION CONFIRMATION MODAL */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#0c1731] border border-rose-200 dark:border-rose-900/60 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-rose-100 dark:bg-rose-950/80 rounded-xl text-rose-600 dark:text-rose-400">
+                  <AlertTriangle className="w-5 h-5" />
+                </div>
+                <h3 className="font-extrabold text-base sm:text-lg text-slate-900 dark:text-white">Delete Account</h3>
+              </div>
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-4 text-xs sm:text-sm">
+              <div className="bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 rounded-2xl p-4 space-y-2 text-rose-900 dark:text-rose-200">
+                <p className="font-bold flex items-center gap-1.5">
+                  <Clock className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
+                  30-Day Grace Period Protection
+                </p>
+                <ul className="list-disc pl-4 space-y-1 text-rose-800 dark:text-rose-300 text-[11px] sm:text-xs">
+                  <li>Your deletion is scheduled for 30 days from today.</li>
+                  <li>You can log in and cancel this deletion at any time during the 30 days.</li>
+                  <li>After 30 days, your personal profile will be anonymized and login deactivated.</li>
+                  <li>Verified association financial history is preserved for regulatory integrity.</li>
+                </ul>
+              </div>
+
+              {deletionError && (
+                <div className="p-3 bg-rose-100 dark:bg-rose-950/80 border border-rose-300 dark:border-rose-800 rounded-xl text-rose-700 dark:text-rose-300 text-xs font-semibold">
+                  {deletionError}
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <label className="text-xs font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                  Reason for leaving (Optional)
+                </label>
+                <textarea
+                  value={deleteReason}
+                  onChange={(e) => setDeleteReason(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl p-3 text-xs outline-none focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-rose-500 text-slate-900 dark:text-white h-20 resize-none font-medium placeholder:text-slate-400"
+                  placeholder="Help us improve: why are you requesting account deletion?"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-extrabold text-slate-700 dark:text-slate-300">
+                  Type <span className="text-rose-600 dark:text-rose-400 font-mono font-black">DELETE</span> to confirm:
+                </label>
+                <input
+                  type="text"
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  placeholder="DELETE"
+                  className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl px-3.5 py-2.5 text-xs font-mono font-bold outline-none focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-rose-500 text-slate-900 dark:text-white placeholder:text-slate-400"
+                />
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-slate-100 dark:border-slate-800 flex items-center gap-3 bg-slate-50/50 dark:bg-slate-900/50">
+              <button
+                type="button"
+                onClick={() => setShowDeleteModal(false)}
+                className="flex-1 px-4 py-3 rounded-2xl font-bold text-xs sm:text-sm text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleScheduleDeletion}
+                disabled={deleteConfirmText.trim().toUpperCase() !== 'DELETE' || deletingAccount}
+                className="flex-1 px-4 py-3 rounded-2xl font-bold text-xs sm:text-sm text-white bg-rose-600 hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+              >
+                {deletingAccount ? (
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : null}
+                Schedule Deletion
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

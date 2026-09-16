@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { db } from '../firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { getAppSettings } from '../lib/services';
+import { cancelAccountDeletion } from '../lib/auth';
 import { Logo } from '../components/Logo';
 import { 
   Clock, 
@@ -24,7 +25,10 @@ import {
   MapPin,
   Check,
   Sparkles,
-  Copy
+  Copy,
+  AlertTriangle,
+  Undo2,
+  Lock
 } from 'lucide-react';
 
 export default function PendingApproval() {
@@ -36,6 +40,7 @@ export default function PendingApproval() {
   const [supportWhatsApp, setSupportWhatsApp] = useState<string>('');
   const [supportEmail, setSupportEmail] = useState<string>('');
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [cancellingDeletion, setCancellingDeletion] = useState(false);
 
   // Fetch support contacts from settings if available
   useEffect(() => {
@@ -107,8 +112,36 @@ export default function PendingApproval() {
     setTimeout(() => setCopiedField(null), 2000);
   };
 
+  const isPendingDeletion = userProfile?.status === 'pending_deletion';
+  const isSuspended = userProfile?.status === 'suspended';
+  const isDeleted = userProfile?.status === 'deleted';
   const isRejected = userProfile?.status === 'rejected';
   const isApproved = userProfile?.status === 'approved';
+
+  const effectiveDate = userProfile?.deletionEffectiveAt 
+    ? new Date(userProfile.deletionEffectiveAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+    : 'in 30 days';
+
+  const daysRemaining = userProfile?.deletionEffectiveAt 
+    ? Math.max(0, Math.ceil((userProfile.deletionEffectiveAt - Date.now()) / (1000 * 60 * 60 * 24)))
+    : 30;
+
+  const handleCancelDeletion = async () => {
+    if (!currentUser) return;
+    setCancellingDeletion(true);
+    try {
+      await cancelAccountDeletion(currentUser.uid);
+      setToastMessage("Account deletion successfully cancelled! Redirecting...");
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 1500);
+    } catch (err: any) {
+      setToastMessage("Failed to cancel deletion: " + (err.message || 'Unknown error'));
+      setTimeout(() => setToastMessage(null), 4000);
+    } finally {
+      setCancellingDeletion(false);
+    }
+  };
 
   // Support links
   const defaultWhatsApp = supportWhatsApp || '256700000000'; // fallback WhatsApp number if non-configured
@@ -142,15 +175,17 @@ export default function PendingApproval() {
           <Logo />
         </div>
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => checkStatus(true)}
-            disabled={isRefreshing}
-            className="flex items-center gap-1.5 text-xs font-semibold text-slate-200 hover:text-white bg-white/10 hover:bg-white/15 px-3 py-2 rounded-xl transition-all disabled:opacity-50"
-            title="Check verification status"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-mamas-accent' : ''}`} />
-            <span className="hidden sm:inline">Refresh</span>
-          </button>
+          {!isDeleted && !isSuspended && !isPendingDeletion && (
+            <button
+              onClick={() => checkStatus(true)}
+              disabled={isRefreshing}
+              className="flex items-center gap-1.5 text-xs font-semibold text-slate-200 hover:text-white bg-white/10 hover:bg-white/15 px-3 py-2 rounded-xl transition-all disabled:opacity-50"
+              title="Check verification status"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-mamas-accent' : ''}`} />
+              <span className="hidden sm:inline">Refresh</span>
+            </button>
+          )}
           <button
             onClick={logout}
             className="flex items-center gap-1.5 text-xs font-semibold text-rose-300 hover:text-rose-100 bg-rose-500/10 hover:bg-rose-500/20 px-3 py-2 rounded-xl border border-rose-500/20 transition-all"
@@ -167,7 +202,11 @@ export default function PendingApproval() {
           
           {/* Top Hero Banner */}
           <div className={`p-8 sm:p-10 text-center relative overflow-hidden ${
-            isRejected 
+            isPendingDeletion 
+              ? 'bg-gradient-to-br from-amber-900 via-amber-950 to-slate-950 text-white'
+              : isSuspended || isDeleted
+              ? 'bg-gradient-to-br from-rose-900 via-rose-950 to-slate-950 text-white' 
+              : isRejected 
               ? 'bg-gradient-to-br from-rose-900 via-rose-950 to-slate-950 text-white' 
               : 'bg-gradient-to-br from-slate-900 via-mamas-primary to-slate-900 text-white'
           }`}>
@@ -177,7 +216,15 @@ export default function PendingApproval() {
 
             {/* Top Icon Badge */}
             <div className="relative inline-flex items-center justify-center mb-6">
-              {isRejected ? (
+              {isPendingDeletion ? (
+                <div className="w-20 h-20 rounded-3xl bg-amber-500/20 border-2 border-amber-500/40 flex items-center justify-center shadow-lg shadow-amber-950/50">
+                  <Clock className="w-10 h-10 text-amber-400" />
+                </div>
+              ) : isSuspended || isDeleted ? (
+                <div className="w-20 h-20 rounded-3xl bg-rose-500/20 border-2 border-rose-500/40 flex items-center justify-center shadow-lg shadow-rose-950/50">
+                  <Lock className="w-10 h-10 text-rose-400" />
+                </div>
+              ) : isRejected ? (
                 <div className="w-20 h-20 rounded-3xl bg-rose-500/20 border-2 border-rose-500/40 flex items-center justify-center shadow-lg shadow-rose-950/50">
                   <XCircle className="w-10 h-10 text-rose-400" />
                 </div>
@@ -201,14 +248,26 @@ export default function PendingApproval() {
 
             {/* Headlines */}
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-2 text-white">
-              {isRejected 
+              {isPendingDeletion
+                ? "Account Scheduled for Deletion"
+                : isSuspended
+                ? "Account Suspended"
+                : isDeleted
+                ? "Account Deleted"
+                : isRejected 
                 ? "Account Registration Declined" 
                 : isApproved 
                 ? "Account Approved!" 
                 : "Account Under Review"}
             </h1>
             <p className="text-sm sm:text-base text-slate-300 max-w-md mx-auto leading-relaxed">
-              {isRejected 
+              {isPendingDeletion
+                ? `Your account is scheduled for permanent deletion on ${effectiveDate} (${daysRemaining} days left). You may cancel deletion any time during this grace period.`
+                : isSuspended
+                ? (userProfile?.suspendReason ? `Reason: ${userProfile.suspendReason}` : "Your account access has been suspended by the Super Administrator.")
+                : isDeleted
+                ? "This account has been closed and personal data scrubbed in compliance with privacy regulations."
+                : isRejected 
                 ? "Unfortunately, your account registration could not be verified by the admin team at this time." 
                 : isApproved 
                 ? "Your membership has been verified! Redirecting to your dashboard..." 
@@ -219,8 +278,52 @@ export default function PendingApproval() {
           {/* Body Section */}
           <div className="p-6 sm:p-8 space-y-6">
 
-            {/* 3-Step Progress Tracker (Only for Pending) */}
-            {!isRejected && (
+            {/* Pending Deletion Grace Period Actions */}
+            {isPendingDeletion && (
+              <div className="bg-amber-50 dark:bg-amber-950/40 p-5 sm:p-6 rounded-2xl border border-amber-200 dark:border-amber-900/60 space-y-4">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                  <div className="space-y-1.5 text-xs sm:text-sm">
+                    <h4 className="font-bold text-amber-900 dark:text-amber-200">What happens during the 30-day grace period?</h4>
+                    <ul className="list-disc list-inside space-y-1 text-amber-800 dark:text-amber-300/90 leading-relaxed">
+                      <li>Your profile is hidden from the public alumni directory.</li>
+                      <li>Member features (voting, applying for grants, contributing) are paused.</li>
+                      <li>Past verified financial contributions and welfare records remain safely in association ledgers.</li>
+                      <li>You can cancel this deletion request below to restore full access immediately.</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <div className="pt-2 flex flex-col sm:flex-row gap-3">
+                  <button
+                    onClick={handleCancelDeletion}
+                    disabled={cancellingDeletion}
+                    className="flex-1 bg-amber-600 hover:bg-amber-500 text-white font-bold py-3 px-4 rounded-xl text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    {cancellingDeletion ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Undo2 className="w-4 h-4" />}
+                    <span>Cancel Account Deletion & Restore Access</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Suspended Info */}
+            {isSuspended && (
+              <div className="bg-rose-50 dark:bg-rose-950/40 p-5 rounded-2xl border border-rose-200 dark:border-rose-900/60 space-y-3">
+                <div className="flex items-start gap-3">
+                  <ShieldAlert className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+                  <div className="space-y-1 text-xs sm:text-sm">
+                    <h4 className="font-bold text-rose-900 dark:text-rose-200">Account Suspension Notice</h4>
+                    <p className="text-rose-800 dark:text-rose-300 leading-relaxed">
+                      If you believe this suspension is in error or you have resolved pending governance obligations, please contact the Association Executive Committee.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 3-Step Progress Tracker (Only for normal Pending) */}
+            {!isRejected && !isPendingDeletion && !isSuspended && !isDeleted && (
               <div className="bg-slate-50 dark:bg-slate-800/60 p-5 sm:p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-400 mb-4 text-center">
                   Verification Progress
