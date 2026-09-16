@@ -22,6 +22,7 @@ import SetupSuperAdmin from './pages/SetupSuperAdmin';
 import MoneyOut from './pages/MoneyOut';
 import TopContributors from './pages/TopContributors';
 import { cancelAccountDeletion } from './lib/auth';
+import { AdBannerModal } from './components/AdBannerModal';
 import { AlertTriangle, Clock, RefreshCw, Undo2, Menu, Users, User, Shield } from 'lucide-react';
 
 function DeletionBanner() {
@@ -85,6 +86,7 @@ function Layout() {
   
   return (
     <div className="h-screen w-screen overflow-hidden bg-mamas-bg flex flex-col font-sans transition-colors duration-200">
+      <AdBannerModal />
       <DeletionBanner />
       {userProfile && userProfile?.status === 'approved' && userProfile?.hasCompletedOnboarding !== true && (
         <OnboardingTour userProfile={userProfile} onComplete={() => {}} />
@@ -110,7 +112,7 @@ function Layout() {
               </button>
             ) : (
               <Link to="/" className="flex items-center">
-                <Logo />
+                <Logo dark />
               </Link>
             )}
 

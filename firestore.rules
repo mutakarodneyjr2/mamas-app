@@ -186,11 +186,11 @@ service cloud.firestore {
 
     // =========================================
     // 5. Notices Collection
-    // Read: All approved members can read announcements
+    // Read: Public read for announcements on all pages
     // Write: Super Admin, Chairperson, Secretary
     // =========================================
     match /notices/{noticeId} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow write: if hasRole(['super_admin', 'chairperson', 'secretary']);
     }
 
@@ -216,11 +216,15 @@ service cloud.firestore {
       allow write: if hasRole(['super_admin', 'chairperson', 'vice_chairperson', 'treasurer']);
     }
     // =========================================
-    // 8. Banners Collection
-    // Read: All users (even unauthenticated, for the landing page)
-    // Write: Super Admin
+    // 8. Banners Collections
+    // Read: All users (even unauthenticated, for public & ad banners)
+    // Write: STRICTLY Super Admin only
     // =========================================
     match /banners/{document=**} {
+      allow read: if true;
+      allow write: if isSuperAdmin();
+    }
+    match /landingBanners/{document=**} {
       allow read: if true;
       allow write: if isSuperAdmin();
     }

@@ -17,18 +17,16 @@ import {
   MessageSquare, 
   Mail, 
   Phone, 
-  ArrowRight,
-  ShieldAlert,
-  HelpCircle,
-  User,
-  School,
-  MapPin,
-  Check,
-  Sparkles,
-  Copy,
-  AlertTriangle,
-  Undo2,
-  Lock
+  ShieldAlert, 
+  HelpCircle, 
+  User, 
+  School, 
+  Sparkles, 
+  Copy, 
+  Check, 
+  AlertTriangle, 
+  Undo2, 
+  Lock 
 } from 'lucide-react';
 
 export default function PendingApproval() {
@@ -42,7 +40,7 @@ export default function PendingApproval() {
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [cancellingDeletion, setCancellingDeletion] = useState(false);
 
-  // Fetch support contacts from settings if available
+  // Fetch support contacts from settings
   useEffect(() => {
     let isMounted = true;
     getAppSettings().then(settings => {
@@ -56,7 +54,7 @@ export default function PendingApproval() {
     return () => { isMounted = false; };
   }, []);
 
-  // Check status automatically every 30 seconds
+  // Check status automatically
   const checkStatus = useCallback(async (manual = false) => {
     if (!currentUser) return;
     if (manual) setIsRefreshing(true);
@@ -68,12 +66,12 @@ export default function PendingApproval() {
         const currentStatus = data.status;
 
         if (currentStatus === 'approved' || currentStatus === 'active') {
-          setToastMessage("🎉 Congratulations! Your account has been approved!");
+          setToastMessage("🎉 Account approved! Redirecting to dashboard...");
           setTimeout(() => {
             navigate('/dashboard', { replace: true });
-          }, 2000);
+          }, 1500);
         } else if (manual) {
-          setToastMessage("Status checked: Account is still under review.");
+          setToastMessage("Status checked: Account is under review.");
           setTimeout(() => setToastMessage(null), 3000);
         }
       }
@@ -89,7 +87,6 @@ export default function PendingApproval() {
   }, [currentUser, navigate]);
 
   useEffect(() => {
-    // If auth state or profile already shows approved, navigate immediately
     if (userProfile?.status === 'approved') {
       setToastMessage("🎉 Your account is active!");
       const timer = setTimeout(() => {
@@ -98,7 +95,6 @@ export default function PendingApproval() {
       return () => clearTimeout(timer);
     }
 
-    // Set 30 second polling interval
     const interval = setInterval(() => {
       checkStatus(false);
     }, 30000);
@@ -122,16 +118,12 @@ export default function PendingApproval() {
     ? new Date(userProfile.deletionEffectiveAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
     : 'in 30 days';
 
-  const daysRemaining = userProfile?.deletionEffectiveAt 
-    ? Math.max(0, Math.ceil((userProfile.deletionEffectiveAt - Date.now()) / (1000 * 60 * 60 * 24)))
-    : 30;
-
   const handleCancelDeletion = async () => {
     if (!currentUser) return;
     setCancellingDeletion(true);
     try {
       await cancelAccountDeletion(currentUser.uid);
-      setToastMessage("Account deletion successfully cancelled! Redirecting...");
+      setToastMessage("Account deletion cancelled! Restoring access...");
       setTimeout(() => {
         navigate('/dashboard');
       }, 1500);
@@ -143,25 +135,24 @@ export default function PendingApproval() {
     }
   };
 
-  // Support links
-  const defaultWhatsApp = supportWhatsApp || '256700000000'; // fallback WhatsApp number if non-configured
+  const defaultWhatsApp = supportWhatsApp || '256700000000';
   const whatsappUrl = `https://wa.me/${defaultWhatsApp.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hello MAMAS Support, I need assistance with my account review for ${userProfile?.fullName || userProfile?.email || 'my account'}.`)}`;
-  const mailtoUrl = `mailto:${supportEmail || 'support@mamas.org'}?subject=${encodeURIComponent(`Account Verification Inquiry - ${userProfile?.fullName || 'Member'}`)}&body=${encodeURIComponent(`Hello Admin Team,\n\nI registered for MAMAS with the email ${userProfile?.email || ''} and phone number ${userProfile?.phoneNumber || ''}.\n\nPlease assist in reviewing my account verification.\n\nThank you!`)}`;
+  const mailtoUrl = `mailto:${supportEmail || 'support@mamas.org'}?subject=${encodeURIComponent(`Account Verification Inquiry - ${userProfile?.fullName || 'Member'}`)}&body=${encodeURIComponent(`Hello Admin Team,\n\nI registered for MAMAS with the email ${userProfile?.email || ''}.\n\nPlease assist in reviewing my account verification.\n\nThank you!`)}`;
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col justify-between font-sans selection:bg-mamas-accent selection:text-mamas-primary transition-colors duration-200">
+    <div className="min-h-screen bg-mamas-bg flex flex-col justify-between font-sans transition-colors duration-200">
       
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 max-w-md w-full px-4 animate-in fade-in slide-in-from-top-4 duration-300">
-          <div className="bg-mamas-primary text-white text-sm font-semibold px-5 py-3.5 rounded-2xl shadow-2xl border border-mamas-accent/40 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5">
-              <Sparkles className="w-5 h-5 text-mamas-accent animate-spin" />
+          <div className="bg-blue-600 text-white text-xs sm:text-sm font-semibold px-4 py-3 rounded-2xl shadow-xl flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-amber-300 animate-spin" />
               <span>{toastMessage}</span>
             </div>
             <button 
               onClick={() => setToastMessage(null)}
-              className="text-slate-300 hover:text-white text-xs px-2 py-1 rounded-lg hover:bg-white/10"
+              className="text-white/80 hover:text-white text-xs px-2 py-0.5 rounded-lg hover:bg-white/10"
             >
               Dismiss
             </button>
@@ -169,26 +160,26 @@ export default function PendingApproval() {
         </div>
       )}
 
-      {/* Header Bar */}
-      <header className="w-full bg-mamas-primary border-b border-mamas-primary-hover/50 px-4 sm:px-8 py-4 flex items-center justify-between shadow-md sticky top-0 z-10">
+      {/* Vibrant Light Blue Top Header Bar */}
+      <header className="w-full bg-blue-600 dark:bg-blue-700 text-white border-b border-blue-500/40 px-4 sm:px-8 py-3.5 flex items-center justify-between shadow-md sticky top-0 z-50">
         <div className="flex items-center gap-3">
-          <Logo />
+          <Logo dark />
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           {!isDeleted && !isSuspended && !isPendingDeletion && (
             <button
               onClick={() => checkStatus(true)}
               disabled={isRefreshing}
-              className="flex items-center gap-1.5 text-xs font-semibold text-slate-200 hover:text-white bg-white/10 hover:bg-white/15 px-3 py-2 rounded-xl transition-all disabled:opacity-50"
+              className="flex items-center gap-1.5 text-xs font-bold text-white bg-white/15 hover:bg-white/25 px-3 py-1.5 rounded-full border border-white/20 transition-all disabled:opacity-50 cursor-pointer"
               title="Check verification status"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-mamas-accent' : ''}`} />
-              <span className="hidden sm:inline">Refresh</span>
+              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">{isRefreshing ? 'Checking...' : 'Refresh Status'}</span>
             </button>
           )}
           <button
             onClick={logout}
-            className="flex items-center gap-1.5 text-xs font-semibold text-rose-300 hover:text-rose-100 bg-rose-500/10 hover:bg-rose-500/20 px-3 py-2 rounded-xl border border-rose-500/20 transition-all"
+            className="flex items-center gap-1.5 text-xs font-bold text-white bg-rose-500/80 hover:bg-rose-500 px-3 py-1.5 rounded-full transition-all cursor-pointer"
           >
             <LogOut className="w-3.5 h-3.5" />
             <span>Log Out</span>
@@ -196,421 +187,217 @@ export default function PendingApproval() {
         </div>
       </header>
 
-      {/* Main Content Area */}
-      <main className="flex-1 flex items-center justify-center p-4 sm:p-6 md:p-10 my-4 sm:my-8">
-        <div className="w-full max-w-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl shadow-xl overflow-hidden transition-all duration-300 animate-in fade-in zoom-in-95">
-          
-          {/* Top Hero Banner */}
-          <div className={`p-8 sm:p-10 text-center relative overflow-hidden ${
-            isPendingDeletion 
-              ? 'bg-gradient-to-br from-amber-900 via-amber-950 to-slate-950 text-white'
-              : isSuspended || isDeleted
-              ? 'bg-gradient-to-br from-rose-900 via-rose-950 to-slate-950 text-white' 
-              : isRejected 
-              ? 'bg-gradient-to-br from-rose-900 via-rose-950 to-slate-950 text-white' 
-              : 'bg-gradient-to-br from-slate-900 via-mamas-primary to-slate-900 text-white'
-          }`}>
-            {/* Background Accent Graphics */}
-            <div className="absolute -top-12 -right-12 w-40 h-40 bg-mamas-accent/10 rounded-full blur-2xl pointer-events-none" />
-            <div className="absolute -bottom-12 -left-12 w-40 h-40 bg-blue-500/10 rounded-full blur-2xl pointer-events-none" />
-
-            {/* Top Icon Badge */}
-            <div className="relative inline-flex items-center justify-center mb-6">
-              {isPendingDeletion ? (
-                <div className="w-20 h-20 rounded-3xl bg-amber-500/20 border-2 border-amber-500/40 flex items-center justify-center shadow-lg shadow-amber-950/50">
-                  <Clock className="w-10 h-10 text-amber-400" />
-                </div>
-              ) : isSuspended || isDeleted ? (
-                <div className="w-20 h-20 rounded-3xl bg-rose-500/20 border-2 border-rose-500/40 flex items-center justify-center shadow-lg shadow-rose-950/50">
-                  <Lock className="w-10 h-10 text-rose-400" />
-                </div>
-              ) : isRejected ? (
-                <div className="w-20 h-20 rounded-3xl bg-rose-500/20 border-2 border-rose-500/40 flex items-center justify-center shadow-lg shadow-rose-950/50">
-                  <XCircle className="w-10 h-10 text-rose-400" />
-                </div>
-              ) : isApproved ? (
-                <div className="w-20 h-20 rounded-3xl bg-emerald-500/20 border-2 border-emerald-500/40 flex items-center justify-center shadow-lg shadow-emerald-950/50 animate-bounce">
-                  <CheckCircle2 className="w-10 h-10 text-emerald-400" />
-                </div>
-              ) : (
-                <div className="relative">
-                  <div className="absolute inset-0 rounded-3xl bg-mamas-accent/30 blur-md animate-pulse" />
-                  <div className="relative w-20 h-20 rounded-3xl bg-mamas-primary-hover border-2 border-mamas-accent/60 flex items-center justify-center shadow-xl">
-                    <Hourglass className="w-10 h-10 text-mamas-accent animate-pulse" />
-                  </div>
-                  <span className="absolute -bottom-1 -right-1 flex h-4 w-4">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-mamas-accent opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-4 w-4 bg-mamas-accent"></span>
-                  </span>
-                </div>
-              )}
-            </div>
-
-            {/* Headlines */}
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-2 text-white">
-              {isPendingDeletion
-                ? "Account Scheduled for Deletion"
-                : isSuspended
-                ? "Account Suspended"
-                : isDeleted
-                ? "Account Deleted"
-                : isRejected 
-                ? "Account Registration Declined" 
-                : isApproved 
-                ? "Account Approved!" 
-                : "Account Under Review"}
-            </h1>
-            <p className="text-sm sm:text-base text-slate-300 max-w-md mx-auto leading-relaxed">
-              {isPendingDeletion
-                ? `Your account is scheduled for permanent deletion on ${effectiveDate} (${daysRemaining} days left). You may cancel deletion any time during this grace period.`
-                : isSuspended
-                ? (userProfile?.suspendReason ? `Reason: ${userProfile.suspendReason}` : "Your account access has been suspended by the Super Administrator.")
-                : isDeleted
-                ? "This account has been closed and personal data scrubbed in compliance with privacy regulations."
-                : isRejected 
-                ? "Unfortunately, your account registration could not be verified by the admin team at this time." 
-                : isApproved 
-                ? "Your membership has been verified! Redirecting to your dashboard..." 
-                : "Thank you for joining MAMAS! Your account is currently being verified by our admin team."}
-            </p>
+      {/* Main Content Area (Compact, Edge-to-Edge, Zero Card Boundaries) */}
+      <main className="flex-1 w-full max-w-2xl mx-auto px-4 sm:px-6 py-6 space-y-6 text-slate-900 dark:text-slate-100">
+        
+        {/* Status Title & Badge */}
+        <div className="text-center space-y-2">
+          <div className="inline-flex items-center justify-center p-3.5 bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 rounded-2xl border border-blue-100 dark:border-blue-900/60 shadow-xs mb-1">
+            {isPendingDeletion ? (
+              <Clock className="w-8 h-8 text-amber-500" />
+            ) : isSuspended || isDeleted || isRejected ? (
+              <Lock className="w-8 h-8 text-rose-500" />
+            ) : isApproved ? (
+              <CheckCircle2 className="w-8 h-8 text-emerald-500" />
+            ) : (
+              <Hourglass className="w-8 h-8 text-blue-600 dark:text-blue-400 animate-pulse" />
+            )}
           </div>
 
-          {/* Body Section */}
-          <div className="p-6 sm:p-8 space-y-6">
+          <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+            {isPendingDeletion
+              ? "Account Scheduled for Deletion"
+              : isSuspended
+              ? "Account Suspended"
+              : isDeleted
+              ? "Account Deleted"
+              : isRejected 
+              ? "Account Registration Declined" 
+              : isApproved 
+              ? "Account Approved!" 
+              : "Account Under Review"}
+          </h1>
 
-            {/* Pending Deletion Grace Period Actions */}
-            {isPendingDeletion && (
-              <div className="bg-amber-50 dark:bg-amber-950/40 p-5 sm:p-6 rounded-2xl border border-amber-200 dark:border-amber-900/60 space-y-4">
-                <div className="flex items-start gap-3">
-                  <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-                  <div className="space-y-1.5 text-xs sm:text-sm">
-                    <h4 className="font-bold text-amber-900 dark:text-amber-200">What happens during the 30-day grace period?</h4>
-                    <ul className="list-disc list-inside space-y-1 text-amber-800 dark:text-amber-300/90 leading-relaxed">
-                      <li>Your profile is hidden from the public alumni directory.</li>
-                      <li>Member features (voting, applying for grants, contributing) are paused.</li>
-                      <li>Past verified financial contributions and welfare records remain safely in association ledgers.</li>
-                      <li>You can cancel this deletion request below to restore full access immediately.</li>
-                    </ul>
-                  </div>
-                </div>
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
+            {isPendingDeletion
+              ? `Your account is scheduled for deletion on ${effectiveDate}. You may cancel anytime during this grace period.`
+              : isSuspended
+              ? (userProfile?.suspendReason ? `Reason: ${userProfile.suspendReason}` : "Your account access has been suspended.")
+              : isDeleted
+              ? "This account has been closed."
+              : isRejected 
+              ? "Your registration could not be verified by the admin team." 
+              : isApproved 
+              ? "Your membership has been verified! Redirecting..." 
+              : "Thank you for joining MAMAS! Your account is currently being verified by our admin team (usually 1–2 business days)."}
+          </p>
+        </div>
 
-                <div className="pt-2 flex flex-col sm:flex-row gap-3">
-                  <button
-                    onClick={handleCancelDeletion}
-                    disabled={cancellingDeletion}
-                    className="flex-1 bg-amber-600 hover:bg-amber-500 text-white font-bold py-3 px-4 rounded-xl text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                  >
-                    {cancellingDeletion ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Undo2 className="w-4 h-4" />}
-                    <span>Cancel Account Deletion & Restore Access</span>
-                  </button>
-                </div>
+        {/* Pending Deletion Cancel Banner */}
+        {isPendingDeletion && (
+          <div className="bg-amber-50 dark:bg-amber-950/30 p-4 rounded-2xl border border-amber-200 dark:border-amber-800/60 space-y-3">
+            <div className="flex items-center gap-2 text-amber-900 dark:text-amber-200 font-bold text-xs sm:text-sm">
+              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>Cancel account deletion request</span>
+            </div>
+            <button
+              onClick={handleCancelDeletion}
+              disabled={cancellingDeletion}
+              className="w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+            >
+              {cancellingDeletion ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Undo2 className="w-3.5 h-3.5" />}
+              <span>Restore Account & Full Access</span>
+            </button>
+          </div>
+        )}
+
+        {/* Sleek 3-Step Progress Tracker */}
+        {!isRejected && !isPendingDeletion && !isSuspended && !isDeleted && (
+          <div className="bg-white dark:bg-[#0c1731] py-4 px-4 sm:px-6 border-y border-slate-200/60 dark:border-slate-800/60">
+            <div className="flex items-center justify-between max-w-sm mx-auto relative">
+              <div className="absolute left-6 right-6 top-4 h-0.5 bg-slate-200 dark:bg-slate-700 -z-0">
+                <div className={`h-full transition-all ${isApproved ? 'w-full bg-emerald-500' : 'w-1/2 bg-blue-600'}`} />
               </div>
-            )}
 
-            {/* Suspended Info */}
-            {isSuspended && (
-              <div className="bg-rose-50 dark:bg-rose-950/40 p-5 rounded-2xl border border-rose-200 dark:border-rose-900/60 space-y-3">
-                <div className="flex items-start gap-3">
-                  <ShieldAlert className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
-                  <div className="space-y-1 text-xs sm:text-sm">
-                    <h4 className="font-bold text-rose-900 dark:text-rose-200">Account Suspension Notice</h4>
-                    <p className="text-rose-800 dark:text-rose-300 leading-relaxed">
-                      If you believe this suspension is in error or you have resolved pending governance obligations, please contact the Association Executive Committee.
-                    </p>
-                  </div>
+              {/* Step 1 */}
+              <div className="relative z-10 flex flex-col items-center">
+                <div className="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold text-xs">
+                  <Check className="w-4 h-4" />
                 </div>
+                <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 mt-1.5">Registered</span>
               </div>
-            )}
 
-            {/* 3-Step Progress Tracker (Only for normal Pending) */}
-            {!isRejected && !isPendingDeletion && !isSuspended && !isDeleted && (
-              <div className="bg-slate-50 dark:bg-slate-800/60 p-5 sm:p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-400 mb-4 text-center">
-                  Verification Progress
-                </h3>
-                
-                <div className="relative flex items-center justify-between max-w-md mx-auto">
-                  {/* Connecting Line */}
-                  <div className="absolute left-6 right-6 top-5 h-1 bg-slate-200 dark:bg-slate-700 -z-0">
-                    <div 
-                      className={`h-full transition-all duration-500 ${
-                        isApproved ? 'w-full bg-emerald-500' : 'w-1/2 bg-mamas-accent'
-                      }`} 
-                    />
-                  </div>
-
-                  {/* Step 1: Registered */}
-                  <div className="relative z-10 flex flex-col items-center">
-                    <div className="w-10 h-10 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-md font-bold text-sm">
-                      <CheckCircle2 className="w-5 h-5" />
-                    </div>
-                    <span className="text-xs font-bold text-slate-700 dark:text-slate-200 mt-2">Registered</span>
-                    <span className="text-[10px] text-slate-400">Completed</span>
-                  </div>
-
-                  {/* Step 2: Under Review */}
-                  <div className="relative z-10 flex flex-col items-center">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center shadow-md font-bold text-sm transition-all ${
-                      isApproved 
-                        ? 'bg-emerald-500 text-white' 
-                        : 'bg-mamas-accent text-mamas-primary ring-4 ring-mamas-accent/30 animate-pulse'
-                    }`}>
-                      {isApproved ? <CheckCircle2 className="w-5 h-5" /> : <Clock className="w-5 h-5" />}
-                    </div>
-                    <span className={`text-xs font-bold mt-2 ${isApproved ? 'text-slate-700 dark:text-slate-200' : 'text-mamas-accent dark:text-mamas-accent font-extrabold'}`}>
-                      Under Review
-                    </span>
-                    <span className="text-[10px] text-mamas-accent/90 font-medium">
-                      {isApproved ? 'Passed' : 'Active Step'}
-                    </span>
-                  </div>
-
-                  {/* Step 3: Approved */}
-                  <div className="relative z-10 flex flex-col items-center">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center shadow-md font-bold text-sm transition-all ${
-                      isApproved 
-                        ? 'bg-emerald-500 text-white ring-4 ring-emerald-500/30' 
-                        : 'bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500'
-                    }`}>
-                      <ShieldCheck className="w-5 h-5" />
-                    </div>
-                    <span className={`text-xs font-semibold mt-2 ${isApproved ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-slate-400 dark:text-slate-500'}`}>
-                      Approved
-                    </span>
-                    <span className="text-[10px] text-slate-400">
-                      {isApproved ? 'Unlocked' : 'Pending'}
-                    </span>
-                  </div>
+              {/* Step 2 */}
+              <div className="relative z-10 flex flex-col items-center">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all ${
+                  isApproved ? 'bg-emerald-500 text-white' : 'bg-blue-600 text-white ring-4 ring-blue-500/20 animate-pulse'
+                }`}>
+                  {isApproved ? <Check className="w-4 h-4" /> : <Clock className="w-4 h-4" />}
                 </div>
+                <span className="text-[11px] font-extrabold text-blue-600 dark:text-blue-400 mt-1.5">Under Review</span>
               </div>
-            )}
 
-            {/* Information Notice Box */}
-            <div className={`p-4 sm:p-5 rounded-2xl border ${
-              isRejected 
-                ? 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-900/60 text-rose-900 dark:text-rose-200' 
-                : 'bg-amber-50/70 dark:bg-amber-950/30 border-amber-200/80 dark:border-amber-900/50 text-slate-800 dark:text-slate-200'
-            }`}>
-              <div className="flex items-start gap-3">
-                {isRejected ? (
-                  <ShieldAlert className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
-                ) : (
-                  <HelpCircle className="w-5 h-5 text-amber-600 dark:text-mamas-accent shrink-0 mt-0.5" />
-                )}
-                <div className="space-y-2 text-xs sm:text-sm">
-                  <h4 className="font-bold text-slate-900 dark:text-white text-sm">
-                    {isRejected ? "What happens next?" : "What you need to know:"}
-                  </h4>
-                  {isRejected ? (
-                    <ul className="list-disc list-inside space-y-1 text-rose-800 dark:text-rose-300 leading-relaxed">
-                      <li>Your registration details did not meet the verification criteria.</li>
-                      <li>You can contact the Executive Committee for clarification or resubmission.</li>
-                      <li>Reach out via WhatsApp or email using the support links below.</li>
-                    </ul>
-                  ) : (
-                    <ul className="space-y-1.5 text-slate-600 dark:text-slate-300 leading-relaxed">
-                      <li className="flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
-                        <span><strong>Verification Timeline:</strong> Usually takes 1–2 business days.</span>
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
-                        <span><strong>Automatic Notification:</strong> You will receive an email as soon as approved.</span>
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
-                        <span><strong>Urgent Requests:</strong> Contact the Secretary or Super Admin for fast tracking.</span>
-                      </li>
-                    </ul>
-                  )}
+              {/* Step 3 */}
+              <div className="relative z-10 flex flex-col items-center">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all ${
+                  isApproved ? 'bg-emerald-500 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-400'
+                }`}>
+                  <ShieldCheck className="w-4 h-4" />
                 </div>
+                <span className={`text-[11px] font-semibold mt-1.5 ${isApproved ? 'text-emerald-600 font-bold' : 'text-slate-400'}`}>Approved</span>
               </div>
             </div>
+          </div>
+        )}
 
-            {/* User Account Details Summary */}
-            <div className="bg-slate-50 dark:bg-slate-800/50 p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                  Submitted Account Info
-                </span>
-                <span className="text-[11px] font-semibold text-mamas-primary dark:text-slate-300 bg-slate-200 dark:bg-slate-700 px-2 py-0.5 rounded-md">
-                  Read Only
-                </span>
+        {/* Submitted Account Info Grid */}
+        <div className="border-t border-b border-slate-200/60 dark:border-slate-800/60 py-4 space-y-3">
+          <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+            Submitted Account Information
+          </h3>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+            <div className="p-3 bg-white dark:bg-[#0c1731] border border-slate-200/60 dark:border-slate-800 rounded-2xl flex items-center justify-between">
+              <div>
+                <span className="text-[10px] text-slate-400 block font-semibold uppercase">Member Name</span>
+                <span className="font-bold text-slate-800 dark:text-slate-200 truncate">{userProfile?.fullName || 'N/A'}</span>
               </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                {/* Full Name */}
-                <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200/60 dark:border-slate-800">
-                  <span className="text-slate-400 dark:text-slate-500 flex items-center gap-1.5 text-[11px] mb-1">
-                    <User className="w-3.5 h-3.5 text-slate-400" /> Member Name
-                  </span>
-                  <p className="font-bold text-slate-800 dark:text-slate-200 truncate">
-                    {userProfile?.fullName || 'N/A'}
-                  </p>
-                </div>
-
-                {/* Registered Phone */}
-                <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200/60 dark:border-slate-800">
-                  <span className="text-slate-400 dark:text-slate-500 flex items-center justify-between text-[11px] mb-1">
-                    <span className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5 text-slate-400" /> Phone</span>
-                    <button 
-                      onClick={() => copyToClipboard(userProfile?.phoneNumber || '', 'phone')}
-                      className="text-[10px] text-mamas-accent hover:underline flex items-center gap-0.5"
-                    >
-                      {copiedField === 'phone' ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
-                    </button>
-                  </span>
-                  <p className="font-bold text-slate-800 dark:text-slate-200 truncate">
-                    {userProfile?.phoneNumber || 'N/A'}
-                  </p>
-                </div>
-
-                {/* Registered Email */}
-                <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200/60 dark:border-slate-800">
-                  <span className="text-slate-400 dark:text-slate-500 flex items-center justify-between text-[11px] mb-1">
-                    <span className="flex items-center gap-1.5"><Mail className="w-3.5 h-3.5 text-slate-400" /> Email</span>
-                    <button 
-                      onClick={() => copyToClipboard(userProfile?.email || '', 'email')}
-                      className="text-[10px] text-mamas-accent hover:underline flex items-center gap-0.5"
-                    >
-                      {copiedField === 'email' ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
-                    </button>
-                  </span>
-                  <p className="font-bold text-slate-800 dark:text-slate-200 truncate">
-                    {userProfile?.email || currentUser?.email || 'N/A'}
-                  </p>
-                </div>
-
-                {/* School Year / District */}
-                <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200/60 dark:border-slate-800">
-                  <span className="text-slate-400 dark:text-slate-500 flex items-center gap-1.5 text-[11px] mb-1">
-                    <School className="w-3.5 h-3.5 text-slate-400" /> Year Left School
-                  </span>
-                  <p className="font-bold text-slate-800 dark:text-slate-200 truncate">
-                    {userProfile?.yearLeftSchool || 'N/A'} {userProfile?.district ? `(${userProfile.district})` : ''}
-                  </p>
-                </div>
-              </div>
+              <User className="w-4 h-4 text-slate-400 shrink-0" />
             </div>
 
-            {/* Actions Grid */}
-            <div className="space-y-4 pt-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* School Campaigns Quick Link */}
-                <div className="p-4 bg-blue-50 dark:bg-blue-950/40 rounded-2xl border border-blue-200 dark:border-blue-900 flex flex-col justify-between h-full">
-                  <div>
-                    <h4 className="font-bold text-blue-900 dark:text-blue-100 flex items-center gap-2 mb-2">
-                      <School className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                      School Campaigns
-                    </h4>
-                    <p className="text-[11px] text-blue-700 dark:text-blue-300/80 leading-relaxed mb-4">
-                      While waiting for approval, you can still support active school development campaigns.
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => navigate('/campaigns')}
-                    className="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer"
-                  >
-                    View & Contribute
-                  </button>
-                </div>
-
-                {/* Profile Edit Quick Link */}
-                <div className="p-4 bg-indigo-50 dark:bg-indigo-950/40 rounded-2xl border border-indigo-200 dark:border-indigo-900 flex flex-col justify-between h-full">
-                  <div>
-                    <h4 className="font-bold text-indigo-900 dark:text-indigo-100 flex items-center gap-2 mb-2">
-                      <User className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                      Complete Profile
-                    </h4>
-                    <p className="text-[11px] text-indigo-700 dark:text-indigo-300/80 leading-relaxed mb-4">
-                      Ensure your batch, location, and profession are up to date to help classmates reconnect once approved.
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => navigate('/profile')}
-                    className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer"
-                  >
-                    Edit Profile & Privacy
-                  </button>
-                </div>
+            <div className="p-3 bg-white dark:bg-[#0c1731] border border-slate-200/60 dark:border-slate-800 rounded-2xl flex items-center justify-between">
+              <div>
+                <span className="text-[10px] text-slate-400 block font-semibold uppercase">Phone Number</span>
+                <span className="font-bold text-slate-800 dark:text-slate-200 truncate">{userProfile?.phoneNumber || 'N/A'}</span>
               </div>
-
-              {/* Note on unlocked features */}
-              <div className="bg-slate-100 dark:bg-slate-800/40 p-4 rounded-xl text-center text-xs text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-800">
-                <span className="font-semibold text-slate-700 dark:text-slate-300">Note:</span> Full member directory, welfare contributions, grants, and member contacts will unlock immediately upon approval.
-              </div>
-            </div>
-
-            {/* Support Actions */}
-            <div className="pt-6 border-t border-slate-200/80 dark:border-slate-800">
-              <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 text-center">Contact Support</h4>
-              <div className="flex flex-col sm:flex-row gap-3">
-                {/* Contact Support via Phone Call */}
-                {supportPhone && (
-                  <a
-                    href={`tel:${supportPhone}`}
-                    className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 text-white font-bold text-xs shadow-md transition-all active:scale-[0.99]"
-                  >
-                    <Phone className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Call Admin</span>
-                  </a>
-                )}
-
-                {/* Contact Support via WhatsApp */}
-                {supportWhatsApp && (
-                  <a
-                    href={whatsappUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition-all active:scale-[0.99]"
-                  >
-                    <MessageSquare className="w-3.5 h-3.5" />
-                    <span>WhatsApp</span>
-                  </a>
-                )}
-
-                {/* Contact Support via Email */}
-                {supportEmail && (
-                  <a
-                    href={mailtoUrl}
-                    className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs border border-slate-200 dark:border-slate-700 transition-all active:scale-[0.99]"
-                  >
-                    <Mail className="w-3.5 h-3.5 text-mamas-primary dark:text-mamas-accent" />
-                    <span>Email Admin</span>
-                  </a>
-                )}
-              </div>
-            </div>
-
-            {/* Status Action Row */}
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4">
-              <button
-                onClick={() => checkStatus(true)}
-                disabled={isRefreshing}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-all disabled:opacity-50 cursor-pointer"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-mamas-accent' : ''}`} />
-                <span>{isRefreshing ? 'Checking Firestore...' : 'Re-check Status Now'}</span>
+              <button onClick={() => copyToClipboard(userProfile?.phoneNumber || '', 'phone')} className="text-slate-400 hover:text-blue-500">
+                {copiedField === 'phone' ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
               </button>
             </div>
-          </div>
 
-          {/* Footer note */}
-          <div className="px-6 py-4 bg-slate-100/60 dark:bg-slate-900/80 border-t border-slate-200/80 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-500 font-medium">
-            <div className="flex gap-4">
-              <button onClick={() => navigate('/terms')} className="hover:text-blue-600 dark:hover:text-blue-400">Terms of Service</button>
-              <button onClick={() => navigate('/privacy')} className="hover:text-blue-600 dark:hover:text-blue-400">Privacy Policy</button>
+            <div className="p-3 bg-white dark:bg-[#0c1731] border border-slate-200/60 dark:border-slate-800 rounded-2xl flex items-center justify-between">
+              <div>
+                <span className="text-[10px] text-slate-400 block font-semibold uppercase">Email</span>
+                <span className="font-bold text-slate-800 dark:text-slate-200 truncate">{userProfile?.email || currentUser?.email || 'N/A'}</span>
+              </div>
+              <button onClick={() => copyToClipboard(userProfile?.email || '', 'email')} className="text-slate-400 hover:text-blue-500">
+                {copiedField === 'email' ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+              </button>
             </div>
-            <span>Auto-refreshing state</span>
+
+            <div className="p-3 bg-white dark:bg-[#0c1731] border border-slate-200/60 dark:border-slate-800 rounded-2xl flex items-center justify-between">
+              <div>
+                <span className="text-[10px] text-slate-400 block font-semibold uppercase">Class Year</span>
+                <span className="font-bold text-slate-800 dark:text-slate-200 truncate">
+                  {userProfile?.yearLeftSchool ? `Class of ${userProfile.yearLeftSchool}` : 'N/A'} {userProfile?.district ? `(${userProfile.district})` : ''}
+                </span>
+              </div>
+              <School className="w-4 h-4 text-slate-400 shrink-0" />
+            </div>
           </div>
-
         </div>
-      </main>
 
-      {/* Footer */}
-      <footer className="w-full py-4 text-center text-xs text-slate-400 dark:text-slate-600">
-        &copy; {new Date().getFullYear()} MAMAS Welfare & Alumni Association. All rights reserved.
-      </footer>
+        {/* Quick Unlocked Action Links */}
+        <div className="flex flex-col sm:flex-row gap-2.5">
+          <button
+            onClick={() => navigate('/campaigns')}
+            className="flex-1 py-3 px-4 bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/60 text-blue-700 dark:text-blue-300 font-bold text-xs rounded-2xl border border-blue-200/60 dark:border-blue-900/50 flex items-center justify-center gap-2 transition-all cursor-pointer"
+          >
+            <School className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            <span>Support School Campaigns</span>
+          </button>
+
+          <button
+            onClick={() => navigate('/profile')}
+            className="flex-1 py-3 px-4 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-center gap-2 transition-all cursor-pointer"
+          >
+            <User className="w-4 h-4 text-slate-500" />
+            <span>Edit Profile & Privacy</span>
+          </button>
+        </div>
+
+        {/* Contact Support Action Row */}
+        <div className="pt-2 text-center space-y-2.5">
+          <span className="text-[11px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">
+            Need Fast-Track Verification?
+          </span>
+
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            {supportPhone && (
+              <a
+                href={`tel:${supportPhone}`}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs border border-slate-200 dark:border-slate-700 transition-all active:scale-95 cursor-pointer"
+              >
+                <Phone className="w-3.5 h-3.5 text-blue-600" />
+                <span>Call Admin</span>
+              </a>
+            )}
+
+            {supportWhatsApp && (
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-all active:scale-95 cursor-pointer shadow-xs"
+              >
+                <MessageSquare className="w-3.5 h-3.5" />
+                <span>WhatsApp Admin</span>
+              </a>
+            )}
+
+            {supportEmail && (
+              <a
+                href={mailtoUrl}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs border border-slate-200 dark:border-slate-700 transition-all active:scale-95 cursor-pointer"
+              >
+                <Mail className="w-3.5 h-3.5 text-blue-600" />
+                <span>Email Support</span>
+              </a>
+            )}
+          </div>
+        </div>
+
+      </main>
     </div>
   );
 }

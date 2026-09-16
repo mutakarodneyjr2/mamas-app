@@ -20,7 +20,10 @@ import {
   Heart,
   ChevronLeft,
   ChevronRight,
-  ImageIcon
+  ImageIcon,
+  CheckCircle2,
+  Layers,
+  HelpCircle
 } from 'lucide-react';
 
 export default function Landing() {
@@ -35,12 +38,14 @@ export default function Landing() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [slideDirection, setSlideDirection] = useState(1);
   const [isHovered, setIsHovered] = useState(false);
+  
+  // Interactive Showcase Active Tab state ('pillars' | 'how' | 'banners')
+  const [activeTab, setActiveTab] = useState<'pillars' | 'how' | 'banners'>('pillars');
 
   useEffect(() => {
     let isMounted = true;
     async function fetchImpactStatsAndSettings() {
       try {
-        // App Settings for Landing Banners
         const settingsSnap = await getDoc(doc(db, 'appSettings', 'main'));
         if (settingsSnap.exists() && isMounted) {
           const data = settingsSnap.data();
@@ -50,18 +55,15 @@ export default function Landing() {
           }
         }
 
-        // Members count
         const usersSnap = await getDocs(collection(db, 'users'));
         const activeMembers = usersSnap.docs.filter(d => ['active', 'approved'].includes(d.data().status)).length;
 
-        // Contributions
         const contribsSnap = await getDocs(query(collection(db, 'contributions'), where('status', '==', 'completed')));
         let totalSum = 0;
         contribsSnap.docs.forEach(d => {
           totalSum += (d.data().amount || 0);
         });
 
-        // Welfare grants
         const welfareSnap = await getDocs(query(collection(db, 'welfareRequests'), where('status', '==', 'approved')));
         const grants = welfareSnap.docs.length;
 
@@ -81,6 +83,16 @@ export default function Landing() {
     return () => { isMounted = false; };
   }, []);
 
+  // Auto-switch tabs periodically if not hovered
+  useEffect(() => {
+    if (isHovered) return;
+    const interval = setInterval(() => {
+      setActiveTab(prev => (prev === 'pillars' ? 'how' : prev === 'how' ? 'banners' : 'pillars'));
+    }, 8000);
+    return () => clearInterval(interval);
+  }, [isHovered]);
+
+  // Auto advance banner slider if banners present
   useEffect(() => {
     if (banners.length <= 1 || isHovered) return;
     const timer = setInterval(() => {
@@ -100,413 +112,278 @@ export default function Landing() {
     setCurrentSlide(prev => (prev + 1) % banners.length);
   };
 
-  const handleImageError = (failedUrl: string) => {
-    setBanners(prev => {
-      const filtered = prev.filter(u => u !== failedUrl);
-      if (currentSlide >= filtered.length && filtered.length > 0) {
-        setCurrentSlide(0);
-      }
-      return filtered;
-    });
-  };
-
   if (currentUser) {
     return <Navigate to="/dashboard" replace />;
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#060d1f] font-sans text-slate-900 dark:text-slate-100 flex flex-col selection:bg-blue-600 selection:text-white transition-colors duration-200">
+    <div className="h-screen overflow-hidden bg-mamas-bg font-sans text-slate-900 dark:text-slate-100 flex flex-col selection:bg-blue-600 selection:text-white transition-colors duration-200">
       
-      {/* Top Navigation Header */}
-      <header className="w-full bg-[#07132c]/95 dark:bg-[#07132c]/95 backdrop-blur-md border-b border-blue-900/40 px-6 sm:px-12 py-3.5 flex items-center justify-between sticky top-0 z-50 shadow-md">
-        <Logo />
-        <div className="flex items-center gap-3 sm:gap-4">
-          <ThemeIconButton className="text-white hover:bg-white/10" />
+      {/* 1. VIBRANT LIGHT BLUE TOP SYSTEM HEADER */}
+      <header className="w-full bg-blue-600 dark:bg-blue-700 text-white border-b border-blue-500/40 px-4 sm:px-8 py-3.5 flex items-center justify-between shrink-0 shadow-md z-50">
+        <div className="flex items-center gap-3">
+          <Logo dark />
+        </div>
+        <div className="flex items-center gap-2 sm:gap-3">
+          <ThemeIconButton className="text-white hover:bg-white/15" />
           <Link 
             to="/login" 
-            className="text-xs sm:text-sm font-bold text-slate-200 hover:text-white px-3 sm:px-4 py-2 rounded-2xl hover:bg-white/10 transition-all cursor-pointer"
+            className="text-xs sm:text-sm font-bold text-white hover:bg-white/15 px-3 sm:px-4 py-2 rounded-full transition-all cursor-pointer"
           >
             Member Login
           </Link>
           <Link 
             to="/register" 
-            className="text-xs sm:text-sm font-extrabold bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-2xl shadow-md shadow-blue-500/25 active:scale-95 transition-all cursor-pointer"
+            className="text-xs sm:text-sm font-extrabold bg-white text-blue-900 hover:bg-blue-50 px-4 sm:px-5 py-2 rounded-full shadow-md active:scale-95 transition-all cursor-pointer"
           >
             Join MAMAS
           </Link>
         </div>
       </header>
 
-      {/* 1. HERO SECTION */}
-      <section className="relative bg-gradient-to-r from-[#07132c] via-[#0f2756] to-[#1e3a8a] text-white overflow-hidden py-16 sm:py-24 lg:py-32 px-6 sm:px-12 border-b border-blue-900/30">
-        {/* Glowing Background Orbs */}
-        <div className="absolute top-1/4 -left-20 w-96 h-96 bg-blue-400/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-10 -right-20 w-96 h-96 bg-blue-500/15 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center relative z-10">
-          
-          {/* Left Text Column */}
-          <div className="lg:col-span-7 text-center lg:text-left space-y-6">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 border border-white/15 text-blue-200 text-xs font-bold tracking-wide uppercase backdrop-blur-md">
-              <ShieldCheck className="w-4 h-4 text-blue-300" />
-              <span>Official Matuumu Alumni Association</span>
+      {/* MAIN VIEWPORT WRAPPER (No Long Scroll Marathon, Edge-to-Edge) */}
+      <div 
+        className="flex-1 overflow-y-auto flex flex-col justify-between"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
+        
+        {/* HERO TITLE & STATS STRIP (EDGE-TO-EDGE) */}
+        <div className="bg-gradient-to-r from-[#07132c] via-[#0f2756] to-[#1e3a8a] text-white pt-6 pb-4 px-4 sm:px-8 border-b border-blue-900/40">
+          <div className="max-w-5xl mx-auto text-center space-y-3">
+            
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/15 text-blue-200 text-xs font-bold uppercase tracking-wider backdrop-blur-md">
+              <ShieldCheck className="w-3.5 h-3.5 text-blue-300" />
+              <span>Official Matuumu Alumni Mutual Aid Association</span>
             </div>
 
-            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.15] text-white">
-              Together for Each Other. <br className="hidden sm:inline"/>
-              <span className="text-blue-300">Together for Matuumu.</span>
+            <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white leading-tight">
+              Together for Each Other. <span className="text-blue-300">Together for Matuumu.</span>
             </h1>
 
-            <p className="text-base sm:text-lg text-blue-100/90 max-w-2xl mx-auto lg:mx-0 leading-relaxed font-medium">
-              The Matuumu Alumni Mutual Aid Association — where alumni support one another in times of need, and give back to the school that made us.
+            <p className="text-xs sm:text-sm text-blue-100/90 max-w-2xl mx-auto leading-relaxed">
+              Where alumni support one another in times of need and fund school development projects via Mobile Money.
             </p>
 
-            <div className="pt-4 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
-              <Link 
-                to="/register" 
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-4 rounded-2xl bg-white hover:bg-blue-50 text-blue-900 font-extrabold text-base shadow-xl active:scale-95 transition-all cursor-pointer"
-              >
-                <span>Join MAMAS</span>
-                <ArrowRight className="w-5 h-5" />
-              </Link>
-              <Link 
-                to="/login" 
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl border-2 border-white/30 hover:border-white text-white font-bold text-base hover:bg-white/10 transition-all cursor-pointer"
-              >
-                Member Login
-              </Link>
+            {/* IMPACT METRICS EDGE-TO-EDGE BAR */}
+            <div className="pt-2 grid grid-cols-3 gap-2 max-w-xl mx-auto text-center divide-x divide-blue-800/60">
+              <div>
+                <span className="text-base sm:text-2xl font-extrabold text-blue-300 block">UGX {stats.totalContributions}</span>
+                <span className="text-[10px] sm:text-xs font-bold text-blue-200/80 uppercase">Contributed</span>
+              </div>
+              <div>
+                <span className="text-base sm:text-2xl font-extrabold text-blue-300 block">{stats.membersCount}</span>
+                <span className="text-[10px] sm:text-xs font-bold text-blue-200/80 uppercase">Members</span>
+              </div>
+              <div>
+                <span className="text-base sm:text-2xl font-extrabold text-blue-300 block">{stats.grantsCount}</span>
+                <span className="text-[10px] sm:text-xs font-bold text-blue-200/80 uppercase">Relief Grants</span>
+              </div>
             </div>
+
+          </div>
+        </div>
+
+        {/* INTERACTIVE ANIMATED FEATURE SHOWCASE (EDGE-TO-EDGE, NO CARDS) */}
+        <div className="flex-1 max-w-5xl mx-auto w-full px-4 sm:px-8 py-6 flex flex-col justify-center">
+          
+          {/* TAB CHIPS SELECTOR */}
+          <div className="flex items-center justify-center gap-2 mb-6 border-b border-slate-200/60 dark:border-slate-800/60 pb-3">
+            <button
+              onClick={() => setActiveTab('pillars')}
+              className={`px-4 py-2 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                activeTab === 'pillars'
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+              }`}
+            >
+              <Heart className="w-3.5 h-3.5" />
+              <span>Core Pillars</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('how')}
+              className={`px-4 py-2 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                activeTab === 'how'
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span>How It Works</span>
+            </button>
+
+            {banners.length > 0 && (
+              <button
+                onClick={() => setActiveTab('banners')}
+                className={`px-4 py-2 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  activeTab === 'banners'
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                }`}
+              >
+                <ImageIcon className="w-3.5 h-3.5" />
+                <span>Featured Gallery ({banners.length})</span>
+              </button>
+            )}
           </div>
 
-          {/* Right Column: Interactive Banner Slider or Pillar Grid Fallback */}
-          <div className="lg:col-span-5 flex justify-center w-full">
-            {banners.length > 0 ? (
-              <div 
-                className="relative w-full max-w-lg aspect-[16/10] sm:aspect-[16/9] rounded-3xl overflow-hidden bg-slate-900/90 border border-white/20 backdrop-blur-md shadow-2xl group flex items-center justify-center select-none"
-                onMouseEnter={() => setIsHovered(true)}
-                onMouseLeave={() => setIsHovered(false)}
+          {/* ANIMATED CONTENT PANEL */}
+          <AnimatePresence mode="wait">
+            
+            {/* 1. CORE PILLARS PANEL */}
+            {activeTab === 'pillars' && (
+              <motion.div
+                key="pillars"
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                transition={{ duration: 0.3 }}
+                className="grid grid-cols-1 md:grid-cols-3 gap-6 divide-y md:divide-y-0 md:divide-x divide-slate-200/60 dark:divide-slate-800/60"
               >
-                <AnimatePresence initial={false} custom={slideDirection} mode="wait">
-                  <motion.div
-                    key={banners[currentSlide]}
-                    custom={slideDirection}
-                    initial={{ opacity: 0, x: slideDirection > 0 ? 250 : -250 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: slideDirection > 0 ? -250 : 250 }}
-                    transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-                    className="absolute inset-0 w-full h-full"
-                  >
-                    <img
-                      src={banners[currentSlide]}
-                      alt={`Featured Banner ${currentSlide + 1}`}
-                      className="w-full h-full object-cover"
-                      onError={() => handleImageError(banners[currentSlide])}
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/10 to-slate-950/20" />
-                  </motion.div>
-                </AnimatePresence>
-
-                {/* Top Badge Overlay */}
-                <div className="absolute top-4 left-4 z-20 flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-950/80 border border-white/20 text-blue-200 text-xs font-bold backdrop-blur-md shadow-md">
-                  <ImageIcon className="w-3.5 h-3.5" />
-                  <span>Featured Initiative ({currentSlide + 1}/{banners.length})</span>
+                <div className="pt-4 md:pt-0 md:px-4 space-y-2 text-center md:text-left">
+                  <div className="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center mx-auto md:mx-0 font-bold">
+                    <HeartHandshake className="w-5 h-5" />
+                  </div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">Mutual Aid & Relief</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                    When a fellow alumnus faces bereavement, medical emergencies, or hardship, we rally together with direct financial grants.
+                  </p>
                 </div>
 
-                {/* Carousel Controls */}
+                <div className="pt-4 md:pt-0 md:px-4 space-y-2 text-center md:text-left">
+                  <div className="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center mx-auto md:mx-0 font-bold">
+                    <GraduationCap className="w-5 h-5" />
+                  </div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">School Infrastructure</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                    Fund school development projects — building classrooms, laboratories, and upgrading facilities for Matuumu students.
+                  </p>
+                </div>
+
+                <div className="pt-4 md:pt-0 md:px-4 space-y-2 text-center md:text-left">
+                  <div className="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center mx-auto md:mx-0 font-bold">
+                    <TrendingUp className="w-5 h-5" />
+                  </div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">Alumni Endowment</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                    Every member contribution builds a sustainable, transparent endowment pool governed democratically by vote.
+                  </p>
+                </div>
+              </motion.div>
+            )}
+
+            {/* 2. HOW IT WORKS PANEL */}
+            {activeTab === 'how' && (
+              <motion.div
+                key="how"
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                transition={{ duration: 0.3 }}
+                className="grid grid-cols-1 md:grid-cols-3 gap-6 divide-y md:divide-y-0 md:divide-x divide-slate-200/60 dark:divide-slate-800/60"
+              >
+                <div className="pt-4 md:pt-0 md:px-4 space-y-2 text-center md:text-left">
+                  <div className="w-8 h-8 rounded-full bg-blue-600 text-white font-extrabold text-xs flex items-center justify-center mx-auto md:mx-0">
+                    1
+                  </div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center justify-center md:justify-start gap-1.5">
+                    <UserPlus className="w-4 h-4 text-blue-600" /> Register & Verify
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                    Create your member account and get verified as an authentic Matuumu alumnus by our executive team.
+                  </p>
+                </div>
+
+                <div className="pt-4 md:pt-0 md:px-4 space-y-2 text-center md:text-left">
+                  <div className="w-8 h-8 rounded-full bg-blue-600 text-white font-extrabold text-xs flex items-center justify-center mx-auto md:mx-0">
+                    2
+                  </div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center justify-center md:justify-start gap-1.5">
+                    <Wallet className="w-4 h-4 text-blue-600" /> Pay Mobile Dues
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                    Pay weekly welfare dues or back active school infrastructure campaigns seamlessly using MTN/Airtel Mobile Money.
+                  </p>
+                </div>
+
+                <div className="pt-4 md:pt-0 md:px-4 space-y-2 text-center md:text-left">
+                  <div className="w-8 h-8 rounded-full bg-blue-600 text-white font-extrabold text-xs flex items-center justify-center mx-auto md:mx-0">
+                    3
+                  </div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center justify-center md:justify-start gap-1.5">
+                    <Sparkles className="w-4 h-4 text-blue-600" /> Impact & Relief
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                    Access emergency welfare grants in times of need and vote on solidarity resolutions transparently.
+                  </p>
+                </div>
+              </motion.div>
+            )}
+
+            {/* 3. FEATURED BANNERS GALLERY PANEL */}
+            {activeTab === 'banners' && banners.length > 0 && (
+              <motion.div
+                key="banners"
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                transition={{ duration: 0.3 }}
+                className="relative w-full max-w-2xl mx-auto aspect-[16/9] rounded-2xl overflow-hidden bg-slate-900 border border-slate-700/60 shadow-lg"
+              >
+                <img
+                  src={banners[currentSlide]}
+                  alt={`Banner ${currentSlide + 1}`}
+                  className="w-full h-full object-cover"
+                />
                 {banners.length > 1 && (
                   <>
                     <button
                       onClick={handlePrev}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 z-30 w-10 h-10 rounded-full bg-slate-950/70 border border-white/20 text-white flex items-center justify-center hover:bg-blue-600 transition-all shadow-lg active:scale-90 opacity-80 hover:opacity-100 cursor-pointer"
-                      title="Previous Banner"
+                      className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-slate-950/70 text-white flex items-center justify-center hover:bg-blue-600 transition-all cursor-pointer"
                     >
                       <ChevronLeft className="w-5 h-5" />
                     </button>
                     <button
                       onClick={handleNext}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 z-30 w-10 h-10 rounded-full bg-slate-950/70 border border-white/20 text-white flex items-center justify-center hover:bg-blue-600 transition-all shadow-lg active:scale-90 opacity-80 hover:opacity-100 cursor-pointer"
-                      title="Next Banner"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-slate-950/70 text-white flex items-center justify-center hover:bg-blue-600 transition-all cursor-pointer"
                     >
                       <ChevronRight className="w-5 h-5" />
                     </button>
-
-                    {/* Indicator Dots */}
-                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-950/70 border border-white/15 backdrop-blur-md">
-                      {banners.map((_, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => {
-                            setSlideDirection(idx > currentSlide ? 1 : -1);
-                            setCurrentSlide(idx);
-                          }}
-                          className={`h-2 rounded-full transition-all duration-300 cursor-pointer ${
-                            idx === currentSlide 
-                              ? 'w-6 bg-blue-400' 
-                              : 'w-2 bg-white/40 hover:bg-white/70'
-                          }`}
-                          title={`Go to slide ${idx + 1}`}
-                        />
-                      ))}
-                    </div>
                   </>
                 )}
-              </div>
-            ) : (
-              <div className="relative w-full max-w-md aspect-square rounded-3xl bg-white/5 border border-white/10 backdrop-blur-md p-8 flex items-center justify-center shadow-2xl">
-                
-                {/* Outer Pulsing Rings */}
-                <div className="absolute inset-4 border border-blue-400/20 rounded-2xl animate-pulse" />
-                <div className="absolute inset-8 border border-white/10 rounded-2xl" />
-
-                {/* Central Pillar Icons Grid */}
-                <div className="grid grid-cols-2 gap-4 w-full relative z-10">
-                  {/* Heart / Mutual Aid */}
-                  <div className="bg-[#0c1731]/90 border border-rose-500/30 p-5 rounded-2xl flex flex-col items-center text-center shadow-lg hover:border-rose-500/60 transition-all group">
-                    <div className="w-12 h-12 rounded-xl bg-rose-500/20 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                      <Heart className="w-6 h-6 text-rose-400 fill-rose-400/30" />
-                    </div>
-                    <span className="text-xs font-bold text-slate-200">Mutual Aid</span>
-                    <span className="text-[10px] text-slate-400">Welfare Grants</span>
-                  </div>
-
-                  {/* School */}
-                  <div className="bg-[#0c1731]/90 border border-blue-500/30 p-5 rounded-2xl flex flex-col items-center text-center shadow-lg hover:border-blue-500/60 transition-all group">
-                    <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                      <Building2 className="w-6 h-6 text-blue-400" />
-                    </div>
-                    <span className="text-xs font-bold text-slate-200">Matuumu Alma Mater</span>
-                    <span className="text-[10px] text-slate-400">Development</span>
-                  </div>
-
-                  {/* Community */}
-                  <div className="bg-[#0c1731]/90 border border-indigo-500/30 p-5 rounded-2xl flex flex-col items-center text-center shadow-lg hover:border-indigo-500/60 transition-all group">
-                    <div className="w-12 h-12 rounded-xl bg-indigo-500/20 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                      <Users className="w-6 h-6 text-indigo-400" />
-                    </div>
-                    <span className="text-xs font-bold text-slate-200">Alumni Family</span>
-                    <span className="text-[10px] text-slate-400">Strong Network</span>
-                  </div>
-
-                  {/* Legacy */}
-                  <div className="bg-[#0c1731]/90 border border-emerald-500/30 p-5 rounded-2xl flex flex-col items-center text-center shadow-lg hover:border-emerald-500/60 transition-all group">
-                    <div className="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                      <GraduationCap className="w-6 h-6 text-emerald-400" />
-                    </div>
-                    <span className="text-xs font-bold text-slate-200">Future Legacy</span>
-                    <span className="text-[10px] text-slate-400">Next Generation</span>
-                  </div>
-                </div>
-
-              </div>
+              </motion.div>
             )}
-          </div>
 
-        </div>
-      </section>
-
-      {/* 4. IMPACT BAR */}
-      <section className="bg-[#07132c] border-y border-blue-900/40 text-white py-10 px-6 sm:px-12">
-        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 text-center divide-y md:divide-y-0 md:divide-x divide-blue-900/50">
-          
-          <div className="pt-4 md:pt-0">
-            <div className="text-3xl sm:text-4xl font-extrabold text-blue-300 tracking-tight">
-              UGX {stats.totalContributions}
-            </div>
-            <p className="text-xs sm:text-sm font-bold text-blue-200/80 uppercase tracking-wider mt-1">
-              Contributed
-            </p>
-          </div>
-
-          <div className="pt-4 md:pt-0">
-            <div className="text-3xl sm:text-4xl font-extrabold text-blue-300 tracking-tight">
-              {stats.membersCount}
-            </div>
-            <p className="text-xs sm:text-sm font-bold text-blue-200/80 uppercase tracking-wider mt-1">
-              Active Members
-            </p>
-          </div>
-
-          <div className="pt-4 md:pt-0">
-            <div className="text-3xl sm:text-4xl font-extrabold text-blue-300 tracking-tight">
-              {stats.grantsCount}
-            </div>
-            <p className="text-xs sm:text-sm font-bold text-blue-200/80 uppercase tracking-wider mt-1">
-              Welfare Grants Given
-            </p>
-          </div>
-
-        </div>
-      </section>
-
-      {/* 2. THREE PILLARS SECTION */}
-      <section className="py-16 sm:py-24 px-6 sm:px-12 max-w-7xl mx-auto w-full">
-        <div className="text-center max-w-2xl mx-auto mb-12 sm:mb-16">
-          <span className="text-xs font-extrabold uppercase tracking-widest text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 px-3.5 py-1.5 rounded-full border border-blue-200 dark:border-blue-900/60 inline-block mb-3">
-            Our Core Pillars
-          </span>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-            What We Do
-          </h2>
-          <p className="text-slate-600 dark:text-slate-400 text-sm sm:text-base mt-2">
-            MAMAS is built on three unwavering commitments to our members and our alma mater.
-          </p>
+          </AnimatePresence>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          
-          {/* Card 1: Support Each Other */}
-          <div className="bg-white dark:bg-[#0c1731] p-8 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group">
-            <div>
-              <div className="w-14 h-14 rounded-2xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-900/60 flex items-center justify-center text-blue-600 dark:text-blue-400 mb-6 group-hover:scale-110 transition-transform">
-                <HeartHandshake className="w-7 h-7" />
-              </div>
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3">
-                Support Each Other
-              </h3>
-              <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed">
-                Life is unpredictable. When a fellow alumnus faces hardship, we rally together. Apply for welfare grants or contribute to help a brother or sister in need.
-              </p>
-            </div>
-            <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 text-xs font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1">
-              <span>Welfare & Emergency Relief</span>
-            </div>
+        {/* BOTTOM ACTION BAR (STICKY/FOOTER AT BOTTOM OF VIEWPORT) */}
+        <div className="border-t border-slate-200/60 dark:border-slate-800/60 bg-white dark:bg-[#0c1731] px-4 sm:px-8 py-3 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
+          <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 text-center sm:text-left">
+            Stand with fellow alumni today. Join the Matuumu family.
           </div>
 
-          {/* Card 2: Support Our School */}
-          <div className="bg-white dark:bg-[#0c1731] p-8 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group">
-            <div>
-              <div className="w-14 h-14 rounded-2xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-900/60 flex items-center justify-center text-blue-600 dark:text-blue-400 mb-6 group-hover:scale-110 transition-transform">
-                <GraduationCap className="w-7 h-7" />
-              </div>
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3">
-                Support Our School
-              </h3>
-              <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed">
-                Matuumu shaped us. Now we shape its future. Fund school development campaigns — classrooms, libraries, and facilities for the next generation.
-              </p>
-            </div>
-            <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 text-xs font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1">
-              <span>School Development Projects</span>
-            </div>
-          </div>
-
-          {/* Card 3: Grow Together */}
-          <div className="bg-white dark:bg-[#0c1731] p-8 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group">
-            <div>
-              <div className="w-14 h-14 rounded-2xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-900/60 flex items-center justify-center text-blue-600 dark:text-blue-400 mb-6 group-hover:scale-110 transition-transform">
-                <TrendingUp className="w-7 h-7" />
-              </div>
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3">
-                Grow Together
-              </h3>
-              <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed">
-                Every contribution builds our collective strength. The more we give, the more we can do — for each other, for our school, and for our legacy.
-              </p>
-            </div>
-            <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 text-xs font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1">
-              <span>Sustainable Alumni Endowment</span>
-            </div>
-          </div>
-
-        </div>
-      </section>
-
-      {/* 3. HOW IT WORKS */}
-      <section className="py-16 bg-slate-100/70 dark:bg-[#081226] border-y border-slate-200/60 dark:border-slate-800 px-6 sm:px-12">
-        <div className="max-w-6xl mx-auto text-center">
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white mb-10">
-            How It Works
-          </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
-            
-            {/* Step 1 */}
-            <div className="bg-white dark:bg-[#0c1731] p-6 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col items-center text-center">
-              <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white font-extrabold text-lg flex items-center justify-center mb-4 shadow-md shadow-blue-500/25">
-                1
-              </div>
-              <h4 className="text-lg font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
-                <UserPlus className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                <span>Join</span>
-              </h4>
-              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                Create your account and get verified as an authentic Matuumu alumnus by our admin team.
-              </p>
-            </div>
-
-            {/* Step 2 */}
-            <div className="bg-white dark:bg-[#0c1731] p-6 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col items-center text-center">
-              <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white font-extrabold text-lg flex items-center justify-center mb-4 shadow-md shadow-blue-500/25">
-                2
-              </div>
-              <h4 className="text-lg font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
-                <Wallet className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                <span>Contribute</span>
-              </h4>
-              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                Send weekly welfare dues or back active school development projects using Mobile Money seamlessly.
-              </p>
-            </div>
-
-            {/* Step 3 */}
-            <div className="bg-white dark:bg-[#0c1731] p-6 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col items-center text-center">
-              <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white font-extrabold text-lg flex items-center justify-center mb-4 shadow-md shadow-blue-500/25">
-                3
-              </div>
-              <h4 className="text-lg font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                <span>Impact</span>
-              </h4>
-              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                Receive urgent welfare support when in need and watch our school transform for generations to come.
-              </p>
-            </div>
-
-          </div>
-        </div>
-      </section>
-
-      {/* CALL TO ACTION */}
-      <section className="py-16 sm:py-20 px-6 sm:px-12 bg-gradient-to-r from-[#07132c] via-[#0f2756] to-[#1e3a8a] text-white text-center relative overflow-hidden">
-        <div className="max-w-3xl mx-auto space-y-6 relative z-10">
-          <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
-            Ready to Stand With Your Fellow Alumni?
-          </h2>
-          <p className="text-blue-100/90 text-sm sm:text-base max-w-xl mx-auto leading-relaxed">
-            Join hundreds of Matuumu alumni already building a safety net for each other and transforming our school.
-          </p>
-          <div className="pt-2">
-            <Link 
-              to="/register" 
-              className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white hover:bg-blue-50 text-blue-900 font-extrabold text-base shadow-2xl active:scale-95 transition-all cursor-pointer"
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <Link
+              to="/login"
+              className="flex-1 sm:flex-initial text-center py-2.5 px-5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs rounded-full border border-slate-200 dark:border-slate-700 transition-all cursor-pointer"
             >
-              <span>Create Your Member Account</span>
-              <ArrowRight className="w-5 h-5" />
+              Log In
+            </Link>
+
+            <Link
+              to="/register"
+              className="flex-1 sm:flex-initial text-center py-2.5 px-6 bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs rounded-full shadow-md shadow-blue-500/25 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+            >
+              <span>Create Account</span>
+              <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
         </div>
-      </section>
 
-      {/* 5. FOOTER */}
-      <footer className="w-full bg-[#050b18] text-slate-400 py-10 px-6 sm:px-12 border-t border-slate-800">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-3">
-            <Logo />
-          </div>
-
-          <div className="flex items-center gap-6 text-xs sm:text-sm font-semibold">
-            <Link to="/terms" className="hover:text-white transition-colors">Terms of Service</Link>
-            <span>&middot;</span>
-            <Link to="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
-          </div>
-
-          <div className="text-xs text-slate-500 text-center sm:text-right">
-            &copy; {new Date().getFullYear()} Matuumu Alumni Mutual Aid Association. All rights reserved.
-          </div>
-        </div>
-      </footer>
+      </div>
 
     </div>
   );
 }
-

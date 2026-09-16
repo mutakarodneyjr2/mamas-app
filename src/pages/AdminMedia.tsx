@@ -14,6 +14,18 @@ export default function AdminMedia() {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
 
+  if (userProfile?.role !== 'super_admin') {
+    return (
+      <div className="flex flex-col items-center justify-center p-8 text-center bg-white dark:bg-[#0c1731] rounded-3xl border border-slate-200/80 dark:border-slate-800 my-6 shadow-xs">
+        <ShieldAlert className="w-12 h-12 text-rose-500 mb-3" />
+        <h2 className="text-lg font-extrabold text-slate-900 dark:text-white">Super Admin Access Required</h2>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-md">
+          Media banner graphics and visual advert management is strictly restricted to the Super Admin role.
+        </p>
+      </div>
+    );
+  }
+
   useEffect(() => {
     if (!currentUser) return;
     const q = query(collection(db, 'landingBanners'), orderBy('order', 'asc'));

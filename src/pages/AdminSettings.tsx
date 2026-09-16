@@ -434,7 +434,7 @@ export default function AdminSettings() {
 
   const canEditWelfare = isSuperAdmin || isChairperson || isViceChairperson;
   const canEditApprovers = isSuperAdmin || isChairperson;
-  const canEditBanners = isSuperAdmin || isChairperson || isViceChairperson;
+  const canEditBanners = isSuperAdmin;
 
   // Reusable Master Save Bar to display on each tab view
   const renderMasterSaveBar = () => (

@@ -6,14 +6,14 @@ export function Logo({ className = '', dark = false }: { className?: string; dar
   return (
     <div className={`flex items-center gap-2.5 ${className}`}>
       {hasError ? (
-        <div className="w-10 h-10 rounded-xl bg-blue-600/10 dark:bg-blue-500/20 flex items-center justify-center border border-blue-500/30">
-          <span className="font-extrabold text-blue-600 dark:text-blue-400 text-lg">M</span>
+        <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center p-0.5 shadow-sm border border-slate-200">
+          <span className="font-extrabold text-blue-700 text-lg">M</span>
         </div>
       ) : (
         <img 
           src="/logo.png" 
-          alt="MAMAS Official Logo" 
-          className="w-10 h-10 object-contain rounded-xl shadow-sm bg-white p-0.5 border border-slate-200/80 dark:border-slate-700"
+          alt="Matuumu Alumni Logo" 
+          className="w-10 h-10 object-contain rounded-xl shadow-xs bg-white p-0.5 border border-white/40"
           referrerPolicy="no-referrer"
           onError={() => setHasError(true)}
         />
@@ -30,15 +30,15 @@ export function LogoLarge({ className = '' }: { className?: string }) {
 
   return (
     <div className={`flex flex-col items-center gap-4 ${className}`}>
-      <div className="w-24 h-24 rounded-3xl bg-white dark:bg-slate-800 p-2 shadow-md border border-slate-200/80 dark:border-slate-700 flex items-center justify-center">
+      <div className="w-24 h-24 rounded-3xl bg-white p-2 shadow-md border border-slate-200/80 flex items-center justify-center">
         {hasError ? (
-          <div className="w-full h-full rounded-2xl bg-blue-50 dark:bg-blue-950/40 flex items-center justify-center">
-            <span className="font-extrabold text-blue-600 dark:text-blue-400 text-4xl">M</span>
+          <div className="w-full h-full rounded-2xl bg-blue-50 flex items-center justify-center">
+            <span className="font-extrabold text-blue-700 text-4xl">M</span>
           </div>
         ) : (
           <img 
             src="/logo.png" 
-            alt="MAMAS Official Logo" 
+            alt="Matuumu Alumni Logo" 
             className="w-full h-full object-contain"
             referrerPolicy="no-referrer"
             onError={() => setHasError(true)}

@@ -34,7 +34,8 @@ import {
   Clock, 
   Filter, 
   Sparkles,
-  Inbox
+  Inbox,
+  Users
 } from 'lucide-react';
 
 export default function Help() {
@@ -244,111 +245,116 @@ export default function Help() {
   };
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto pb-28 font-sans animate-in fade-in duration-300">
+    <div className="max-w-4xl mx-auto w-full pb-20 font-sans animate-in fade-in duration-300">
       
-      {/* Header Banner */}
-      <div className="bg-gradient-to-r from-[#07132c] via-[#0f2756] to-[#1e3a8a] rounded-3xl p-6 sm:p-8 text-white shadow-xl border border-blue-900/40 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-2xl pointer-events-none"></div>
-        <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-          <div>
-            <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-blue-200 border border-white/15 mb-3 uppercase tracking-wider">
-              <LifeBuoy className="w-3.5 h-3.5" /> Matuumu S.S. Alumni Help Desk
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
-              How can we help you today?
+      {/* STICKY TOP TITLE HEADER */}
+      <div className="sticky top-0 z-30 bg-mamas-bg/95 backdrop-blur-md px-4 sm:px-6 py-3 border-b border-slate-200/60 dark:border-slate-800/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <LifeBuoy className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+              Help & Support Center
             </h1>
-            <p className="text-blue-100/80 text-xs sm:text-sm mt-1 max-w-xl leading-relaxed">
-              Find answers to common questions about welfare assistance, weekly contributions, school campaigns, or send a direct message to the Executive Committee.
-            </p>
           </div>
-
-          {/* Quick Direct Contacts */}
-          <div className="flex flex-col sm:flex-row gap-2.5 w-full sm:w-auto shrink-0">
-            {supportPhone && (
-              <a
-                href={`tel:${supportPhone}`}
-                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-bold text-xs transition-all shadow-md shadow-emerald-950/20 cursor-pointer"
-              >
-                <PhoneCall className="w-4 h-4" />
-                <span>Call Executive</span>
-              </a>
-            )}
-            {supportWhatsApp && (
-              <a
-                href={`https://wa.me/${supportWhatsApp.replace(/[^0-9]/g, '')}?text=Hello%20MAMAS%20Executive,%20I%20have%20an%20inquiry%20regarding%20Matuumu%20Alumni%20Association`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-teal-600 hover:bg-teal-500 text-white rounded-2xl font-bold text-xs transition-all shadow-md shadow-teal-950/20 cursor-pointer"
-              >
-                <MessageSquare className="w-4 h-4" />
-                <span>WhatsApp Chat</span>
-              </a>
-            )}
-            {supportEmail && (
-              <a
-                href={`mailto:${supportEmail}?subject=MAMAS%20Executive%20Inquiry`}
-                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-bold text-xs transition-all shadow-md shadow-blue-950/20 cursor-pointer"
-              >
-                <Mail className="w-4 h-4" />
-                <span>Email Support</span>
-              </a>
-            )}
-            {whatsappGroupLink && (
-              <a
-                href={whatsappGroupLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-700 hover:bg-emerald-600 text-white rounded-2xl font-bold text-xs transition-all shadow-md cursor-pointer"
-              >
-                <MessageSquare className="w-4 h-4" />
-                <span>Join Alumni Group</span>
-              </a>
-            )}
-          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            FAQs, knowledge base, and direct Executive Committee support
+          </p>
         </div>
 
-        {/* Tab Selector */}
-        <div className="mt-8 flex flex-wrap gap-2 pt-4 border-t border-white/10">
-          <button
-            onClick={() => setActiveTab('faq')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
-              activeTab === 'faq' ? 'bg-white text-blue-900 shadow-md font-extrabold' : 'bg-white/10 hover:bg-white/20 text-white'
-            }`}
-          >
-            <BookOpen className="w-4 h-4" /> FAQs & Knowledge Base
-          </button>
-
-          <button
-            onClick={() => setActiveTab('contact')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
-              activeTab === 'contact' ? 'bg-white text-blue-900 shadow-md font-extrabold' : 'bg-white/10 hover:bg-white/20 text-white'
-            }`}
-          >
-            <Send className="w-4 h-4" /> Contact Support Ticket
-          </button>
-
-          {isAdmin && (
-            <>
-              <button
-                onClick={() => setActiveTab('admin-articles')}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
-                  activeTab === 'admin-articles' ? 'bg-white text-blue-900 shadow-md font-extrabold' : 'bg-white/10 hover:bg-white/20 text-blue-200'
-                }`}
-              >
-                <Edit3 className="w-4 h-4" /> Manage Articles
-              </button>
-
-              <button
-                onClick={() => setActiveTab('admin-tickets')}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
-                  activeTab === 'admin-tickets' ? 'bg-white text-blue-900 shadow-md font-extrabold' : 'bg-white/10 hover:bg-white/20 text-blue-200'
-                }`}
-              >
-                <Inbox className="w-4 h-4" /> Support Tickets ({tickets.filter(t => t.status === 'open').length})
-              </button>
-            </>
+        {/* Quick Direct Contact Buttons */}
+        <div className="flex items-center gap-1.5 flex-wrap shrink-0">
+          {supportPhone && (
+            <a
+              href={`tel:${supportPhone}`}
+              className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-full font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer border border-slate-200 dark:border-slate-700"
+              title="Call Executive"
+            >
+              <PhoneCall className="w-3.5 h-3.5 text-blue-600" />
+              <span className="hidden sm:inline">Call</span>
+            </a>
+          )}
+          {supportWhatsApp && (
+            <a
+              href={`https://wa.me/${supportWhatsApp.replace(/[^0-9]/g, '')}?text=Hello%20MAMAS%20Executive,%20I%20have%20an%20inquiry%20regarding%20Matuumu%20Alumni%20Association`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+              title="WhatsApp Chat"
+            >
+              <MessageSquare className="w-3.5 h-3.5" />
+              <span>WhatsApp</span>
+            </a>
+          )}
+          {supportEmail && (
+            <a
+              href={`mailto:${supportEmail}?subject=MAMAS%20Executive%20Inquiry`}
+              className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-full font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer border border-slate-200 dark:border-slate-700"
+              title="Email Support"
+            >
+              <Mail className="w-3.5 h-3.5 text-blue-600" />
+              <span className="hidden sm:inline">Email</span>
+            </a>
+          )}
+          {whatsappGroupLink && (
+            <a
+              href={whatsappGroupLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3 py-1.5 bg-teal-600 hover:bg-teal-500 text-white rounded-full font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
+              title="Join Alumni Group"
+            >
+              <Users className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Group</span>
+            </a>
           )}
         </div>
+      </div>
+
+      {/* STICKY TAB SELECTOR */}
+      <div className="bg-white dark:bg-[#0c1731] px-4 sm:px-6 py-2.5 border-b border-slate-200/60 dark:border-slate-800/60 flex items-center gap-2 overflow-x-auto no-scrollbar mb-4">
+        <button
+          onClick={() => setActiveTab('faq')}
+          className={`px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
+            activeTab === 'faq' ? 'bg-blue-600 text-white shadow-xs font-extrabold' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+          }`}
+        >
+          <BookOpen className="w-3.5 h-3.5" />
+          <span>FAQs & Knowledge Base</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('contact')}
+          className={`px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
+            activeTab === 'contact' ? 'bg-blue-600 text-white shadow-xs font-extrabold' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+          }`}
+        >
+          <Send className="w-3.5 h-3.5" />
+          <span>Send Support Ticket</span>
+        </button>
+
+        {isAdmin && (
+          <>
+            <button
+              onClick={() => setActiveTab('admin-articles')}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
+                activeTab === 'admin-articles' ? 'bg-blue-600 text-white shadow-xs font-extrabold' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+              }`}
+            >
+              <Edit3 className="w-3.5 h-3.5" />
+              <span>Manage Articles</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('admin-tickets')}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
+                activeTab === 'admin-tickets' ? 'bg-blue-600 text-white shadow-xs font-extrabold' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+              }`}
+            >
+              <Inbox className="w-3.5 h-3.5" />
+              <span>Support Tickets ({tickets.filter(t => t.status === 'open').length})</span>
+            </button>
+          </>
+        )}
       </div>
 
       {/* TAB 1: FAQ & KNOWLEDGE BASE */}
@@ -468,7 +474,7 @@ export default function Help() {
 
       {/* TAB 2: CONTACT SUPPORT TICKET */}
       {activeTab === 'contact' && (
-        <div className="bg-white dark:bg-[#0c1731] border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xs max-w-3xl mx-auto space-y-6">
+        <div className="bg-white dark:bg-[#0c1731] border-b border-slate-200/60 dark:border-slate-800/60 px-4 sm:px-6 py-6 space-y-6">
           <div>
             <h2 className="text-xl font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
               <Send className="w-5 h-5 text-blue-600 dark:text-blue-400" /> Contact Executive Support
