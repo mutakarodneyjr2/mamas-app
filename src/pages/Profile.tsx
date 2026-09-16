@@ -275,31 +275,8 @@ export default function Profile() {
   if (!userProfile) return null;
 
   return (
-    <div className="max-w-2xl mx-auto w-full pb-20 animate-in fade-in duration-300">
+    <div className="max-w-2xl mx-auto w-full pb-20 px-4 sm:px-6 pt-4 animate-in fade-in duration-300">
       
-      {/* STICKY TOP PAGE TITLE HEADER */}
-      <div className="sticky top-0 z-30 bg-mamas-bg/95 backdrop-blur-md px-4 sm:px-6 py-3.5 border-b border-slate-200/60 dark:border-slate-800/60 mb-5 flex items-center justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <User className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-            <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-              Member Profile
-            </h1>
-          </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Personal information & directory privacy preferences
-          </p>
-        </div>
-
-        <button
-          onClick={() => { setSheetTab('menu'); setIsSheetOpen(true); }}
-          className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white px-3.5 py-2 rounded-2xl text-xs font-bold shadow-xs shadow-blue-500/25 transition-all cursor-pointer shrink-0"
-        >
-          <Settings className="w-3.5 h-3.5" />
-          <span>Settings</span>
-        </button>
-      </div>
-
       {/* SUCCESS / ERROR ALERTS */}
       {successMsg && (
         <div className="mb-4 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-emerald-800 dark:text-emerald-300 p-3.5 rounded-2xl text-xs font-bold flex items-center justify-between">
@@ -334,20 +311,20 @@ export default function Profile() {
         </div>
       )}
 
-      {/* COMPACT PROFILE HERO */}
+      {/* COMPACT PROFILE HERO - Serves as the page header directly below the system top toolbar */}
       <div className="bg-gradient-to-r from-[#07132c] via-[#0f2756] to-[#1e3a8a] rounded-3xl p-5 sm:p-6 text-white shadow-xl border border-blue-900/40 mb-6 relative overflow-hidden">
         <div className="flex items-center justify-between mb-4">
           <span className="bg-white/10 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest text-blue-200 border border-white/15">
             {userProfile?.role?.replace('_', ' ') || 'Member'}
           </span>
 
-          {/* Right Sheet Trigger Button */}
+          {/* Single, Unified Settings & Privacy Button */}
           <button
             onClick={() => { setSheetTab('menu'); setIsSheetOpen(true); }}
-            className="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 active:scale-95 text-white px-3 py-1.5 rounded-full text-xs font-bold border border-white/20 transition-all cursor-pointer"
+            className="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 active:scale-95 text-white px-3.5 py-1.5 rounded-full text-xs font-bold border border-white/20 transition-all cursor-pointer"
           >
             <Settings className="w-3.5 h-3.5" />
-            <span>Settings & Privacy</span>
+            <span>Profile Settings</span>
           </button>
         </div>
 

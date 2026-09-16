@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { collection, query, where, onSnapshot, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
-import { formatUGX } from '../lib/utils';
+import { formatUGX, safeGetDate } from '../lib/utils';
 import { 
   Users, 
   CheckCircle2, 
@@ -674,7 +674,7 @@ export default function AdminDashboard() {
                     const ts = (log as any).createdAt || (log as any).timestamp;
                     if (!ts) return '';
                     try {
-                      const dateObj = typeof ts === 'number' ? new Date(ts) : (ts?.toDate ? ts.toDate() : new Date(ts));
+                      const dateObj = safeGetDate(ts);
                       return isNaN(dateObj.getTime()) ? '' : dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                     } catch {
                       return '';

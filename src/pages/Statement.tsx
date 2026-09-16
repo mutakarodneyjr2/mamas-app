@@ -7,7 +7,7 @@ import {
   FileText, Download, Heart, Target, RefreshCw, 
   HeartHandshake, ShieldCheck
 } from 'lucide-react';
-import { formatUGX } from '../lib/utils';
+import { formatUGX, safeGetDate, safeFormatDate } from '../lib/utils';
 import { StatusBadge } from '../components/StatusBadge';
 import { EmptyState } from '../components/EmptyState';
 
@@ -30,10 +30,10 @@ export default function Statement() {
       const snap = await getDocs(q);
       const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
 
-      // CRIT-03: Sort by timestamp consistently
+      // Sort by timestamp consistently using safeGetDate helper
       list.sort((a, b) => {
-        const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : a.timestamp?.toMillis ? a.timestamp.toMillis() : (typeof a.createdAt === 'number' ? a.createdAt : (typeof a.timestamp === 'number' ? a.timestamp : 0));
-        const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : b.timestamp?.toMillis ? b.timestamp.toMillis() : (typeof b.createdAt === 'number' ? b.createdAt : (typeof b.timestamp === 'number' ? b.timestamp : 0));
+        const timeA = safeGetDate(a.createdAt || a.timestamp || a.paidAt || 0).getTime();
+        const timeB = safeGetDate(b.createdAt || b.timestamp || b.paidAt || 0).getTime();
         return timeB - timeA;
       });
 
@@ -55,7 +55,7 @@ export default function Statement() {
     setRecheckMessage(null);
     try {
       const idToken = await currentUser.getIdToken();
-      const res = await fetch('/api/relworx/reconcile-pending', {
+      const res = await fetch('/api/relworx/reconcile-contribution', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -67,7 +67,7 @@ export default function Statement() {
       if (res.ok && data.success) {
         setRecheckMessage({
           id: contribId,
-          text: `Status updated: ${data.outcome || 'Reconciliation checked.'}`,
+          text: `Status updated: ${data.outcome || data.status || 'Reconciliation checked.'}`,
           success: true
         });
         await fetchStatement();
@@ -118,10 +118,7 @@ export default function Statement() {
   const exportCSV = () => {
     const headers = ['Date', 'Transaction ID', 'Purpose / Type', 'Amount (UGX)', 'Status', 'Phone / Network'];
     const rows = filteredContributions.map((c: any) => {
-      let dateStr = 'N/A';
-      if (c.createdAt?.toDate) dateStr = c.createdAt.toDate().toLocaleDateString();
-      else if (c.timestamp?.toDate) dateStr = c.timestamp.toDate().toLocaleDateString();
-      else if (typeof c.createdAt === 'number') dateStr = new Date(c.createdAt).toLocaleDateString();
+      const dateStr = safeFormatDate(c.createdAt || c.timestamp || c.paidAt || 0);
 
       const purposeStr = c.type === 'welfare_support' ? 'Solidarity Welfare Support' : c.type === 'school_support' ? 'School Campaign' : 'Welfare Relief Pool';
       return [
@@ -288,14 +285,7 @@ export default function Statement() {
               const isSolidarity = item.type === 'welfare_support' || item.purpose === 'welfare_support';
               const isCampaign = item.type === 'school_support' || item.purpose === 'campaign';
 
-              let dateStr = 'Recent';
-              if (item.createdAt?.toDate) {
-                dateStr = item.createdAt.toDate().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-              } else if (item.timestamp?.toDate) {
-                dateStr = item.timestamp.toDate().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-              } else if (typeof item.createdAt === 'number') {
-                dateStr = new Date(item.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-              }
+              const dateStr = safeFormatDate(item.createdAt || item.timestamp || item.paidAt, { day: 'numeric', month: 'short', year: 'numeric' }) || 'Recent';
 
               return (
                 <div 

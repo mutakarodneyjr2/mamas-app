@@ -242,12 +242,17 @@ export const verifyContribution = async (contributionId: string, adminId: string
       verifiedAt: Date.now()
     });
 
-    // Update user totals based on type
-    const newTotalContributed = contribution.type === 'welfare' 
-      ? (userData.totalContributed || 0) + contribution.amount 
+    // Update user totals based on type (using aligned accounting rules)
+    const contrib = contribution as any;
+    const isWelfare = contrib.purpose === 'welfare' || contrib.type === 'welfare';
+    const isCampaign = contrib.purpose === 'campaign' || contrib.type === 'school_support' || contrib.type === 'campaign';
+    const isWelfareSupport = contrib.purpose === 'welfare_support' || contrib.type === 'welfare_support';
+
+    const newTotalContributed = (isWelfare || isWelfareSupport || !isCampaign)
+      ? (userData.totalContributed || 0) + contribution.amount
       : (userData.totalContributed || 0);
 
-    const newCampaignContributed = contribution.type === 'school_support'
+    const newCampaignContributed = isCampaign
       ? (userData.totalCampaignContributed || 0) + contribution.amount
       : (userData.totalCampaignContributed || 0);
 

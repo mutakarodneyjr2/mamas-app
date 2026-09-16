@@ -267,7 +267,7 @@ export async function handleDisbursementWebhook(payload: any) {
     const expenseDoc = await expenseRef.get();
     if (expenseDoc.exists) {
       const expenseData = expenseDoc.data();
-      if (expenseData?.status === 'paid' || expenseData?.relworxDisbursementId === disbursementId) {
+      if (expenseData?.status === 'paid' || expenseData?.disbursementStatus === 'paid') {
         console.log(`[Relworx] Expense ${reference} already paid. Skipping duplicate.`);
         return { success: true, skipped: true };
       }
@@ -304,7 +304,7 @@ export async function handleDisbursementWebhook(payload: any) {
     const welfareDoc = await welfareRef.get();
     if (welfareDoc.exists) {
       const welfareData = welfareDoc.data();
-      if (welfareData?.status === 'paid' || welfareData?.relworxDisbursementId === disbursementId) {
+      if (welfareData?.status === 'paid' || welfareData?.disbursementStatus === 'paid') {
         console.log(`[Relworx] Welfare request ${reference} already paid. Skipping duplicate.`);
         return { success: true, skipped: true };
       }
@@ -599,7 +599,12 @@ app.post(['/api/relworx/initiate-disbursement', '/relworx/initiate-disbursement'
   }
 });
 
-app.post(['/api/relworx/reconcile-contribution', '/relworx/reconcile-contribution'], requireFirebaseAdmin, async (req, res) => {
+app.post([
+  '/api/relworx/reconcile-contribution', 
+  '/relworx/reconcile-contribution',
+  '/api/relworx/reconcile-pending',
+  '/relworx/reconcile-pending'
+], requireFirebaseAdmin, async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) return res.status(401).json({ success: false, message: 'Unauthorized' });
@@ -701,6 +706,9 @@ app.post(['/api/relworx/reconcile-contribution', '/relworx/reconcile-contributio
 
 app.all('*', (req, res) => {
   console.log(`[Fallback] ${req.method} ${req.path}`);
+  if (req.path.startsWith('/api/')) {
+    return res.status(404).json({ success: false, message: 'API route not found' });
+  }
   return res.status(200).json({ success: true, status: 'success', message: 'API active.', path: req.path });
 });
 

@@ -54,3 +54,55 @@ export function exportToCSV(filename: string, rows: Record<string, any>[]) {
   document.body.removeChild(link);
 }
 
+/**
+ * Safely converts any Firestore timestamp representation (Timestamp object, number milliseconds, string, Date)
+ * into a standard JS Date object.
+ */
+export function safeGetDate(dateValue: any): Date {
+  if (!dateValue) return new Date();
+  
+  // 1. If it has a toDate method (Firestore Timestamp)
+  if (typeof dateValue.toDate === 'function') {
+    return dateValue.toDate();
+  }
+  
+  // 2. If it has seconds / nanoseconds properties (raw serialized Timestamp)
+  if (typeof dateValue.seconds === 'number') {
+    return new Date(dateValue.seconds * 1000 + Math.floor((dateValue.nanoseconds || 0) / 1000000));
+  }
+  
+  // 3. If it is already a Date object
+  if (dateValue instanceof Date) {
+    return dateValue;
+  }
+  
+  // 4. If it is a number (milliseconds)
+  if (typeof dateValue === 'number') {
+    return new Date(dateValue);
+  }
+  
+  // 5. If it is a string (ISO, timestamp string, etc.)
+  if (typeof dateValue === 'string') {
+    if (/^\d+$/.test(dateValue)) {
+      return new Date(Number(dateValue));
+    }
+    const d = new Date(dateValue);
+    if (!isNaN(d.getTime())) {
+      return d;
+    }
+  }
+  
+  return new Date();
+}
+
+/**
+ * Safely formats any timestamp value into local date string.
+ */
+export function safeFormatDate(dateValue: any, options?: Intl.DateTimeFormatOptions): string {
+  if (!dateValue) return '';
+  const dateObj = safeGetDate(dateValue);
+  const defaultOptions: Intl.DateTimeFormatOptions = options || { day: 'numeric', month: 'short', year: 'numeric' };
+  return dateObj.toLocaleDateString('en-GB', defaultOptions);
+}
+
+
