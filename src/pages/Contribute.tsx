@@ -316,6 +316,21 @@ export default function Contribute() {
   return (
     <div className="max-w-2xl mx-auto w-full pb-12 animate-in fade-in duration-300">
       
+      {/* STICKY TOP PAGE TITLE HEADER */}
+      <div className="sticky top-16 z-30 bg-mamas-bg/95 backdrop-blur-md py-3.5 border-b border-slate-200/60 dark:border-slate-800/60 mb-5 flex items-center justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <Heart className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+              Pay Dues & Support
+            </h1>
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Welfare dues, school campaigns and solidarity relief contributions
+          </p>
+        </div>
+      </div>
+
       {/* HEADER BANNER */}
       <div className="bg-gradient-to-r from-[#07132c] via-[#0f2756] to-[#1e3a8a] rounded-3xl p-6 sm:p-8 text-white shadow-xl border border-blue-900/40 mb-8 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-2xl pointer-events-none" />

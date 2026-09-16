@@ -63,7 +63,7 @@ export default function Welfare() {
     <div className="max-w-4xl mx-auto w-full animate-in fade-in duration-300 pb-20">
       
       {/* STICKY NON-SCROLLING PAGE TITLE HEADER */}
-      <div className="sticky top-16 z-20 bg-mamas-bg/95 backdrop-blur-md py-3.5 border-b border-slate-200/60 dark:border-slate-800/60 mb-5 flex items-center justify-between gap-3">
+      <div className="sticky top-16 z-30 bg-mamas-bg/95 backdrop-blur-md py-3.5 border-b border-slate-200/60 dark:border-slate-800/60 mb-5 flex items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
             <Heart className="w-5 h-5 text-rose-500" fill="currentColor" />

@@ -94,8 +94,8 @@ function Layout() {
       <LeftDrawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
 
       {/* Sticky Top Header */}
-      <header className="bg-white/90 dark:bg-[#0c1731]/90 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800/80 sticky top-0 z-40 shadow-xs transition-colors">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <header className="bg-white/95 dark:bg-[#0c1731]/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800/80 sticky top-0 z-50 shadow-xs transition-colors h-16">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-full flex items-center justify-between">
           
           {/* Left Side: Drawer Toggle + User Profile Photo / Name */}
           <div className="flex items-center gap-2 sm:gap-3.5 min-w-0">
@@ -173,7 +173,7 @@ function Layout() {
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 w-full max-w-7xl mx-auto p-3 sm:px-5 lg:px-8 pb-32 md:pb-8 flex flex-col gap-6 overflow-x-hidden text-slate-900 dark:text-slate-100">
+      <main className="flex-1 w-full max-w-7xl mx-auto p-3 sm:px-5 lg:px-8 pb-32 md:pb-8 flex flex-col gap-6 text-slate-900 dark:text-slate-100">
         <Outlet />
       </main>
 

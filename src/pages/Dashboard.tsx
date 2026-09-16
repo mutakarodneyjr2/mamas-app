@@ -145,7 +145,7 @@ export default function Dashboard() {
     <div className="max-w-2xl mx-auto w-full pb-20 animate-in fade-in duration-300">
       
       {/* COMPACT GREETING LINE & STICKY FEED CONTROLS */}
-      <div className="sticky top-16 z-20 bg-mamas-bg/95 backdrop-blur-md pt-3 pb-3 border-b border-slate-200/60 dark:border-slate-800/60 flex flex-col gap-2.5">
+      <div className="sticky top-16 z-30 bg-mamas-bg/95 backdrop-blur-md pt-3 pb-3 border-b border-slate-200/60 dark:border-slate-800/60 flex flex-col gap-2.5">
         <div className="flex items-center justify-between">
           <div className="min-w-0">
             <h1 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white tracking-tight truncate">

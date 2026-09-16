@@ -277,6 +277,29 @@ export default function Profile() {
   return (
     <div className="max-w-2xl mx-auto w-full pb-20 animate-in fade-in duration-300">
       
+      {/* STICKY TOP PAGE TITLE HEADER */}
+      <div className="sticky top-16 z-30 bg-mamas-bg/95 backdrop-blur-md py-3.5 border-b border-slate-200/60 dark:border-slate-800/60 mb-5 flex items-center justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <User className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+              Member Profile
+            </h1>
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Personal information & directory privacy preferences
+          </p>
+        </div>
+
+        <button
+          onClick={() => { setSheetTab('menu'); setIsSheetOpen(true); }}
+          className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white px-3.5 py-2 rounded-2xl text-xs font-bold shadow-xs shadow-blue-500/25 transition-all cursor-pointer shrink-0"
+        >
+          <Settings className="w-3.5 h-3.5" />
+          <span>Settings</span>
+        </button>
+      </div>
+
       {/* SUCCESS / ERROR ALERTS */}
       {successMsg && (
         <div className="mb-4 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-emerald-800 dark:text-emerald-300 p-3.5 rounded-2xl text-xs font-bold flex items-center justify-between">
