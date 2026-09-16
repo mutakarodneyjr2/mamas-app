@@ -1,204 +1,393 @@
 import React, { useState, useEffect } from 'react';
-import { Download, FileText, Wallet, Heart, Target, Sparkles, RefreshCw } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
-import { reconcileContribution } from '../lib/services';
+import { Contribution } from '../types';
+import { 
+  FileText, Download, Heart, Target, RefreshCw, 
+  HeartHandshake, ShieldCheck
+} from 'lucide-react';
+import { formatUGX } from '../lib/utils';
 import { StatusBadge } from '../components/StatusBadge';
 import { EmptyState } from '../components/EmptyState';
-import { formatUGX } from '../lib/utils';
 
 export default function Statement() {
-  const { currentUser } = useAuth();
-  const [transactions, setTransactions] = useState<any[]>([]);
-  const [filter, setFilter] = useState<'all' | 'welfare' | 'campaign' | 'welfare_support'>('all');
+  const { currentUser, userProfile } = useAuth();
+  const [contributions, setContributions] = useState<Contribution[]>([]);
   const [loading, setLoading] = useState(true);
-  const [reconcilingId, setReconcilingId] = useState<string | null>(null);
+  const [filter, setFilter] = useState<'all' | 'welfare' | 'school_support' | 'welfare_support'>('all');
+  const [recheckingId, setRecheckingId] = useState<string | null>(null);
+  const [recheckMessage, setRecheckMessage] = useState<{ id: string; text: string; success: boolean } | null>(null);
 
-  const fetchTransactions = async () => {
+  const fetchStatement = async () => {
     if (!currentUser) return;
+    setLoading(true);
     try {
       const q = query(
         collection(db, 'contributions'),
         where('userId', '==', currentUser.uid)
       );
       const snap = await getDocs(q);
-      const list = snap.docs.map(doc => ({ id: doc.id, ...(doc.data() as any) }));
+      const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+
+      // CRIT-03: Sort by timestamp consistently
       list.sort((a, b) => {
-        const timeA = a.createdAt || a.timestamp?.toMillis?.() || 0;
-        const timeB = b.createdAt || b.timestamp?.toMillis?.() || 0;
+        const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : a.timestamp?.toMillis ? a.timestamp.toMillis() : (typeof a.createdAt === 'number' ? a.createdAt : (typeof a.timestamp === 'number' ? a.timestamp : 0));
+        const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : b.timestamp?.toMillis ? b.timestamp.toMillis() : (typeof b.createdAt === 'number' ? b.createdAt : (typeof b.timestamp === 'number' ? b.timestamp : 0));
         return timeB - timeA;
       });
-      setTransactions(list);
+
+      setContributions(list as Contribution[]);
     } catch (err) {
-      console.error("Error fetching transactions", err);
+      console.error("Error fetching statement:", err);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchTransactions();
+    fetchStatement();
   }, [currentUser]);
 
-  const handleRecheck = async (id: string) => {
-    setReconcilingId(id);
+  const handleRecheckStatus = async (contribId: string) => {
+    if (!currentUser) return;
+    setRecheckingId(contribId);
+    setRecheckMessage(null);
     try {
-      await reconcileContribution(id);
-      await fetchTransactions();
+      const idToken = await currentUser.getIdToken();
+      const res = await fetch('/api/relworx/reconcile-pending', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
+        body: JSON.stringify({ contributionId: contribId })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setRecheckMessage({
+          id: contribId,
+          text: `Status updated: ${data.outcome || 'Reconciliation checked.'}`,
+          success: true
+        });
+        await fetchStatement();
+      } else {
+        setRecheckMessage({
+          id: contribId,
+          text: data.message || 'Could not verify status with provider yet.',
+          success: false
+        });
+      }
     } catch (err: any) {
       console.error("Recheck error:", err);
+      setRecheckMessage({
+        id: contribId,
+        text: 'Network check failed. Try again shortly.',
+        success: false
+      });
     } finally {
-      setReconcilingId(null);
+      setRecheckingId(null);
     }
   };
 
-  const filteredData = transactions.filter(t => {
+  const verifiedItems = contributions.filter(c => c.status === 'verified');
+
+  // Breakdown across 3 categories
+  const welfareTotal = verifiedItems
+    .filter(c => c.type === 'welfare' || c.purpose === 'welfare')
+    .reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
+
+  const campaignTotal = verifiedItems
+    .filter(c => c.type === 'school_support' || c.purpose === 'campaign')
+    .reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
+
+  const solidarityTotal = verifiedItems
+    .filter(c => c.type === 'welfare_support' || c.purpose === 'welfare_support')
+    .reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
+
+  const totalVerified = welfareTotal + campaignTotal + solidarityTotal;
+
+  const filteredContributions = contributions.filter(item => {
     if (filter === 'all') return true;
-    if (filter === 'welfare') return t.purpose === 'welfare' || t.type === 'welfare';
-    if (filter === 'campaign') return t.purpose === 'campaign' || t.type === 'school_support';
-    if (filter === 'welfare_support') return t.purpose === 'welfare_support' || t.type === 'welfare_support';
+    if (filter === 'welfare') return item.type === 'welfare' || item.purpose === 'welfare';
+    if (filter === 'school_support') return item.type === 'school_support' || item.purpose === 'campaign';
+    if (filter === 'welfare_support') return item.type === 'welfare_support' || item.purpose === 'welfare_support';
     return true;
   });
-  
-  const isApproved = (st: string) => st === 'verified' || st === 'successful' || st === 'completed';
-  const totalWelfare = transactions.filter(t => (t.purpose === 'welfare' || t.type === 'welfare') && isApproved(t.status)).reduce((acc, curr) => acc + (curr.amount || 0), 0);
-  const totalCampaigns = transactions.filter(t => (t.purpose === 'campaign' || t.type === 'school_support') && isApproved(t.status)).reduce((acc, curr) => acc + (curr.amount || 0), 0);
-  const totalWelfareSupport = transactions.filter(t => (t.purpose === 'welfare_support' || t.type === 'welfare_support') && isApproved(t.status)).reduce((acc, curr) => acc + (curr.amount || 0), 0);
-  const totalAll = totalWelfare + totalCampaigns + totalWelfareSupport;
 
-  const handleDownload = () => {
-    const csvRows = ['Date,Purpose,Amount,Status,Reference'];
-    filteredData.forEach(t => {
-      const timeVal = t.createdAt || t.timestamp?.toMillis?.();
-      const date = timeVal ? new Date(timeVal).toLocaleDateString() : 'N/A';
-      csvRows.push(`${date},${t.purpose || t.type},${t.amount},${t.status},${t.transactionReference || 'N/A'}`);
+  const exportCSV = () => {
+    const headers = ['Date', 'Transaction ID', 'Purpose / Type', 'Amount (UGX)', 'Status', 'Phone / Network'];
+    const rows = filteredContributions.map((c: any) => {
+      let dateStr = 'N/A';
+      if (c.createdAt?.toDate) dateStr = c.createdAt.toDate().toLocaleDateString();
+      else if (c.timestamp?.toDate) dateStr = c.timestamp.toDate().toLocaleDateString();
+      else if (typeof c.createdAt === 'number') dateStr = new Date(c.createdAt).toLocaleDateString();
+
+      const purposeStr = c.type === 'welfare_support' ? 'Solidarity Welfare Support' : c.type === 'school_support' ? 'School Campaign' : 'Welfare Relief Pool';
+      return [
+        `"${dateStr}"`,
+        `"${c.id}"`,
+        `"${purposeStr}"`,
+        `"${c.amount}"`,
+        `"${c.status}"`,
+        `"${c.phoneNumber || ''} (${c.network || ''})"`
+      ];
     });
-    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'mamas_statement.csv';
-    a.click();
-    window.URL.revokeObjectURL(url);
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `MAMAS_Statement_${userProfile?.fullName?.replace(/\s+/g, '_') || 'Member'}_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
-    <div className="max-w-4xl mx-auto w-full animate-in fade-in duration-300 pb-12">
+    <div className="max-w-4xl mx-auto w-full animate-in fade-in duration-300 pb-20">
       
-      {/* HEADER */}
-      <div className="flex items-center justify-between mb-6">
+      {/* STICKY TITLE HEADER */}
+      <div className="sticky top-16 z-20 bg-mamas-bg/95 backdrop-blur-md py-3.5 border-b border-slate-200/60 dark:border-slate-800/60 mb-5 flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">Financial Statement</h1>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">Your official contribution history and receipts</p>
+          <div className="flex items-center gap-2">
+            <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+              Financial Statement
+            </h1>
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Complete record of your verified contributions & support
+          </p>
         </div>
+
         <button 
-          onClick={handleDownload}
-          className="flex items-center gap-2 border border-slate-200/80 dark:border-slate-700 bg-white dark:bg-[#0c1731] text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/80 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold shadow-xs transition-all active:scale-95 cursor-pointer"
+          onClick={exportCSV}
+          disabled={filteredContributions.length === 0}
+          className="flex items-center gap-1.5 bg-white dark:bg-[#0c1731] hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 px-3.5 py-2 rounded-2xl font-bold text-xs border border-slate-200 dark:border-slate-700 shadow-xs transition-all disabled:opacity-50 cursor-pointer active:scale-95 shrink-0"
         >
           <Download className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-          <span className="hidden sm:inline">Download CSV</span>
+          <span className="hidden sm:inline">Export CSV</span>
+          <span className="sm:hidden">Export</span>
         </button>
       </div>
 
-      {/* SUMMARY CARD */}
-      <div className="bg-gradient-to-r from-[#07132c] via-[#0f2756] to-[#1e3a8a] rounded-3xl p-6 sm:p-8 mb-8 shadow-xl border border-blue-900/40 text-white relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-80 h-80 rounded-full bg-blue-500/10 blur-3xl pointer-events-none" />
-        
-        <p className="text-blue-200 text-xs font-bold mb-1 uppercase tracking-widest">Total Verified Contributions</p>
-        <h2 className="text-3xl sm:text-4xl font-extrabold mb-8 tracking-tight">{formatUGX(totalAll)}</h2>
-        
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="bg-white/10 backdrop-blur-xs rounded-2xl p-4 border border-white/15">
-            <div className="flex items-center gap-2 mb-1.5 text-blue-200">
-              <Heart className="w-4 h-4 text-rose-300" />
-              <span className="text-xs font-semibold uppercase tracking-wider">Welfare Relief Fund</span>
-            </div>
-            <p className="font-extrabold text-xl">{formatUGX(totalWelfare)}</p>
+      {/* COMPACT SUMMARY CARD (3 CATEGORIES IN ONE ROW) */}
+      <div className="bg-white dark:bg-[#0c1731] rounded-3xl p-5 shadow-xs border border-slate-200/80 dark:border-slate-800 mb-6 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
+          <div>
+            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500 block">
+              Total Verified Contributions
+            </span>
+            <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+              {formatUGX(totalVerified)}
+            </span>
           </div>
-          <div className="bg-white/10 backdrop-blur-xs rounded-2xl p-4 border border-white/15">
-            <div className="flex items-center gap-2 mb-1.5 text-blue-200">
-              <Target className="w-4 h-4 text-amber-300" />
-              <span className="text-xs font-semibold uppercase tracking-wider">School Campaigns</span>
-            </div>
-            <p className="font-extrabold text-xl">{formatUGX(totalCampaigns)}</p>
+
+          <div className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-800/80 w-fit">
+            <ShieldCheck className="w-3.5 h-3.5" />
+            <span>Audited & Immutable</span>
           </div>
-          <div className="bg-white/10 backdrop-blur-xs rounded-2xl p-4 border border-white/15 sm:col-span-1">
-            <div className="flex items-center gap-2 mb-1.5 text-blue-200">
-              <Sparkles className="w-4 h-4 text-purple-300" />
-              <span className="text-xs font-semibold uppercase tracking-wider">Solidarity Support</span>
+        </div>
+
+        {/* 3 Categories in 1 Compact Row */}
+        <div className="grid grid-cols-3 gap-2 sm:gap-3">
+          {/* Welfare Relief */}
+          <div className="bg-slate-50 dark:bg-slate-900/60 p-3 sm:p-3.5 rounded-2xl border border-slate-100 dark:border-slate-800 flex flex-col justify-between">
+            <div className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400 mb-1">
+              <Heart className="w-3.5 h-3.5 shrink-0" />
+              <span className="text-[10px] sm:text-xs font-bold truncate">Welfare Dues</span>
             </div>
-            <p className="font-extrabold text-xl">{formatUGX(totalWelfareSupport)}</p>
+            <span className="font-extrabold text-xs sm:text-base text-slate-900 dark:text-white">
+              {formatUGX(welfareTotal)}
+            </span>
+          </div>
+
+          {/* School Campaigns */}
+          <div className="bg-slate-50 dark:bg-slate-900/60 p-3 sm:p-3.5 rounded-2xl border border-slate-100 dark:border-slate-800 flex flex-col justify-between">
+            <div className="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400 mb-1">
+              <Target className="w-3.5 h-3.5 shrink-0" />
+              <span className="text-[10px] sm:text-xs font-bold truncate">Campaigns</span>
+            </div>
+            <span className="font-extrabold text-xs sm:text-base text-slate-900 dark:text-white">
+              {formatUGX(campaignTotal)}
+            </span>
+          </div>
+
+          {/* Solidarity Support */}
+          <div className="bg-slate-50 dark:bg-slate-900/60 p-3 sm:p-3.5 rounded-2xl border border-slate-100 dark:border-slate-800 flex flex-col justify-between">
+            <div className="flex items-center gap-1.5 text-rose-600 dark:text-rose-400 mb-1">
+              <HeartHandshake className="w-3.5 h-3.5 shrink-0" />
+              <span className="text-[10px] sm:text-xs font-bold truncate">Solidarity</span>
+            </div>
+            <span className="font-extrabold text-xs sm:text-base text-slate-900 dark:text-white">
+              {formatUGX(solidarityTotal)}
+            </span>
           </div>
         </div>
       </div>
 
-      {/* FILTER TABS */}
-      <div className="flex items-center gap-2 mb-6 overflow-x-auto no-scrollbar pb-1">
-        {(['all', 'welfare', 'campaign', 'welfare_support'] as const).map(f => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`px-5 py-2.5 rounded-2xl text-xs sm:text-sm font-bold tracking-wide capitalize transition-all whitespace-nowrap cursor-pointer ${
-              filter === f 
-                ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25' 
-                : 'bg-white dark:bg-[#0c1731] text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800'
-            }`}
-          >
-            {f === 'all' ? 'All Transactions' : f === 'campaign' ? 'School Campaigns' : f === 'welfare_support' ? 'Solidarity Support' : 'Welfare Fund'}
-          </button>
-        ))}
+      {/* FILTER BUTTONS */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-2 mb-4 no-scrollbar">
+        <button
+          onClick={() => setFilter('all')}
+          className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+            filter === 'all'
+              ? 'bg-blue-600 text-white shadow-xs'
+              : 'bg-white dark:bg-[#0c1731] text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+          }`}
+        >
+          All Activity ({contributions.length})
+        </button>
+        <button
+          onClick={() => setFilter('welfare')}
+          className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1 ${
+            filter === 'welfare'
+              ? 'bg-blue-600 text-white shadow-xs'
+              : 'bg-white dark:bg-[#0c1731] text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+          }`}
+        >
+          <Heart className="w-3 h-3 text-blue-500" />
+          <span>Welfare Dues</span>
+        </button>
+        <button
+          onClick={() => setFilter('school_support')}
+          className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1 ${
+            filter === 'school_support'
+              ? 'bg-blue-600 text-white shadow-xs'
+              : 'bg-white dark:bg-[#0c1731] text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+          }`}
+        >
+          <Target className="w-3 h-3 text-indigo-500" />
+          <span>School Campaigns</span>
+        </button>
+        <button
+          onClick={() => setFilter('welfare_support')}
+          className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1 ${
+            filter === 'welfare_support'
+              ? 'bg-blue-600 text-white shadow-xs'
+              : 'bg-white dark:bg-[#0c1731] text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+          }`}
+        >
+          <HeartHandshake className="w-3 h-3 text-rose-500" />
+          <span>Solidarity Support</span>
+        </button>
       </div>
 
       {/* TRANSACTION LIST */}
-      <div className="bg-white dark:bg-[#0c1731] rounded-3xl shadow-xs border border-slate-200/80 dark:border-slate-800 overflow-hidden">
+      <div>
         {loading ? (
-          <div className="flex justify-center p-12">
-            <div className="w-8 h-8 border-3 border-blue-200 dark:border-blue-900 border-t-blue-600 rounded-full animate-spin"></div>
+          <div className="flex justify-center py-16 bg-white dark:bg-[#0c1731] rounded-3xl border border-slate-200/80 dark:border-slate-800">
+            <div className="w-7 h-7 border-3 border-blue-200 dark:border-blue-900 border-t-blue-600 rounded-full animate-spin"></div>
           </div>
-        ) : filteredData.length > 0 ? (
-          <div className="divide-y divide-slate-100 dark:divide-slate-800/80">
-            {filteredData.map(t => {
-              const isWelfareSup = t.purpose === 'welfare_support' || t.type === 'welfare_support';
-              const isCamp = t.purpose === 'campaign' || t.type === 'school_support';
-              const timeVal = t.createdAt || t.timestamp?.toMillis?.();
-              const dateStr = timeVal ? new Date(timeVal).toLocaleDateString() : 'Pending Date';
+        ) : filteredContributions.length > 0 ? (
+          <div className="space-y-3">
+            {filteredContributions.map((item: any) => {
+              const isVerified = item.status === 'verified';
+              const isPending = item.status === 'pending';
+              const isSolidarity = item.type === 'welfare_support' || item.purpose === 'welfare_support';
+              const isCampaign = item.type === 'school_support' || item.purpose === 'campaign';
+
+              let dateStr = 'Recent';
+              if (item.createdAt?.toDate) {
+                dateStr = item.createdAt.toDate().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+              } else if (item.timestamp?.toDate) {
+                dateStr = item.timestamp.toDate().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+              } else if (typeof item.createdAt === 'number') {
+                dateStr = new Date(item.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+              }
 
               return (
-                <div key={t.id} className="p-5 sm:px-6 flex items-center justify-between hover:bg-slate-50/70 dark:hover:bg-slate-800/30 transition-colors">
-                  <div className="flex items-center gap-4">
-                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${
-                      isWelfareSup ? 'bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400' : isCamp ? 'bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400' : 'bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400'
+                <div 
+                  key={item.id} 
+                  className="bg-white dark:bg-[#0c1731] rounded-3xl p-4 sm:p-5 shadow-xs border border-slate-200/80 dark:border-slate-800 hover:border-blue-500/40 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                >
+                  <div className="flex items-start gap-3.5 min-w-0">
+                    <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${
+                      isSolidarity 
+                        ? 'bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900' 
+                        : isCampaign 
+                        ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-900' 
+                        : 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900'
                     }`}>
-                      {isWelfareSup ? (
-                        <Sparkles className="w-5 h-5 text-purple-500" />
-                      ) : isCamp ? (
-                        <Target className="w-5 h-5 text-amber-500" />
+                      {isSolidarity ? (
+                        <HeartHandshake className="w-5 h-5" />
+                      ) : isCampaign ? (
+                        <Target className="w-5 h-5" />
                       ) : (
-                        <Heart className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                        <Heart className="w-5 h-5" />
                       )}
                     </div>
-                    <div>
-                      <h3 className="font-bold text-slate-900 dark:text-white text-sm sm:text-base capitalize">
-                        {isWelfareSup ? 'Solidarity Support' : isCamp ? 'Campaign Support' : 'Welfare Contribution'}
-                      </h3>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                        {dateStr} • Ref: <span className="font-mono">{t.transactionReference || 'N/A'}</span>
-                      </p>
+
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className="font-bold text-slate-900 dark:text-white text-sm sm:text-base truncate">
+                          {isSolidarity 
+                            ? 'Solidarity Welfare Support' 
+                            : isCampaign 
+                            ? 'School Infrastructure Campaign' 
+                            : 'Welfare Relief Pool'}
+                        </span>
+                        <StatusBadge status={item.status} />
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400 dark:text-slate-500">
+                        <span>{dateStr}</span>
+                        {item.network && (
+                          <>
+                            <span className="opacity-40">•</span>
+                            <span>{item.network}</span>
+                          </>
+                        )}
+                        {item.phoneNumber && (
+                          <>
+                            <span className="opacity-40">•</span>
+                            <span>{item.phoneNumber}</span>
+                          </>
+                        )}
+                      </div>
+
+                      {/* Recheck outcome notification */}
+                      {recheckMessage && recheckMessage.id === item.id && (
+                        <div className={`mt-2 text-xs p-2 rounded-xl font-bold flex items-center gap-1.5 ${
+                          recheckMessage.success 
+                            ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' 
+                            : 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
+                        }`}>
+                          <RefreshCw className="w-3.5 h-3.5 shrink-0" />
+                          <span>{recheckMessage.text}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
-                  <div className="text-right flex flex-col items-end gap-1.5">
-                    <span className="font-extrabold text-slate-900 dark:text-white text-sm sm:text-base">{formatUGX(t.amount)}</span>
-                    <StatusBadge status={t.status} />
-                    {['pending', 'pending_payment', 'initiated'].includes(t.status) && (
+
+                  {/* Right side: Amount & Recheck action */}
+                  <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-0 border-slate-100 dark:border-slate-800">
+                    <div className="text-left sm:text-right">
+                      <span className={`block font-extrabold text-base sm:text-lg ${
+                        isVerified 
+                          ? 'text-slate-900 dark:text-white' 
+                          : isPending 
+                          ? 'text-amber-600 dark:text-amber-400' 
+                          : 'text-slate-400 line-through'
+                      }`}>
+                        {formatUGX(item.amount)}
+                      </span>
+                      <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
+                        {item.id.slice(0, 10)}...
+                      </span>
+                    </div>
+
+                    {isPending && (
                       <button
-                        disabled={reconcilingId === t.id}
-                        onClick={() => handleRecheck(t.id)}
-                        className="mt-1 flex items-center gap-1 bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 hover:bg-blue-100 px-2.5 py-1 rounded-xl text-[10px] font-bold transition-all disabled:opacity-50 cursor-pointer"
-                        title="Recheck payment confirmation status with mobile network"
+                        type="button"
+                        onClick={() => handleRecheckStatus(item.id)}
+                        disabled={recheckingId === item.id}
+                        className="px-3 py-1.5 bg-amber-50 dark:bg-amber-950/60 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+                        title="Recheck pending payment with Mobile Money provider"
                       >
-                        <RefreshCw className={`w-3 h-3 ${reconcilingId === t.id ? 'animate-spin' : ''}`} />
-                        {reconcilingId === t.id ? 'Checking...' : 'Recheck Status'}
+                        <RefreshCw className={`w-3.5 h-3.5 ${recheckingId === item.id ? 'animate-spin' : ''}`} />
+                        <span>{recheckingId === item.id ? 'Checking' : 'Recheck'}</span>
                       </button>
                     )}
                   </div>
@@ -207,11 +396,13 @@ export default function Statement() {
             })}
           </div>
         ) : (
-          <EmptyState 
-            icon={FileText} 
-            title="No Transactions" 
-            subtitle="You haven't made any contributions in this category yet."
-          />
+          <div className="bg-white dark:bg-[#0c1731] rounded-3xl shadow-xs border border-slate-200/80 dark:border-slate-800">
+            <EmptyState
+              icon={FileText}
+              title="No Transactions Found"
+              subtitle="When you make contributions through Mobile Money, your verified statement and timestamps will be visible here."
+            />
+          </div>
         )}
       </div>
     </div>
