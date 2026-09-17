@@ -43,12 +43,21 @@ const getDb = () => getFirestore();
 
 // ========== INLINE RELWORX FUNCTIONS (NO EXTERNAL IMPORTS) ==========
 
-export function verifyWebhookSignature(signature: string, payload: string, secret: string): boolean {
-  if (!signature || !payload || !secret) return false;
+export function verifyWebhookSignature(signatureHeader: string, payload: string, secretKey: string): boolean {
+  if (!signatureHeader || !secretKey) return false;
   try {
-    const expectedSignature = crypto.createHmac('sha256', secret).update(payload).digest('hex');
-    const sigBuf = Buffer.from(signature);
-    const expectedBuf = Buffer.from(expectedSignature);
+    let signatureToVerify = signatureHeader.trim();
+    if (signatureHeader.includes('v=')) {
+      const parts = signatureHeader.split(',');
+      const vPart = parts.find(p => p.trim().startsWith('v='));
+      if (vPart) {
+        signatureToVerify = vPart.trim().substring(2);
+      }
+    }
+
+    const expectedSignature = crypto.createHmac('sha256', secretKey).update(payload || '').digest('hex');
+    const sigBuf = Buffer.from(signatureToVerify.toLowerCase());
+    const expectedBuf = Buffer.from(expectedSignature.toLowerCase());
     if (sigBuf.length !== expectedBuf.length) return false;
     return crypto.timingSafeEqual(sigBuf, expectedBuf);
   } catch (error) {
@@ -351,6 +360,7 @@ export async function handleDisbursementWebhook(payload: any) {
 const app = express();
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json({ verify: (req: any, _res, buf) => { req.rawBody = buf; } }));
+app.use(express.raw({ type: '*/*', verify: (req: any, _res, buf) => { if (buf && buf.length) req.rawBody = buf; } }));
 
 app.get(['/api/health', '/health'], (req, res) => {
   res.json({ status: 'ok', timestamp: Date.now(), service: 'mamas-api' });
@@ -497,12 +507,17 @@ app.post(webhookPaths, async (req, res) => {
       return res.status(200).json({ success: true, status: 'success', message: 'Webhook endpoint active.' });
     }
 
-    const secret = process.env.RELWORX_WEBHOOK_SECRET;
+    const secret = process.env.RELWORX_WEBHOOK_KEY || process.env.RELWORX_WEBHOOK_SECRET;
     if (!secret) {
-      console.error('[Webhook] RELWORX_WEBHOOK_SECRET not configured. Rejecting request.');
+      console.error('[Webhook] RELWORX_WEBHOOK_KEY / RELWORX_WEBHOOK_SECRET not configured. Rejecting request.');
       return res.status(500).json({ success: false, message: 'Server configuration error' });
     }
-    const signature = (req.headers['x-signature'] || req.headers['signature']) as string;
+    const signature = (
+      req.headers['relworx-signature'] ||
+      req.headers['x-relworx-signature'] ||
+      req.headers['x-signature'] ||
+      req.headers['signature']
+    ) as string;
     if (!signature) {
       console.warn('[Webhook] Missing signature in request.');
       return res.status(401).json({ success: false, message: 'Missing signature' });
