@@ -118,7 +118,6 @@ export default function Statement() {
     const headers = ['Date', 'Transaction ID', 'Purpose / Type', 'Amount (UGX)', 'Status', 'Phone / Network'];
     const rows = filteredContributions.map((c: any) => {
       const dateStr = safeFormatDate(c.createdAt || c.timestamp || c.paidAt || 0);
-
       const purposeStr = c.type === 'welfare_support' ? 'Solidarity Welfare Support' : c.type === 'school_support' ? 'School Campaign' : 'Welfare Relief Pool';
       return [
         `"${dateStr}"`,
@@ -141,14 +140,14 @@ export default function Statement() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto w-full animate-in fade-in duration-300 pb-20">
+    <div className="w-full pb-20 animate-in fade-in duration-300">
       
-      {/* STICKY TITLE HEADER */}
-      <div className="sticky top-0 z-30 bg-mamas-bg/95 backdrop-blur-md px-4 sm:px-6 py-3.5 border-b border-slate-200/60 dark:border-slate-800/60 mb-5 flex items-center justify-between gap-3">
+      {/* PAGE HEADER ROW */}
+      <div className="px-4 sm:px-6 py-4 border-b border-slate-200/60 dark:border-slate-800/60 flex items-center justify-between gap-3 bg-white dark:bg-[#0c1731]">
         <div>
           <div className="flex items-center gap-2">
             <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-            <h1 className="text-xl sm:text-2xl font-semibold text-slate-900 dark:text-white tracking-tight">
+            <h1 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white tracking-tight">
               Financial Statement
             </h1>
           </div>
@@ -160,63 +159,59 @@ export default function Statement() {
         <button 
           onClick={exportCSV}
           disabled={filteredContributions.length === 0}
-          className="flex items-center gap-1.5 bg-white dark:bg-[#0c1731] hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 px-3 py-1.5 rounded-xl font-medium text-xs border border-slate-200 dark:border-slate-700 shadow-xs transition-all disabled:opacity-50 cursor-pointer active:scale-95 shrink-0"
+          className="flex items-center gap-1.5 bg-white dark:bg-[#0c1731] hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 px-3 py-1.5 rounded-xl font-semibold text-xs border border-slate-200 dark:border-slate-700 shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
         >
           <Download className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-          <span className="hidden sm:inline">Export CSV</span>
-          <span className="sm:hidden">Export</span>
+          <span>Export CSV</span>
         </button>
       </div>
 
-      {/* COMPACT SUMMARY HEADER */}
-      <div className="bg-white dark:bg-[#0c1731] rounded-2xl p-4 sm:p-5 border border-slate-200/80 dark:border-slate-800 mb-5 shadow-xs">
-        <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 pb-3.5 border-b border-slate-100 dark:border-slate-800">
-          <div>
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 block">
-              Total Verified Contributions
-            </span>
-            <span className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
-              {formatUGX(totalVerified)}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-1 text-[11px] text-emerald-700 dark:text-emerald-400 font-medium bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800/60 w-fit">
+      {/* COMPACT SUMMARY HEADER (Full-width bar) */}
+      <div className="bg-[#0a142c] text-white py-6 px-4 sm:px-6 md:px-8 border-b border-slate-800 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+        <div>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+            Total Verified Contributions
+          </span>
+          <span className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+            {formatUGX(totalVerified)}
+          </span>
+          <div className="flex items-center gap-1.5 text-[10px] text-emerald-400 font-semibold bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20 w-fit mt-2">
             <ShieldCheck className="w-3.5 h-3.5" />
             <span>Audited & Verified</span>
           </div>
         </div>
 
-        {/* 3 Categories in 1 Compact Row */}
-        <div className="grid grid-cols-3 gap-2 sm:gap-3 pt-3.5">
+        {/* 3 Categories in 1 Grid */}
+        <div className="grid grid-cols-3 gap-2.5 sm:gap-4 flex-1 md:max-w-xl">
           {/* Welfare Relief */}
-          <div className="bg-slate-50 dark:bg-slate-800/50 p-2.5 sm:p-3 rounded-xl border border-slate-100 dark:border-slate-800 flex flex-col justify-between">
-            <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300 mb-1">
-              <Heart className="w-3 h-3 text-blue-500 shrink-0" />
-              <span className="text-[10px] sm:text-xs font-medium truncate">Welfare Dues</span>
+          <div className="bg-slate-950/40 p-2.5 rounded-xl border border-slate-800/60">
+            <div className="flex items-center gap-1 text-slate-400 mb-1">
+              <Heart className="w-3 h-3 text-blue-400 shrink-0" />
+              <span className="text-[10px] font-medium truncate">Welfare</span>
             </div>
-            <span className="font-semibold text-xs sm:text-sm text-slate-900 dark:text-white">
+            <span className="font-bold text-xs sm:text-sm text-white">
               {formatUGX(welfareTotal)}
             </span>
           </div>
 
           {/* School Campaigns */}
-          <div className="bg-slate-50 dark:bg-slate-800/50 p-2.5 sm:p-3 rounded-xl border border-slate-100 dark:border-slate-800 flex flex-col justify-between">
-            <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300 mb-1">
-              <Target className="w-3 h-3 text-indigo-500 shrink-0" />
-              <span className="text-[10px] sm:text-xs font-medium truncate">Campaigns</span>
+          <div className="bg-slate-950/40 p-2.5 rounded-xl border border-slate-800/60">
+            <div className="flex items-center gap-1 text-slate-400 mb-1">
+              <Target className="w-3 h-3 text-indigo-400 shrink-0" />
+              <span className="text-[10px] font-medium truncate">Campaigns</span>
             </div>
-            <span className="font-semibold text-xs sm:text-sm text-slate-900 dark:text-white">
+            <span className="font-bold text-xs sm:text-sm text-white">
               {formatUGX(campaignTotal)}
             </span>
           </div>
 
           {/* Solidarity Support */}
-          <div className="bg-slate-50 dark:bg-slate-800/50 p-2.5 sm:p-3 rounded-xl border border-slate-100 dark:border-slate-800 flex flex-col justify-between">
-            <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300 mb-1">
-              <HeartHandshake className="w-3 h-3 text-rose-500 shrink-0" />
-              <span className="text-[10px] sm:text-xs font-medium truncate">Solidarity</span>
+          <div className="bg-slate-950/40 p-2.5 rounded-xl border border-slate-800/60">
+            <div className="flex items-center gap-1 text-slate-400 mb-1">
+              <HeartHandshake className="w-3 h-3 text-rose-400 shrink-0" />
+              <span className="text-[10px] font-medium truncate">Solidarity</span>
             </div>
-            <span className="font-semibold text-xs sm:text-sm text-slate-900 dark:text-white">
+            <span className="font-bold text-xs sm:text-sm text-white">
               {formatUGX(solidarityTotal)}
             </span>
           </div>
@@ -224,57 +219,59 @@ export default function Statement() {
       </div>
 
       {/* FILTER SEGMENTED CONTROL */}
-      <div className="bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl flex gap-1 border border-slate-200/80 dark:border-slate-700/60 mb-4 overflow-x-auto no-scrollbar">
-        <button
-          onClick={() => setFilter('all')}
-          className={`flex-1 min-w-[70px] py-1.5 px-2.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer text-center ${
-            filter === 'all'
-              ? 'bg-blue-600 text-white shadow-xs'
-              : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
-          }`}
-        >
-          All ({contributions.length})
-        </button>
-        <button
-          onClick={() => setFilter('welfare')}
-          className={`flex-1 min-w-[90px] py-1.5 px-2.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer text-center ${
-            filter === 'welfare'
-              ? 'bg-blue-600 text-white shadow-xs'
-              : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
-          }`}
-        >
-          Welfare Dues
-        </button>
-        <button
-          onClick={() => setFilter('school_support')}
-          className={`flex-1 min-w-[90px] py-1.5 px-2.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer text-center ${
-            filter === 'school_support'
-              ? 'bg-blue-600 text-white shadow-xs'
-              : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
-          }`}
-        >
-          Campaigns
-        </button>
-        <button
-          onClick={() => setFilter('welfare_support')}
-          className={`flex-1 min-w-[90px] py-1.5 px-2.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer text-center ${
-            filter === 'welfare_support'
-              ? 'bg-blue-600 text-white shadow-xs'
-              : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
-          }`}
-        >
-          Solidarity
-        </button>
+      <div className="px-4 sm:px-6 mt-6">
+        <div className="bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl flex gap-1 border border-slate-200/80 dark:border-slate-700/60 overflow-x-auto no-scrollbar">
+          <button
+            onClick={() => setFilter('all')}
+            className={`flex-1 min-w-[70px] py-1.5 px-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer text-center ${
+              filter === 'all'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            All ({contributions.length})
+          </button>
+          <button
+            onClick={() => setFilter('welfare')}
+            className={`flex-1 min-w-[90px] py-1.5 px-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer text-center ${
+              filter === 'welfare'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            Welfare Dues
+          </button>
+          <button
+            onClick={() => setFilter('school_support')}
+            className={`flex-1 min-w-[90px] py-1.5 px-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer text-center ${
+              filter === 'school_support'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            Campaigns
+          </button>
+          <button
+            onClick={() => setFilter('welfare_support')}
+            className={`flex-1 min-w-[90px] py-1.5 px-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer text-center ${
+              filter === 'welfare_support'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            Solidarity
+          </button>
+        </div>
       </div>
 
       {/* TRANSACTION LIST */}
-      <div>
+      <div className="mt-4">
         {loading ? (
-          <div className="flex justify-center py-16 bg-white dark:bg-[#0c1731] rounded-2xl border border-slate-200/80 dark:border-slate-800">
+          <div className="flex justify-center py-16 bg-white dark:bg-[#0c1731] border-y border-slate-200/60 dark:border-slate-800">
             <div className="w-6 h-6 border-2 border-blue-200 dark:border-blue-900 border-t-blue-600 rounded-full animate-spin"></div>
           </div>
         ) : filteredContributions.length > 0 ? (
-          <div className="bg-white dark:bg-[#0c1731] rounded-2xl border border-slate-200/80 dark:border-slate-800 divide-y divide-slate-100 dark:divide-slate-800/80 overflow-hidden shadow-xs">
+          <div className="bg-white dark:bg-[#0c1731] border-y border-slate-200/60 dark:border-slate-800/80 divide-y divide-slate-100 dark:divide-slate-800/80">
             {filteredContributions.map((item: any) => {
               const isVerified = item.status === 'verified';
               const isPending = item.status === 'pending';
@@ -286,7 +283,7 @@ export default function Statement() {
               return (
                 <div 
                   key={item.id} 
-                  className="p-3.5 sm:p-4 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors flex items-center justify-between gap-3"
+                  className="py-3.5 px-4 sm:px-6 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors flex items-center justify-between gap-3"
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
@@ -306,7 +303,7 @@ export default function Statement() {
                     </div>
 
                     <div className="min-w-0">
-                      <div className="font-medium text-slate-900 dark:text-white text-xs sm:text-sm truncate">
+                      <div className="font-semibold text-slate-900 dark:text-white text-xs sm:text-sm truncate">
                         {isSolidarity 
                           ? 'Solidarity Welfare Support' 
                           : isCampaign 
@@ -347,7 +344,7 @@ export default function Statement() {
                   {/* Right side: Amount, status, recheck */}
                   <div className="flex items-center gap-3 shrink-0">
                     <div className="text-right">
-                      <span className={`block font-semibold text-xs sm:text-sm ${
+                      <span className={`block font-bold text-xs sm:text-sm ${
                         isVerified 
                           ? 'text-slate-900 dark:text-white' 
                           : isPending 
@@ -378,7 +375,7 @@ export default function Statement() {
             })}
           </div>
         ) : (
-          <div className="bg-white dark:bg-[#0c1731] rounded-2xl p-8 text-center border border-slate-200/80 dark:border-slate-800 shadow-xs">
+          <div className="bg-white dark:bg-[#0c1731] border-y border-slate-200/60 dark:border-slate-800/80 p-8 text-center">
             <FileText className="w-8 h-8 text-slate-300 dark:text-slate-600 mx-auto mb-2" strokeWidth={1.5} />
             <h3 className="text-xs font-semibold text-slate-700 dark:text-slate-300">No transactions found</h3>
             <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">

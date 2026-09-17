@@ -314,14 +314,14 @@ export default function Contribute() {
   const presetAmounts = [1000, 2000, 5000, 10000, 20000, 50000, 100000];
 
   return (
-    <div className="max-w-2xl mx-auto w-full pb-16 animate-in fade-in duration-300">
+    <div className="w-full pb-20 animate-in fade-in duration-300">
       
-      {/* STICKY TOP PAGE TITLE HEADER */}
-      <div className="sticky top-0 z-30 bg-mamas-bg/95 backdrop-blur-md px-4 sm:px-6 py-3.5 border-b border-slate-200/60 dark:border-slate-800/60 mb-5 flex items-center justify-between gap-3">
+      {/* PAGE HEADER ROW */}
+      <div className="px-4 sm:px-6 py-4 border-b border-slate-200/60 dark:border-slate-800/60 flex items-center justify-between gap-3 bg-white dark:bg-[#0c1731]">
         <div>
           <div className="flex items-center gap-2">
             <Heart className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-            <h1 className="text-xl sm:text-2xl font-semibold text-slate-900 dark:text-white tracking-tight">
+            <h1 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white tracking-tight">
               Pay Dues & Support
             </h1>
           </div>
@@ -331,291 +331,293 @@ export default function Contribute() {
         </div>
       </div>
 
-      {error && (
-        <div className="bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 p-3.5 rounded-xl text-xs font-medium border border-rose-200 dark:border-rose-900/50 mb-5 flex items-start gap-2.5">
-          <AlertCircle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
-          <div>{error}</div>
-        </div>
-      )}
-
-      {success && (
-        <div className="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 p-4 rounded-2xl text-xs font-medium border border-emerald-200 dark:border-emerald-900/50 flex items-center gap-3 mb-5 shadow-xs">
-          <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-          <div>
-            <div className="text-sm font-semibold text-emerald-900 dark:text-emerald-200 flex items-center gap-2">
-              Payment Verified 
-              {confirmedAmount !== null && (
-                <span className="bg-emerald-200/50 dark:bg-emerald-800/50 text-emerald-800 dark:text-emerald-200 px-2 py-0.5 rounded-full text-xs">
-                  {formatUGX(confirmedAmount)}
-                </span>
-              )}
-            </div>
-            <div className="text-emerald-700 dark:text-emerald-400 text-xs mt-0.5">Your contribution was successfully recorded. Redirecting to your statement...</div>
+      <div className="max-w-xl mx-auto w-full px-4 sm:px-6 mt-6 space-y-6">
+        
+        {error && (
+          <div className="bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 p-3.5 rounded-xl text-xs font-semibold border border-rose-200 dark:border-rose-900/50 flex items-start gap-2.5">
+            <AlertCircle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+            <div>{error}</div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* MOBILE MONEY PROMPT SENT CARD */}
-      {promptSent ? (
-        <div className="bg-white dark:bg-[#0c1731] rounded-2xl p-5 sm:p-6 shadow-xs border border-slate-200/80 dark:border-slate-800 space-y-4 animate-in zoom-in-95 duration-200">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-900 rounded-xl flex items-center justify-center shrink-0">
-              <Smartphone className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-            </div>
+        {success && (
+          <div className="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 p-4 rounded-xl text-xs font-semibold border border-emerald-200 dark:border-emerald-900/50 flex items-center gap-3 shadow-xs">
+            <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
             <div>
-              <span className="px-2 py-0.5 bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 rounded-full text-[10px] font-bold uppercase tracking-wider border border-blue-200 dark:border-blue-900">
-                Prompt Sent
-              </span>
-              <h2 className="text-base font-semibold text-slate-900 dark:text-white mt-0.5">Check Your Phone</h2>
-            </div>
-          </div>
-
-          <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200/80 dark:border-slate-800 space-y-1.5">
-            <p className="text-xs text-slate-600 dark:text-slate-300">
-              A Mobile Money payment prompt of <span className="font-semibold text-slate-900 dark:text-white">UGX {parseInt(amount || '0', 10).toLocaleString()}</span> has been sent to:
-            </p>
-            <div className="text-base font-semibold text-slate-900 dark:text-white flex items-center gap-2">
-              <span>{normalizedPhoneUsed}</span>
-              <span className="text-[10px] px-2 py-0.5 bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded font-medium">{network}</span>
-            </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-normal pt-1">
-              Please enter your Mobile Money PIN on your handset to approve the transaction.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2.5 p-3 bg-blue-50/70 dark:bg-blue-950/30 rounded-xl border border-blue-100 dark:border-blue-900/40 text-blue-900 dark:text-blue-200 text-xs font-medium">
-            <Loader2 className="w-4 h-4 text-blue-600 dark:text-blue-400 animate-spin shrink-0" />
-            <span>{pollingMessage}</span>
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-2.5 pt-1">
-            <button
-              type="button"
-              onClick={handleManualRefresh}
-              disabled={checkingStatus}
-              className="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-2.5 px-4 rounded-xl font-semibold text-xs shadow-xs flex items-center justify-center gap-2 transition-all disabled:opacity-50 cursor-pointer"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${checkingStatus ? 'animate-spin' : ''}`} />
-              {checkingStatus ? 'Checking...' : 'Refresh Status'}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setPromptSent(false);
-                setError('');
-              }}
-              className="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 py-2.5 px-4 rounded-xl font-medium text-xs transition-all border border-slate-200 dark:border-slate-700 text-center cursor-pointer"
-            >
-              Cancel / Try Again
-            </button>
-          </div>
-        </div>
-      ) : (
-        <form onSubmit={handlePay} className="space-y-4">
-          {/* PURPOSE SELECTION (SEGMENTED CONTROL) */}
-          <div className="bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl flex gap-1 border border-slate-200/80 dark:border-slate-700/60">
-            {!isUnverified && (
-              <button
-                type="button"
-                onClick={() => setPurpose('welfare')}
-                className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-all cursor-pointer text-center ${
-                  purpose === 'welfare' 
-                    ? 'bg-blue-600 text-white shadow-xs' 
-                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                Welfare Dues
-              </button>
-            )}
-            
-            <button
-              type="button"
-              onClick={() => setPurpose('campaign')}
-              className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-all cursor-pointer text-center ${
-                purpose === 'campaign' 
-                  ? 'bg-blue-600 text-white shadow-xs' 
-                  : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              School Campaign
-            </button>
-
-            {(welfareRequestId || purpose === 'welfare_support') && !isUnverified && (
-              <button
-                type="button"
-                onClick={() => setPurpose('welfare_support')}
-                className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-all cursor-pointer text-center ${
-                  purpose === 'welfare_support' 
-                    ? 'bg-blue-600 text-white shadow-xs' 
-                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                Solidarity Appeal
-              </button>
-            )}
-          </div>
-
-          {/* SOLIDARITY APPEAL INFO BANNER */}
-          {purpose === 'welfare_support' && welfareCaseData && (
-            <div className="bg-white dark:bg-[#0c1731] rounded-2xl p-4 shadow-xs border border-slate-200/80 dark:border-slate-800 space-y-2 relative overflow-hidden">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2.5 py-0.5 rounded-full">
-                  {welfareCaseData.category || 'Welfare Solidarity'}
-                </span>
-
-                {welfareCaseData.supportStatus === 'open' && (
-                  <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 px-2 py-0.5 rounded-full">
-                    Appeal Active
-                  </span>
-                )}
-                {welfareCaseData.supportStatus === 'paused' && (
-                  <span className="text-[10px] font-semibold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 px-2 py-0.5 rounded-full">
-                    Support Paused
+              <div className="text-sm font-bold text-emerald-900 dark:text-emerald-200 flex items-center gap-2">
+                Payment Verified 
+                {confirmedAmount !== null && (
+                  <span className="bg-emerald-200/50 dark:bg-emerald-800/50 text-emerald-800 dark:text-emerald-200 px-2 py-0.5 rounded-full text-xs">
+                    {formatUGX(confirmedAmount)}
                   </span>
                 )}
               </div>
+              <div className="text-emerald-700 dark:text-emerald-400 text-xs mt-0.5 font-normal">Your contribution was successfully recorded. Redirecting to your statement...</div>
+            </div>
+          </div>
+        )}
 
+        {/* MOBILE MONEY PROMPT SENT CARD */}
+        {promptSent ? (
+          <div className="bg-white dark:bg-[#0c1731] border border-slate-200/80 dark:border-slate-800 p-5 rounded-xl space-y-4 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-900 rounded-xl flex items-center justify-center shrink-0">
+                <Smartphone className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              </div>
               <div>
-                <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
-                  {welfareCaseData.publicTitle || `Solidarity Support for ${welfareCaseData.personName}`}
-                </h3>
-                <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5 leading-relaxed">
-                  {welfareCaseData.publicSummary || welfareCaseData.reason}
-                </p>
-              </div>
-
-              <div className="flex justify-between items-center text-xs bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800">
-                <span className="text-slate-600 dark:text-slate-400">
-                  Beneficiary: <strong className="text-slate-800 dark:text-slate-200 font-semibold">{welfareCaseData.personName}</strong>
+                <span className="px-2 py-0.5 bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 rounded-full text-[10px] font-bold uppercase tracking-wider border border-blue-200 dark:border-blue-900">
+                  Prompt Sent
                 </span>
-                <span className="font-semibold text-slate-900 dark:text-white">
-                  Raised: {formatUGX(welfareCaseData.supportRaisedAmount || 0)}
-                  {welfareCaseData.supportTargetAmount > 0 && ` / ${formatUGX(welfareCaseData.supportTargetAmount)}`}
-                </span>
+                <h2 className="text-base font-bold text-slate-900 dark:text-white mt-0.5">Check Your Phone</h2>
               </div>
             </div>
-          )}
 
-          {/* CAMPAIGN SELECTION */}
-          {purpose === 'campaign' && (
-            <div className="bg-white dark:bg-[#0c1731] rounded-2xl p-4 shadow-xs border border-slate-200/80 dark:border-slate-800 space-y-2">
-              <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                Select Active Campaign
+            <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200/80 dark:border-slate-800 space-y-1.5">
+              <p className="text-xs text-slate-600 dark:text-slate-300">
+                A Mobile Money payment prompt of <span className="font-bold text-slate-900 dark:text-white">UGX {parseInt(amount || '0', 10).toLocaleString()}</span> has been sent to:
+              </p>
+              <div className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <span>{normalizedPhoneUsed}</span>
+                <span className="text-[10px] px-2 py-0.5 bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded font-medium">{network}</span>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-normal pt-1">
+                Please enter your Mobile Money PIN on your handset to approve the transaction.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2.5 p-3 bg-blue-50/70 dark:bg-blue-950/30 rounded-xl border border-blue-100 dark:border-blue-900/40 text-blue-900 dark:text-blue-200 text-xs font-semibold">
+              <Loader2 className="w-4 h-4 text-blue-600 dark:text-blue-400 animate-spin shrink-0" />
+              <span>{pollingMessage}</span>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-2.5 pt-1">
+              <button
+                type="button"
+                onClick={handleManualRefresh}
+                disabled={checkingStatus}
+                className="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-2.5 px-4 rounded-xl font-bold text-xs shadow-xs flex items-center justify-center gap-2 transition-colors disabled:opacity-50 cursor-pointer"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${checkingStatus ? 'animate-spin' : ''}`} />
+                <span>{checkingStatus ? 'Checking...' : 'Refresh Status'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setPromptSent(false);
+                  setError('');
+                }}
+                className="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 py-2.5 px-4 rounded-xl font-semibold text-xs transition-colors border border-slate-200 dark:border-slate-700 text-center cursor-pointer"
+              >
+                Cancel / Try Again
+              </button>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handlePay} className="space-y-6">
+            
+            {/* PURPOSE SELECTION (SEGMENTED CONTROL) */}
+            <div>
+              <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
+                Contribution Purpose
               </label>
-              {fetchingCampaigns ? (
-                <div className="p-3 text-center text-xs text-slate-400 font-medium">Loading campaigns...</div>
-              ) : campaigns.length > 0 ? (
-                <SelectDropdown
-                  options={campaigns.map(c => ({ label: c.title, value: c.id }))}
-                  value={campaignId}
-                  onChange={setCampaignId}
-                  placeholder="Choose a campaign to support"
-                />
-              ) : (
-                <p className="text-xs text-rose-500 font-medium">No active campaigns available right now.</p>
-              )}
-            </div>
-          )}
-
-          {/* AMOUNT INPUT */}
-          <div className="bg-white dark:bg-[#0c1731] rounded-2xl p-4 sm:p-5 shadow-xs border border-slate-200/80 dark:border-slate-800">
-            <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2.5">
-              Amount (UGX)
-            </label>
-            
-            <div className="relative mb-3">
-              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                <span className="text-slate-400 dark:text-slate-500 font-bold text-base">UGX</span>
-              </div>
-              <input
-                type="number"
-                required
-                min="1000"
-                value={amount}
-                onChange={e => setAmount(e.target.value)}
-                className="w-full pl-16 pr-4 py-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-xl text-2xl font-bold text-slate-900 dark:text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all text-right"
-                placeholder="0"
-              />
-            </div>
-            
-            <div className="flex flex-wrap gap-1.5">
-              {presetAmounts.map(preset => (
+              <div className="bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl flex gap-1 border border-slate-200/80 dark:border-slate-700/60">
+                {!isUnverified && (
+                  <button
+                    type="button"
+                    onClick={() => setPurpose('welfare')}
+                    className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer text-center ${
+                      purpose === 'welfare' 
+                        ? 'bg-blue-600 text-white shadow-xs' 
+                        : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    Welfare Dues
+                  </button>
+                )}
+                
                 <button
-                  key={preset}
                   type="button"
-                  onClick={() => setAmount(preset.toString())}
-                  className="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-medium transition-all border border-slate-200/80 dark:border-slate-700/80 cursor-pointer"
+                  onClick={() => setPurpose('campaign')}
+                  className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer text-center ${
+                    purpose === 'campaign' 
+                      ? 'bg-blue-600 text-white shadow-xs' 
+                      : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+                  }`}
                 >
-                  {preset.toLocaleString()} UGX
+                  School Campaign
                 </button>
-              ))}
-            </div>
-          </div>
 
-          {/* NETWORK & PHONE */}
-          <div className="bg-white dark:bg-[#0c1731] rounded-2xl p-4 sm:p-5 shadow-xs border border-slate-200/80 dark:border-slate-800 space-y-3">
-            <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-              Mobile Money Details
-            </label>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="w-full sm:w-1/3">
-                <SelectDropdown
-                  options={[
-                    { label: 'MTN MoMo', value: 'MTN' },
-                    { label: 'Airtel Money', value: 'Airtel' }
-                  ]}
-                  value={network}
-                  onChange={setNetwork}
-                />
-              </div>
-              <div className="w-full sm:w-2/3 relative">
-                <input
-                  type="tel"
-                  required
-                  value={phone}
-                  onChange={e => setPhone(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-xl text-slate-900 dark:text-white font-medium focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all text-xs sm:text-sm"
-                  placeholder="Phone e.g. 0771234567"
-                />
+                {(welfareRequestId || purpose === 'welfare_support') && !isUnverified && (
+                  <button
+                    type="button"
+                    onClick={() => setPurpose('welfare_support')}
+                    className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer text-center ${
+                      purpose === 'welfare_support' 
+                        ? 'bg-blue-600 text-white shadow-xs' 
+                        : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    Solidarity Appeal
+                  </button>
+                )}
               </div>
             </div>
-            {purpose === 'campaign' && (
-              <label className="flex items-center gap-2 mt-2 cursor-pointer">
-                <input 
-                  type="checkbox" 
-                  checked={isAnonymous}
-                  onChange={(e) => setIsAnonymous(e.target.checked)}
-                  className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" 
-                />
-                <span className="text-xs text-slate-600 dark:text-slate-400">Keep my contribution anonymous publicly</span>
-              </label>
+
+            {/* SOLIDARITY APPEAL INFO BANNER */}
+            {purpose === 'welfare_support' && welfareCaseData && (
+              <div className="bg-slate-50 dark:bg-slate-800/40 rounded-xl p-4 border border-slate-200/80 dark:border-slate-800 space-y-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 bg-slate-200 dark:bg-slate-700 px-2.5 py-0.5 rounded-full">
+                    {welfareCaseData.category || 'Welfare Solidarity'}
+                  </span>
+
+                  {welfareCaseData.supportStatus === 'open' && (
+                    <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/60 dark:border-emerald-800/60 px-2 py-0.5 rounded-full">
+                      Appeal Active
+                    </span>
+                  )}
+                </div>
+
+                <div>
+                  <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                    {welfareCaseData.publicTitle || `Solidarity Support for ${welfareCaseData.personName}`}
+                  </h3>
+                  <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5 leading-relaxed">
+                    {welfareCaseData.publicSummary || welfareCaseData.reason}
+                  </p>
+                </div>
+
+                <div className="flex justify-between items-center text-xs bg-white dark:bg-slate-900 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800">
+                  <span className="text-slate-600 dark:text-slate-400 font-medium">
+                    Beneficiary: <strong className="text-slate-800 dark:text-slate-200 font-bold">{welfareCaseData.personName}</strong>
+                  </span>
+                  <span className="font-bold text-slate-900 dark:text-white">
+                    Raised: {formatUGX(welfareCaseData.supportRaisedAmount || 0)}
+                  </span>
+                </div>
+              </div>
             )}
-          </div>
 
-          {/* PAY BUTTON */}
-          <div className="pt-2">
-            <button
-              type="submit"
-              disabled={loading || success}
-              className="w-full bg-blue-600 hover:bg-blue-500 text-white rounded-xl py-3 text-sm font-semibold shadow-xs active:scale-[0.99] transition-all flex items-center justify-center gap-2 disabled:opacity-70 cursor-pointer"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin text-white" /> Sending Payment Prompt...
-                </>
-              ) : (
-                `Pay ${amount ? `UGX ${parseInt(amount, 10).toLocaleString()}` : ''} Now`
-              )}
-            </button>
-            <div className="mt-2.5 flex items-center justify-center gap-1.5 text-slate-400 dark:text-slate-500">
-              <Lock className="w-3 h-3" />
-              <span className="text-[11px] font-medium">Secured by Relworx Mobile Money Gateway</span>
+            {/* CAMPAIGN SELECTION */}
+            {purpose === 'campaign' && (
+              <div className="space-y-1.5">
+                <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                  Select Active Campaign
+                </label>
+                {fetchingCampaigns ? (
+                  <div className="p-3 text-center text-xs text-slate-400 font-medium">Loading campaigns...</div>
+                ) : campaigns.length > 0 ? (
+                  <SelectDropdown
+                    options={campaigns.map(c => ({ label: c.title, value: c.id }))}
+                    value={campaignId}
+                    onChange={setCampaignId}
+                    placeholder="Choose a campaign to support"
+                  />
+                ) : (
+                  <p className="text-xs text-rose-500 font-semibold">No active campaigns available right now.</p>
+                )}
+              </div>
+            )}
+
+            {/* AMOUNT INPUT */}
+            <div className="space-y-2">
+              <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                Amount (UGX)
+              </label>
+              
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <span className="text-slate-400 dark:text-slate-500 font-extrabold text-base">UGX</span>
+                </div>
+                <input
+                  type="number"
+                  required
+                  min="1000"
+                  value={amount}
+                  onChange={e => setAmount(e.target.value)}
+                  className="w-full pl-16 pr-4 py-3 bg-white dark:bg-[#0c1731] border border-slate-200 dark:border-slate-800 rounded-xl text-xl sm:text-2xl font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all text-right"
+                  placeholder="0"
+                />
+              </div>
+              
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {presetAmounts.map(preset => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => setAmount(preset.toString())}
+                    className="px-2.5 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-semibold border border-slate-200/80 dark:border-slate-800/80 cursor-pointer"
+                  >
+                    {preset.toLocaleString()}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-        </form>
-      )}
+
+            {/* NETWORK & PHONE */}
+            <div className="space-y-3">
+              <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                Mobile Money Details
+              </label>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="w-full sm:w-1/3">
+                  <SelectDropdown
+                    options={[
+                      { label: 'MTN MoMo', value: 'MTN' },
+                      { label: 'Airtel Money', value: 'Airtel' }
+                    ]}
+                    value={network}
+                    onChange={setNetwork}
+                  />
+                </div>
+                <div className="w-full sm:w-2/3">
+                  <input
+                    type="tel"
+                    required
+                    value={phone}
+                    onChange={e => setPhone(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-white dark:bg-[#0c1731] border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all text-xs sm:text-sm"
+                    placeholder="Phone e.g. 0771234567"
+                  />
+                </div>
+              </div>
+              {purpose === 'campaign' && (
+                <label className="flex items-center gap-2.5 mt-2 cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={isAnonymous}
+                    onChange={(e) => setIsAnonymous(e.target.checked)}
+                    className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" 
+                  />
+                  <span className="text-xs text-slate-600 dark:text-slate-400 font-medium">Keep my contribution anonymous publicly</span>
+                </label>
+              )}
+            </div>
+
+            {/* PAY BUTTON */}
+            <div className="pt-2">
+              <button
+                type="submit"
+                disabled={loading || success}
+                className="w-full bg-blue-600 hover:bg-blue-500 text-white rounded-xl py-3 text-sm font-bold shadow-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-70 cursor-pointer"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin text-white" /> Sending Prompt...
+                  </>
+                ) : (
+                  `Pay ${amount ? `UGX ${parseInt(amount, 10).toLocaleString()}` : ''} Now`
+                )}
+              </button>
+              <div className="mt-2.5 flex items-center justify-center gap-1.5 text-slate-400 dark:text-slate-500">
+                <Lock className="w-3 h-3" />
+                <span className="text-[10px] font-semibold uppercase tracking-wider">Secured by Relworx Gateway</span>
+              </div>
+            </div>
+          </form>
+        )}
+      </div>
     </div>
   );
 }
-

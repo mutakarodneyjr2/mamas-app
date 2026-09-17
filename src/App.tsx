@@ -119,29 +119,24 @@ function Layout() {
             {userProfile && (
               <Link 
                 to="/profile" 
-                className="flex items-center gap-2.5 group p-1 -ml-1 rounded-xl hover:bg-white/10 transition-colors min-w-0"
+                className="flex items-center gap-2 group p-1 -ml-1 rounded-xl hover:bg-white/10 transition-colors min-w-0"
               >
                 {userProfile.profilePictureUrl ? (
                   <img 
                     src={userProfile.profilePictureUrl} 
                     alt={userProfile.fullName} 
-                    className="w-8 h-8 rounded-full object-cover border border-white/20 shrink-0" 
+                    className="w-8 h-8 rounded-full object-cover border border-white/25 shrink-0" 
                     referrerPolicy="no-referrer"
                   />
                 ) : (
-                  <div className="w-8 h-8 rounded-full bg-blue-800 text-white font-extrabold text-xs flex items-center justify-center border border-white/30 shrink-0">
+                  <div className="w-8 h-8 rounded-full bg-blue-800 text-white font-extrabold text-[10px] flex items-center justify-center border border-white/30 shrink-0">
                     {userProfile.fullName ? userProfile.fullName.slice(0, 2).toUpperCase() : 'AM'}
                   </div>
                 )}
-                <div className="min-w-0 hidden xs:block sm:block">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs sm:text-sm font-semibold text-white truncate group-hover:text-blue-100 transition-colors">
-                      {userProfile.fullName || 'Member'}
-                    </span>
-                    <span className="text-[9px] font-bold bg-white/20 text-white px-1.5 py-0.5 rounded-full uppercase tracking-wider hidden md:inline">
-                      {userProfile.role?.replace('_', ' ') || 'MEMBER'}
-                    </span>
-                  </div>
+                <div className="min-w-0 flex items-center">
+                  <span className="text-xs sm:text-sm font-semibold text-white truncate max-w-[90px] xs:max-w-[120px] sm:max-w-[180px] group-hover:text-blue-100 transition-colors">
+                    {userProfile.fullName || 'Member'}
+                  </span>
                 </div>
               </Link>
             )}
@@ -238,6 +233,7 @@ import ApplyWelfare from './pages/ApplyWelfare';
 import Expenses from './pages/Expenses';
 import Directory from './pages/Directory';
 import Profile from './pages/Profile';
+import EditProfile from './pages/EditProfile';
 import AdminContributions from './pages/AdminContributions';
 import AdminSettings from './pages/AdminSettings';
 import AdminMedia from './pages/AdminMedia';
@@ -331,6 +327,7 @@ export default function App() {
               <Route path="/setup" element={<SetupSuperAdmin />} />
               <Route path="/contribute" element={<Contribute />} />
               <Route path="/profile" element={<Profile />} />
+              <Route path="/profile/edit" element={<EditProfile />} />
             </Route>
 
             <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
