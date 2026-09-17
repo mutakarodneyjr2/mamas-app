@@ -1,7 +1,12 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import app from './_server.js';
 
-export default (req: VercelRequest, res: VercelResponse) => {
-  return app(req as any, res as any);
+let appHandler: any = null;
+
+export default async (req: VercelRequest, res: VercelResponse) => {
+  if (!appHandler) {
+    const serverModule = await import('./_server.js');
+    appHandler = serverModule.default || serverModule;
+  }
+  return appHandler(req as any, res as any);
 };
 

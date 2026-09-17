@@ -5,6 +5,11 @@
       "includeFiles": "api/**"
     }
   },
+  "build": {
+    "env": {
+      "NODE_OPTIONS": "--experimental-modules"
+    }
+  },
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api" },
     { "source": "/api", "destination": "/api" },
