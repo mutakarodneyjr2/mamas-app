@@ -144,42 +144,89 @@ export default function Profile() {
   return (
     <div className="w-full pb-24 animate-in fade-in duration-300">
       
-      {/* 1. NAVY IDENTITY HEADER (FULL WIDTH) */}
-      <div className="bg-[#0a142c] text-white py-8 px-4 sm:px-6 md:px-8 border-b border-slate-800 text-center flex flex-col items-center justify-center relative">
-        <div className="relative cursor-pointer group mb-4" onClick={() => navigate('/profile/edit')}>
-          <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-slate-800 border-4 border-slate-700 overflow-hidden flex items-center justify-center relative shadow-xl">
-            {userProfile.profilePictureUrl ? (
-              <img 
-                src={userProfile.profilePictureUrl} 
-                alt={userProfile.fullName} 
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform" 
-                referrerPolicy="no-referrer" 
-              />
-            ) : (
-              <User className="w-12 h-12 text-slate-400" />
-            )}
+      {/* 1. STICKY PAGE TITLE BAR (Light Grey Highlighted) */}
+      <div className="sticky top-0 z-30 bg-slate-100/95 dark:bg-slate-850/95 backdrop-blur-md border-b border-slate-200/90 dark:border-slate-700/80 px-4 sm:px-6 py-3 flex items-center justify-between gap-3 shadow-xs">
+        <div>
+          <div className="flex items-center gap-2">
+            <User className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            <h1 className="text-lg sm:text-xl font-bold text-blue-950 dark:text-blue-100 tracking-tight">
+              My Profile
+            </h1>
           </div>
-          <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-lg bg-blue-600 border-2 border-[#0a142c] flex items-center justify-center text-white shadow-md group-hover:bg-blue-500 transition-colors">
-            <Camera className="w-4 h-4" />
-          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Alumni identity, privacy & membership settings
+          </p>
         </div>
 
-        <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white mb-1.5">
-          {userProfile.fullName}
-        </h2>
+        <button
+          type="button"
+          onClick={() => navigate('/profile/edit')}
+          className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white px-3 py-1.5 rounded-xl font-semibold text-xs shadow-xs transition-all cursor-pointer"
+        >
+          <Camera className="w-3.5 h-3.5" />
+          <span>Edit Profile</span>
+        </button>
+      </div>
 
-        <div className="flex flex-wrap items-center justify-center gap-2 mt-1">
-          <StatusBadge status={userProfile.status || 'pending'} />
-          <span className="text-xs text-slate-400 bg-slate-900/60 px-2 py-0.5 rounded-md border border-slate-800">
-            {userProfile.role?.replace('_', ' ').toUpperCase() || 'MEMBER'}
-          </span>
-          {userProfile.yearLeftSchool && (
-            <span className="text-xs text-slate-400 bg-slate-900/60 px-2 py-0.5 rounded-md border border-slate-800">
-              Class of {userProfile.yearLeftSchool}
+      {/* 2. REDUCED & STICKY PROFILE PICTURE CARD */}
+      <div className="sticky top-[53px] z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 sm:px-6 py-3 shadow-xs transition-all">
+        <div className="max-w-4xl mx-auto flex items-center justify-between gap-3 sm:gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            {/* Reduced Profile Picture */}
+            <div 
+              className="relative cursor-pointer group shrink-0" 
+              onClick={() => navigate('/profile/edit')}
+              title="Change profile picture"
+            >
+              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-slate-100 dark:bg-slate-800 border-2 border-blue-600/30 dark:border-blue-500/30 overflow-hidden flex items-center justify-center shadow-xs">
+                {userProfile.profilePictureUrl ? (
+                  <img 
+                    src={userProfile.profilePictureUrl} 
+                    alt={userProfile.fullName} 
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform" 
+                    referrerPolicy="no-referrer" 
+                  />
+                ) : (
+                  <User className="w-6 h-6 text-slate-400" />
+                )}
+              </div>
+              <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-md bg-blue-600 border border-white dark:border-slate-900 flex items-center justify-center text-white shadow-xs group-hover:bg-blue-500 transition-colors">
+                <Camera className="w-2.5 h-2.5" />
+              </div>
+            </div>
+
+            {/* Member Details */}
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm sm:text-base font-bold tracking-tight text-blue-950 dark:text-blue-100 truncate">
+                  {userProfile.fullName}
+                </h2>
+                <StatusBadge status={userProfile.status || 'pending'} />
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5 mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                <span className="font-semibold text-blue-800 dark:text-blue-300 text-[10px] uppercase tracking-wider bg-blue-50 dark:bg-blue-950/60 px-1.5 py-0.5 rounded border border-blue-200/60 dark:border-blue-800/60">
+                  {userProfile.role?.replace('_', ' ') || 'Member'}
+                </span>
+                {userProfile.yearLeftSchool && (
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                    • Class of {userProfile.yearLeftSchool}
+                  </span>
+                )}
+                {userProfile.email && (
+                  <span className="text-[11px] text-slate-400 dark:text-slate-500 hidden md:inline truncate">
+                    • {userProfile.email}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="hidden sm:flex items-center gap-2 shrink-0">
+            <span className="text-[11px] font-medium text-slate-400">
+              MAMAS ID: <strong className="text-blue-950 dark:text-blue-200">{userProfile.uid?.slice(0, 6).toUpperCase()}</strong>
             </span>
-          )}
+          </div>
         </div>
-        <p className="text-xs text-slate-400 mt-2">{userProfile.email}</p>
       </div>
 
       {/* ALERTS ZONE */}

@@ -34,8 +34,8 @@ export function LeftDrawer({ isOpen, onClose }: LeftDrawerProps) {
     const isActive = location.pathname === path || (path !== '/' && path !== '/dashboard' && location.pathname.startsWith(path));
     return `flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all ${
       isActive 
-        ? 'bg-blue-600 text-white font-semibold shadow-xs' 
-        : 'text-slate-300 hover:bg-white/10 hover:text-white'
+        ? 'bg-blue-600 text-white font-bold shadow-xs' 
+        : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-950 dark:hover:text-white'
     }`;
   };
 
@@ -48,35 +48,35 @@ export function LeftDrawer({ isOpen, onClose }: LeftDrawerProps) {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs"
+          className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs"
           onClick={onClose}
         />
 
-        {/* Drawer Content - Deep Navy Weight */}
+        {/* Drawer Content - White background */}
         <motion.div
           initial={{ x: '-100%' }}
           animate={{ x: 0 }}
           exit={{ x: '-100%' }}
           transition={{ type: 'spring', damping: 28, stiffness: 300 }}
-          className="relative w-full max-w-xs sm:max-w-sm bg-[#060c1a] text-slate-100 h-full border-r border-slate-800 flex flex-col z-10 overflow-hidden"
+          className="relative w-full max-w-xs sm:max-w-sm bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 h-full border-r border-slate-200 dark:border-slate-800 flex flex-col z-10 overflow-hidden shadow-2xl"
         >
-          {/* Header Zone (Navy) */}
-          <div className="p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between bg-[#0a142c]">
+          {/* Header Zone (Blue App Name Section) */}
+          <div className="p-4 sm:p-5 border-b border-blue-700 flex items-center justify-between bg-blue-600 dark:bg-blue-700 text-white">
             <div className="flex items-center gap-2.5">
               <Logo dark />
             </div>
             <button
               onClick={onClose}
-              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+              className="p-2 rounded-xl text-white/80 hover:text-white hover:bg-white/15 transition-colors cursor-pointer"
               aria-label="Close menu"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
 
-          {/* User Mini Identity (Integrated, no border box) */}
+          {/* User Identity Zone (Light Grey Section) */}
           {userProfile && (
-            <div className="p-4 bg-[#0a142c]/50 border-b border-slate-800/60">
+            <div className="p-4 bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
               <Link 
                 to="/profile" 
                 onClick={onClose}
@@ -86,24 +86,24 @@ export function LeftDrawer({ isOpen, onClose }: LeftDrawerProps) {
                   <img 
                     src={userProfile.profilePictureUrl} 
                     alt={userProfile.fullName} 
-                    className="w-10 h-10 rounded-xl object-cover border border-slate-800 shrink-0" 
+                    className="w-11 h-11 rounded-xl object-cover border border-slate-300 dark:border-slate-600 shadow-xs shrink-0" 
                     referrerPolicy="no-referrer"
                   />
                 ) : (
-                  <div className="w-10 h-10 rounded-xl bg-blue-900/60 text-blue-200 font-extrabold text-sm flex items-center justify-center border border-blue-800 shrink-0">
+                  <div className="w-11 h-11 rounded-xl bg-blue-600 text-white font-extrabold text-sm flex items-center justify-center border border-blue-500 shadow-xs shrink-0">
                     {userProfile.fullName ? userProfile.fullName.slice(0, 2).toUpperCase() : 'AM'}
                   </div>
                 )}
                 <div className="min-w-0 flex-1">
-                  <h4 className="text-xs sm:text-sm font-bold text-white truncate group-hover:text-blue-400 transition-colors">
+                  <h4 className="text-xs sm:text-sm font-bold text-blue-950 dark:text-blue-100 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                     {userProfile.fullName || 'Member'}
                   </h4>
                   <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className="text-[9px] font-bold bg-blue-950 text-blue-400 border border-blue-800 px-1.5 py-0.2 rounded-full uppercase tracking-wider">
+                    <span className="text-[9px] font-bold bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 border border-blue-200 dark:border-blue-800 px-1.5 py-0.2 rounded-full uppercase tracking-wider">
                       {userProfile.role?.replace('_', ' ') || 'Member'}
                     </span>
                     {userProfile.yearLeftSchool && (
-                      <span className="text-[10px] text-slate-400 font-medium">
+                      <span className="text-[10px] text-slate-600 dark:text-slate-400 font-medium">
                         Class of {userProfile.yearLeftSchool}
                       </span>
                     )}
@@ -118,7 +118,7 @@ export function LeftDrawer({ isOpen, onClose }: LeftDrawerProps) {
             {userProfile?.status === 'pending' ? (
               <>
                 {/* Basic Status Indicator */}
-                <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400">
+                <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400">
                   <div className="flex items-center gap-2 mb-1.5">
                     <Shield className="w-4 h-4 text-amber-500 animate-pulse" />
                     <span className="text-xs font-extrabold uppercase tracking-wider">Account Status</span>
@@ -130,7 +130,7 @@ export function LeftDrawer({ isOpen, onClose }: LeftDrawerProps) {
 
                 {/* Restricted Support Link */}
                 <div>
-                  <div className="text-[10px] font-extrabold uppercase tracking-widest text-slate-500 px-3 mb-2">
+                  <div className="text-[10px] font-extrabold uppercase tracking-widest text-blue-900/80 dark:text-blue-300/80 px-3 mb-2">
                     Support
                   </div>
                   <div className="space-y-1">
@@ -145,7 +145,7 @@ export function LeftDrawer({ isOpen, onClose }: LeftDrawerProps) {
               <>
                 {/* Primary Member Navigation */}
                 <div>
-                  <div className="text-[10px] font-extrabold uppercase tracking-widest text-slate-500 px-3 mb-2">
+                  <div className="text-[10px] font-extrabold uppercase tracking-widest text-blue-900/80 dark:text-blue-300/80 px-3 mb-2">
                     Main Navigation
                   </div>
                   <div className="space-y-1">
@@ -174,7 +174,7 @@ export function LeftDrawer({ isOpen, onClose }: LeftDrawerProps) {
 
                 {/* Quick Summary Links */}
                 <div>
-                  <div className="text-[10px] font-extrabold uppercase tracking-widest text-slate-500 px-3 mb-2">
+                  <div className="text-[10px] font-extrabold uppercase tracking-widest text-blue-900/80 dark:text-blue-300/80 px-3 mb-2">
                     Community & Projects
                   </div>
                   <div className="space-y-1">
@@ -196,8 +196,8 @@ export function LeftDrawer({ isOpen, onClose }: LeftDrawerProps) {
                 {/* Governance / Admin Portal Section */}
                 {isExecutive && (
                   <div>
-                    <div className="text-[10px] font-extrabold uppercase tracking-widest text-blue-400 px-3 mb-2 flex items-center gap-1.5">
-                      <Shield className="w-3 h-3" />
+                    <div className="text-[10px] font-extrabold uppercase tracking-widest text-blue-900 dark:text-blue-300 px-3 mb-2 flex items-center gap-1.5">
+                      <Shield className="w-3 h-3 text-blue-600 dark:text-blue-400" />
                       <span>Executive Governance</span>
                     </div>
                     <div className="space-y-1">
@@ -223,7 +223,7 @@ export function LeftDrawer({ isOpen, onClose }: LeftDrawerProps) {
 
                 {/* Support / Help */}
                 <div>
-                  <div className="text-[10px] font-extrabold uppercase tracking-widest text-slate-500 px-3 mb-2">
+                  <div className="text-[10px] font-extrabold uppercase tracking-widest text-blue-900/80 dark:text-blue-300/80 px-3 mb-2">
                     Support
                   </div>
                   <div className="space-y-1">
@@ -237,11 +237,11 @@ export function LeftDrawer({ isOpen, onClose }: LeftDrawerProps) {
             )}
           </div>
 
-          {/* Bottom Logout Area (Full-Width Row, Muted Border, No Inner Card) */}
-          <div className="p-4 border-t border-slate-800 bg-[#040a17]">
+          {/* Bottom Logout Area */}
+          <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/80">
             <button
               onClick={handleLogout}
-              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold text-rose-500 hover:bg-rose-500/10 border border-rose-500/20 transition-all cursor-pointer"
+              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/30 border border-rose-200 dark:border-rose-900/40 transition-all cursor-pointer"
             >
               <LogOut className="w-4 h-4" />
               <span>Log Out</span>

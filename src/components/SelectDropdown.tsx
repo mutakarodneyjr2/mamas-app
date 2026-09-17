@@ -104,7 +104,7 @@ export function SelectDropdown({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50"
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[150]"
               onClick={handleClose}
             />
             
@@ -114,12 +114,12 @@ export function SelectDropdown({
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed inset-x-0 bottom-0 h-[80vh] bg-white rounded-t-3xl shadow-2xl z-50 flex flex-col"
+              className="fixed inset-x-0 bottom-0 max-h-[85vh] bg-white rounded-t-3xl shadow-2xl z-[160] flex flex-col"
             >
               {/* Header */}
               <div className="flex items-center justify-between p-5 border-b border-gray-100">
                 <h3 className="font-bold text-lg text-gray-900">{placeholder}</h3>
-                <button onClick={handleClose} className="p-2 -mr-2 text-gray-400 hover:text-gray-600 bg-gray-50 rounded-full">
+                <button type="button" onClick={handleClose} className="p-2 -mr-2 text-gray-400 hover:text-gray-600 bg-gray-50 rounded-full cursor-pointer">
                   <X className="w-5 h-5" />
                 </button>
               </div>
@@ -176,10 +176,11 @@ export function SelectDropdown({
               </div>
               
               {/* Footer / Confirm */}
-              <div className="p-4 border-t border-gray-100 pb-safe">
+              <div className="p-4 border-t border-gray-100 pb-28 sm:pb-6 bg-white">
                 <button 
+                  type="button"
                   onClick={handleConfirm}
-                  className="w-full py-4 bg-mamas-primary text-white font-bold rounded-full shadow-lg hover:bg-mamas-primary-hover active:scale-[0.98] transition-all"
+                  className="w-full py-3.5 bg-blue-600 text-white font-bold rounded-xl shadow-md hover:bg-blue-700 active:scale-[0.98] transition-all cursor-pointer"
                 >
                   Confirm Selection
                 </button>

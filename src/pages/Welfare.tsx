@@ -62,12 +62,12 @@ export default function Welfare() {
   return (
     <div className="w-full pb-20 animate-in fade-in duration-300">
       
-      {/* PAGE HEADER ROW */}
-      <div className="px-4 sm:px-6 py-4 border-b border-slate-200/60 dark:border-slate-800/60 flex items-center justify-between gap-3 bg-white dark:bg-[#0c1731]">
+      {/* STICKY PAGE TITLE BAR (Light Grey Highlighted) */}
+      <div className="sticky top-0 z-30 bg-slate-100/95 dark:bg-slate-850/95 backdrop-blur-md px-4 sm:px-6 py-3.5 border-b border-slate-200/90 dark:border-slate-700/80 flex items-center justify-between gap-3 shadow-xs">
         <div>
           <div className="flex items-center gap-2">
             <Heart className="w-5 h-5 text-rose-500" fill="currentColor" />
-            <h1 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white tracking-tight">
+            <h1 className="text-lg sm:text-xl font-bold text-blue-950 dark:text-blue-100 tracking-tight">
               Welfare Support
             </h1>
           </div>
@@ -78,7 +78,7 @@ export default function Welfare() {
 
         <Link 
           to="/welfare/apply" 
-          className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white px-3.5 py-1.5 rounded-xl font-semibold text-xs shadow-xs transition-all shrink-0 cursor-pointer"
+          className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white px-3.5 py-1.5 rounded-xl font-bold text-xs shadow-xs transition-all shrink-0 cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span>Apply for Support</span>

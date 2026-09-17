@@ -98,12 +98,12 @@ export default function Directory() {
   return (
     <div className="max-w-4xl mx-auto w-full pb-20 animate-in fade-in duration-300">
       
-      {/* STICKY TITLE HEADER */}
-      <div className="sticky top-0 z-30 bg-mamas-bg/95 backdrop-blur-md px-4 sm:px-6 py-3.5 border-b border-slate-200/60 dark:border-slate-800/60 mb-5 flex items-center justify-between gap-3">
+      {/* STICKY TITLE HEADER (Light Grey Highlighted) */}
+      <div className="sticky top-0 z-30 bg-slate-100/95 dark:bg-slate-850/95 backdrop-blur-md px-4 sm:px-6 py-3.5 border-b border-slate-200/90 dark:border-slate-700/80 mb-5 flex items-center justify-between gap-3 shadow-xs">
         <div>
           <div className="flex items-center gap-2">
             <Users className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-            <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">
+            <h1 className="text-lg sm:text-xl font-bold tracking-tight text-blue-950 dark:text-blue-100">
               Alumni Directory
             </h1>
           </div>
@@ -111,7 +111,7 @@ export default function Directory() {
             Connect with verified MAMAS members & alumni
           </p>
         </div>
-        <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-full">
+        <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 bg-slate-200/80 dark:bg-slate-800 px-2.5 py-1 rounded-full">
           {safeMembers.length} Members
         </div>
       </div>

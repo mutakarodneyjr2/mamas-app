@@ -142,12 +142,12 @@ export default function Statement() {
   return (
     <div className="w-full pb-20 animate-in fade-in duration-300">
       
-      {/* PAGE HEADER ROW */}
-      <div className="px-4 sm:px-6 py-4 border-b border-slate-200/60 dark:border-slate-800/60 flex items-center justify-between gap-3 bg-white dark:bg-[#0c1731]">
+      {/* STICKY PAGE TITLE BAR (Light Grey Highlighted) */}
+      <div className="sticky top-0 z-30 bg-slate-100/95 dark:bg-slate-850/95 backdrop-blur-md px-4 sm:px-6 py-3.5 border-b border-slate-200/90 dark:border-slate-700/80 flex items-center justify-between gap-3 shadow-xs">
         <div>
           <div className="flex items-center gap-2">
             <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-            <h1 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white tracking-tight">
+            <h1 className="text-lg sm:text-xl font-bold text-blue-950 dark:text-blue-100 tracking-tight">
               Financial Statement
             </h1>
           </div>
@@ -159,7 +159,7 @@ export default function Statement() {
         <button 
           onClick={exportCSV}
           disabled={filteredContributions.length === 0}
-          className="flex items-center gap-1.5 bg-white dark:bg-[#0c1731] hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 px-3 py-1.5 rounded-xl font-semibold text-xs border border-slate-200 dark:border-slate-700 shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
+          className="flex items-center gap-1.5 bg-white dark:bg-[#0c1731] hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 px-3 py-1.5 rounded-xl font-bold text-xs border border-slate-200 dark:border-slate-700 shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
         >
           <Download className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
           <span>Export CSV</span>

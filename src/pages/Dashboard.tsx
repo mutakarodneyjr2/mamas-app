@@ -147,22 +147,22 @@ export default function Dashboard() {
   return (
     <div className="max-w-2xl mx-auto w-full pb-20 animate-in fade-in duration-300">
       
-      {/* COMPACT GREETING LINE & STICKY FEED CONTROLS */}
-      <div className="sticky top-0 z-30 bg-mamas-bg/95 backdrop-blur-md pt-3.5 pb-3 px-4 sm:px-6 border-b border-slate-200/60 dark:border-slate-800/60 flex flex-col gap-3">
+      {/* COMPACT GREETING LINE & STICKY FEED CONTROLS (Light Grey Highlighted) */}
+      <div className="sticky top-0 z-30 bg-slate-100/95 dark:bg-slate-850/95 backdrop-blur-md pt-3.5 pb-3 px-4 sm:px-6 border-b border-slate-200/90 dark:border-slate-700/80 flex flex-col gap-3 shadow-xs">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <h1 className="text-xl sm:text-2xl font-semibold text-slate-900 dark:text-white tracking-tight truncate">
+            <h1 className="text-xl sm:text-2xl font-bold text-blue-950 dark:text-blue-100 tracking-tight truncate">
               Community Feed
             </h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
-              Active school campaigns & alumni solidarity appeals
+            <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5 font-medium">
+              School campaigns & alumni welfare solidarity appeals
             </p>
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
             <Link
               to="/contribute"
-              className="text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 px-3.5 py-1.5 rounded-xl transition-all active:scale-95 shadow-xs"
+              className="text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 px-3.5 py-1.5 rounded-xl transition-all active:scale-95 shadow-xs"
             >
               Pay Dues
             </Link>
@@ -173,59 +173,59 @@ export default function Dashboard() {
         <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar">
           <button
             onClick={() => setFilterType('all')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
               filterType === 'all'
-                ? 'bg-blue-600 text-white font-semibold shadow-xs'
-                : 'bg-white dark:bg-[#0c1731] text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'bg-white dark:bg-[#0c1731] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
             }`}
           >
             All Updates ({feedItems.length})
           </button>
           <button
             onClick={() => setFilterType('announcement')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
               filterType === 'announcement'
-                ? 'bg-blue-600 text-white font-semibold shadow-xs'
-                : 'bg-white dark:bg-[#0c1731] text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'bg-white dark:bg-[#0c1731] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
             }`}
           >
-            <Sparkles className="w-3.5 h-3.5 opacity-70" />
+            <Sparkles className="w-3.5 h-3.5 opacity-80" />
             <span>Announcements</span>
           </button>
           <button
             onClick={() => setFilterType('campaign')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
               filterType === 'campaign'
-                ? 'bg-blue-600 text-white font-semibold shadow-xs'
-                : 'bg-white dark:bg-[#0c1731] text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'bg-white dark:bg-[#0c1731] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
             }`}
           >
-            <Target className="w-3.5 h-3.5 opacity-70" />
+            <Target className="w-3.5 h-3.5 opacity-80" />
             <span>Campaigns ({feedItems.filter(i => i.itemType === 'campaign').length})</span>
           </button>
           <button
             onClick={() => setFilterType('welfare')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
               filterType === 'welfare'
-                ? 'bg-blue-600 text-white font-semibold shadow-xs'
-                : 'bg-white dark:bg-[#0c1731] text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'bg-white dark:bg-[#0c1731] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
             }`}
           >
-            <HeartHandshake className="w-3.5 h-3.5 opacity-70" />
+            <HeartHandshake className="w-3.5 h-3.5 opacity-80" />
             <span>Welfare ({feedItems.filter(i => i.itemType === 'welfare').length})</span>
           </button>
         </div>
       </div>
 
-      {/* FEED CONTENT */}
-      <div className="mt-2 divide-y divide-slate-200/60 dark:divide-slate-800/60">
+      {/* FEED CONTENT - WITH STRONG CARD SEPARATION */}
+      <div className="p-3 sm:p-4 space-y-4">
         {loading ? (
-          <div className="p-4 space-y-4">
+          <div className="space-y-4">
             {[1, 2, 3].map((n) => (
-              <div key={n} className="bg-white dark:bg-[#0c1731] p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 animate-pulse space-y-3">
+              <div key={n} className="bg-white dark:bg-[#0c1731] p-5 rounded-2xl border border-slate-200 dark:border-slate-800 animate-pulse space-y-3 shadow-xs">
                 <div className="flex justify-between items-center">
-                  <div className="w-20 h-4 bg-slate-200 dark:bg-slate-800 rounded" />
-                  <div className="w-14 h-4 bg-slate-200 dark:bg-slate-800 rounded" />
+                  <div className="w-24 h-4 bg-slate-200 dark:bg-slate-800 rounded" />
+                  <div className="w-16 h-4 bg-slate-200 dark:bg-slate-800 rounded" />
                 </div>
                 <div className="w-3/4 h-5 bg-slate-200 dark:bg-slate-800 rounded" />
                 <div className="w-full h-3 bg-slate-200 dark:bg-slate-800 rounded" />
@@ -234,7 +234,7 @@ export default function Dashboard() {
             ))}
           </div>
         ) : filteredFeed.length === 0 ? (
-          <div className="py-16 text-center px-4">
+          <div className="py-16 text-center px-4 bg-white dark:bg-[#0c1731] rounded-2xl border border-slate-200 dark:border-slate-800">
             <Layers className="w-9 h-9 text-slate-300 dark:text-slate-600 mx-auto mb-2" strokeWidth={1.5} />
             <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">No Active Posts Right Now</h3>
             <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 max-w-sm mx-auto">
@@ -257,16 +257,16 @@ export default function Dashboard() {
             const isSupportClosed = item.status === 'closed';
 
             return (
-              <div 
+              <article 
                 key={`${item.itemType}-${item.id}`}
-                className="bg-white dark:bg-[#0c1731] py-4 px-4 sm:px-5 border-b border-slate-200/60 dark:border-slate-800/60 transition-all flex flex-col justify-between"
+                className="bg-white dark:bg-[#0c1731] rounded-2xl border border-slate-200 dark:border-slate-800/90 shadow-xs hover:shadow-md transition-all p-4 sm:p-5 flex flex-col justify-between"
               >
                 <div>
                   {/* Top Badge Row */}
-                  <div className="flex items-center justify-between gap-2 mb-2.5">
+                  <div className="flex items-center justify-between gap-2 mb-3">
                     <div className="flex items-center gap-2">
-                      <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2.5 py-0.5 rounded-full">
-                        {isCampaign ? 'Campaign' : 'Welfare'}
+                      <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider text-blue-900 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 border border-blue-200/80 dark:border-blue-800 px-2.5 py-0.5 rounded-full">
+                        {isCampaign ? 'School Campaign' : 'Welfare Solidarity'}
                       </span>
 
                       {item.category && !isCampaign && (
@@ -300,7 +300,7 @@ export default function Dashboard() {
                       <img
                         src={item.imageUrl}
                         alt={item.title}
-                        className="w-full sm:w-24 h-28 sm:h-24 rounded-xl object-cover bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shrink-0"
+                        className="w-full sm:w-28 h-32 sm:h-26 rounded-xl object-cover bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shrink-0 shadow-xs"
                         onError={(e) => {
                           (e.target as HTMLImageElement).src = DEFAULT_CAMPAIGN_PLACEHOLDER;
                         }}
@@ -310,7 +310,7 @@ export default function Dashboard() {
                     <div className="flex-1 min-w-0">
                       <h2 
                         onClick={() => setSelectedPost(item)}
-                        className="font-semibold text-slate-900 dark:text-white text-base tracking-tight hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer leading-snug mb-1"
+                        className="font-bold text-blue-950 dark:text-blue-100 text-base sm:text-lg tracking-tight hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer leading-snug mb-1.5"
                       >
                         {item.title}
                       </h2>
@@ -319,12 +319,12 @@ export default function Dashboard() {
                       </p>
 
                       {!isCampaign && (
-                        <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 mt-2">
-                          <span>Beneficiary: <strong className="text-slate-800 dark:text-slate-200 font-semibold">{item.beneficiaryName}</strong></span>
+                        <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 mt-2 bg-slate-50 dark:bg-slate-800/40 p-2 rounded-lg border border-slate-100 dark:border-slate-800">
+                          <span>Beneficiary: <strong className="text-blue-950 dark:text-blue-200 font-bold">{item.beneficiaryName}</strong></span>
                           {item.location && (
                             <>
                               <span className="text-slate-300 dark:text-slate-700">•</span>
-                              <span>District: <strong className="text-slate-800 dark:text-slate-200 font-semibold">{item.location}</strong></span>
+                              <span>District: <strong className="text-slate-700 dark:text-slate-300 font-semibold">{item.location}</strong></span>
                             </>
                           )}
                         </div>
@@ -334,22 +334,22 @@ export default function Dashboard() {
                 </div>
 
                 {/* Progress & Actions */}
-                <div className="pt-2.5 border-t border-slate-100 dark:border-slate-800/80">
-                  <div className="flex justify-between items-baseline text-xs mb-1.5">
-                    <div className="flex items-baseline gap-1">
-                      <span className="font-semibold text-sm text-slate-900 dark:text-white">
+                <div className="pt-3 border-t border-slate-100 dark:border-slate-800/80">
+                  <div className="flex justify-between items-baseline text-xs mb-2">
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="font-bold text-sm sm:text-base text-blue-950 dark:text-blue-100">
                         {formatUGX(raised)}
                       </span>
-                      <span className="text-[11px] text-slate-400 dark:text-slate-500">raised</span>
+                      <span className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">raised</span>
                     </div>
 
                     <div className="text-right text-[11px]">
                       {hasTarget ? (
-                        <span className="text-slate-500 dark:text-slate-400 font-medium">
+                        <span className="text-blue-900 dark:text-blue-300 font-bold">
                           Goal: {formatUGX(target)} ({pct}%)
                         </span>
                       ) : (
-                        <span className="text-slate-500 dark:text-slate-400">
+                        <span className="text-slate-500 dark:text-slate-400 font-medium">
                           {item.supporterCount || 0} {item.supporterCount === 1 ? 'supporter' : 'supporters'}
                         </span>
                       )}
@@ -357,9 +357,9 @@ export default function Dashboard() {
                   </div>
 
                   {hasTarget && (
-                    <div className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden mb-3">
+                    <div className="w-full h-2.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden mb-3.5">
                       <div 
-                        className="h-full rounded-full transition-all duration-500 bg-blue-600"
+                        className="h-full rounded-full transition-all duration-500 bg-blue-600 shadow-xs"
                         style={{ width: `${pct}%` }}
                       />
                     </div>
@@ -370,14 +370,14 @@ export default function Dashboard() {
                       isCampaign ? (
                         <Link 
                           to={`/contribute?campaignId=${item.id}`}
-                          className="flex-1 py-2 px-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white font-semibold text-xs text-center transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                          className="flex-1 py-2.5 px-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white font-bold text-xs text-center transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
                         >
                           <span>Support Campaign</span>
                         </Link>
                       ) : (
                         <Link 
                           to={`/contribute?type=welfare_support&welfareId=${item.id}`}
-                          className="flex-1 py-2 px-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white font-semibold text-xs text-center transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                          className="flex-1 py-2.5 px-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white font-bold text-xs text-center transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
                         >
                           <span>Support Appeal</span>
                         </Link>
@@ -385,7 +385,7 @@ export default function Dashboard() {
                     ) : (
                       <button 
                         disabled 
-                        className="flex-1 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 font-medium text-xs text-center cursor-not-allowed border border-slate-200 dark:border-slate-700"
+                        className="flex-1 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 font-semibold text-xs text-center cursor-not-allowed border border-slate-200 dark:border-slate-700"
                       >
                         {isSupportPaused ? 'Support Paused' : 'Concluded'}
                       </button>
@@ -393,13 +393,13 @@ export default function Dashboard() {
 
                     <button
                       onClick={() => setSelectedPost(item)}
-                      className="px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium text-xs transition-colors cursor-pointer"
+                      className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold text-xs transition-colors cursor-pointer"
                     >
                       Details
                     </button>
                   </div>
                 </div>
-              </div>
+              </article>
             );
           })
         )}

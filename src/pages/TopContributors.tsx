@@ -74,105 +74,107 @@ export default function TopContributors() {
   return (
     <div className="max-w-3xl mx-auto w-full pb-20 animate-in fade-in duration-300">
       
-      {/* STICKY PAGE TITLE HEADER */}
-      <div className="sticky top-0 z-30 bg-mamas-bg/95 backdrop-blur-md px-4 sm:px-6 py-4 mb-4 border-b border-slate-200/60 dark:border-slate-800/60 flex items-center justify-between">
+      {/* STICKY PAGE TITLE HEADER (Light Grey Highlighted) */}
+      <div className="sticky top-0 z-30 bg-slate-100/95 dark:bg-slate-850/95 backdrop-blur-md px-4 sm:px-6 py-3.5 border-b border-slate-200/90 dark:border-slate-700/80 flex items-center justify-between shadow-xs">
         <div>
           <div className="flex items-center gap-2">
             <Trophy className="w-5 h-5 text-amber-500" />
-            <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">Top Contributors</h1>
+            <h1 className="text-lg sm:text-xl font-bold text-blue-950 dark:text-blue-100 tracking-tight">Top Contributors</h1>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Recognizing alumni dedicated to our collective solidarity and growth</p>
         </div>
       </div>
 
-      {loading ? (
-        <div className="flex justify-center py-16">
-          <div className="w-8 h-8 border-3 border-blue-200 dark:border-blue-900 border-t-blue-600 rounded-full animate-spin"></div>
-        </div>
-      ) : contributors.length === 0 ? (
-        <div className="py-12 text-center text-slate-400">
-          <Trophy className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto mb-2" strokeWidth={1.5} />
-          <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">No Contribution Records Yet</h3>
-          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">When members pay dues or back campaigns, the verified leaderboard will appear here.</p>
-        </div>
-      ) : (
-        <div className="divide-y divide-slate-200/60 dark:divide-slate-800/60">
-          {contributors.map((member, index) => {
-            const rank = index + 1;
-            const rankLabel = rank === 1 ? '1st' : rank === 2 ? '2nd' : rank === 3 ? '3rd' : `${rank}th`;
-            const initials = member.fullName ? member.fullName.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() : 'AM';
+      <div className="p-3 sm:p-4">
+        {loading ? (
+          <div className="flex justify-center py-16">
+            <div className="w-8 h-8 border-3 border-blue-200 dark:border-blue-900 border-t-blue-600 rounded-full animate-spin"></div>
+          </div>
+        ) : contributors.length === 0 ? (
+          <div className="py-12 text-center text-slate-400 bg-white dark:bg-[#0c1731] rounded-2xl border border-slate-200 dark:border-slate-800">
+            <Trophy className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto mb-2" strokeWidth={1.5} />
+            <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">No Contribution Records Yet</h3>
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">When members pay dues or back campaigns, the verified leaderboard will appear here.</p>
+          </div>
+        ) : (
+          <div className="space-y-2.5">
+            {contributors.map((member, index) => {
+              const rank = index + 1;
+              const rankLabel = rank === 1 ? '1st' : rank === 2 ? '2nd' : rank === 3 ? '3rd' : `${rank}th`;
+              const initials = member.fullName ? member.fullName.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() : 'AM';
 
-            const badgeBg = rank === 1 
-              ? 'bg-amber-500 text-slate-950 border-amber-400' 
-              : rank === 2 
-              ? 'bg-slate-300 dark:bg-slate-700 text-slate-900 dark:text-white border-slate-400' 
-              : rank === 3 
-              ? 'bg-amber-700 text-white border-amber-600' 
-              : 'bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700';
+              const badgeBg = rank === 1 
+                ? 'bg-amber-500 text-slate-950 border-amber-400 font-black' 
+                : rank === 2 
+                ? 'bg-slate-300 dark:bg-slate-700 text-slate-900 dark:text-white border-slate-400 font-bold' 
+                : rank === 3 
+                ? 'bg-amber-700 text-white border-amber-600 font-bold' 
+                : 'bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 font-semibold';
 
-            return (
-              <div
-                key={member.uid}
-                onClick={() => setSelectedMember(member)}
-                className="bg-white dark:bg-[#0c1731] py-3.5 px-2 sm:px-4 transition-all cursor-pointer flex items-center justify-between gap-3 sm:gap-4 hover:bg-slate-50 dark:hover:bg-slate-800/40"
-              >
-                <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-                  {/* Rank Badge */}
-                  <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-2xl flex items-center justify-center font-extrabold text-xs sm:text-sm border shadow-xs shrink-0 ${badgeBg}`}>
-                    {rankLabel}
+              return (
+                <div
+                  key={member.uid}
+                  onClick={() => setSelectedMember(member)}
+                  className="bg-white dark:bg-[#0c1731] py-3.5 px-4 rounded-xl border border-slate-200/90 dark:border-slate-800 shadow-xs hover:shadow-md transition-all cursor-pointer flex items-center justify-between gap-3 sm:gap-4"
+                >
+                  <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                    {/* Rank Badge */}
+                    <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-xs sm:text-sm border shadow-xs shrink-0 ${badgeBg}`}>
+                      {rankLabel}
+                    </div>
+
+                    {/* Avatar */}
+                    {member.profilePictureUrl ? (
+                      <img
+                        src={member.profilePictureUrl}
+                        alt={member.fullName}
+                        className="w-11 h-11 rounded-xl object-cover border border-slate-200 dark:border-slate-700 shrink-0"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <div className="w-11 h-11 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-extrabold text-sm flex items-center justify-center border border-blue-200 dark:border-blue-800 shrink-0">
+                        {initials}
+                      </div>
+                    )}
+
+                    {/* Member Info */}
+                    <div className="min-w-0">
+                      <h3 className="font-bold text-blue-950 dark:text-blue-100 text-sm sm:text-base truncate">
+                        {member.fullName}
+                      </h3>
+                      <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                        <span className="flex items-center gap-1 font-medium">
+                          <School className="w-3.5 h-3.5 text-blue-500" />
+                          Class of {member.yearLeftSchool || '—'}
+                        </span>
+                        {member.district && canViewField(member, 'location') && (
+                          <>
+                            <span className="opacity-40">•</span>
+                            <span className="truncate">{member.district}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Avatar */}
-                  {member.profilePictureUrl ? (
-                    <img
-                      src={member.profilePictureUrl}
-                      alt={member.fullName}
-                      className="w-11 h-11 rounded-2xl object-cover border border-slate-200 dark:border-slate-700 shrink-0"
-                      referrerPolicy="no-referrer"
-                    />
-                  ) : (
-                    <div className="w-11 h-11 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-extrabold text-sm flex items-center justify-center border border-blue-200 dark:border-blue-800 shrink-0">
-                      {initials}
-                    </div>
-                  )}
-
-                  {/* Member Info */}
-                  <div className="min-w-0">
-                    <h3 className="font-bold text-slate-900 dark:text-white text-sm sm:text-base truncate">
-                      {member.fullName}
-                    </h3>
-                    <div className="flex items-center gap-2 text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-                      <span className="flex items-center gap-1 font-medium">
-                        <School className="w-3.5 h-3.5 text-blue-500" />
-                        Class of {member.yearLeftSchool || '—'}
+                  {/* Amount / Action */}
+                  <div className="flex items-center gap-3 shrink-0">
+                    <div className="text-right">
+                      <span className="block font-black text-sm sm:text-base text-blue-950 dark:text-blue-100">
+                        {formatUGX(member.totalContributed)}
                       </span>
-                      {member.district && canViewField(member, 'location') && (
-                        <>
-                          <span className="opacity-40">•</span>
-                          <span className="truncate">{member.district}</span>
-                        </>
-                      )}
+                      <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-400 dark:text-slate-500">
+                        Total Contributed
+                      </span>
                     </div>
+                    <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600 hidden sm:block" />
                   </div>
                 </div>
-
-                {/* Amount / Action */}
-                <div className="flex items-center gap-3 shrink-0">
-                  <div className="text-right">
-                    <span className="block font-extrabold text-sm sm:text-base text-slate-900 dark:text-white">
-                      {formatUGX(member.totalContributed)}
-                    </span>
-                    <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-400 dark:text-slate-500">
-                      Total Contributed
-                    </span>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600 hidden sm:block" />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       {/* Profile Detail Modal */}
       <AnimatePresence>
