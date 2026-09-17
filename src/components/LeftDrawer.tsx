@@ -32,10 +32,10 @@ export function LeftDrawer({ isOpen, onClose }: LeftDrawerProps) {
 
   const navLinkClass = (path: string) => {
     const isActive = location.pathname === path || (path !== '/' && path !== '/dashboard' && location.pathname.startsWith(path));
-    return `flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm font-semibold transition-all ${
+    return `flex items-center gap-3 px-3 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all ${
       isActive 
-        ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/25 font-bold' 
-        : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/70 hover:text-blue-600 dark:hover:text-blue-400'
+        ? 'bg-blue-600 text-white font-semibold shadow-xs' 
+        : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/70 hover:text-slate-900 dark:hover:text-white'
     }`;
   };
 
@@ -164,11 +164,11 @@ export function LeftDrawer({ isOpen, onClose }: LeftDrawerProps) {
                       <span>Alumni Directory</span>
                     </Link>
                     <Link to="/top-contributors" onClick={onClose} className={navLinkClass('/top-contributors')}>
-                      <Trophy className="w-4 h-4 text-amber-500" />
+                      <Trophy className="w-4 h-4 opacity-70" />
                       <span>Top Contributors</span>
                     </Link>
                     <Link to="/statement" onClick={onClose} className={navLinkClass('/statement')}>
-                      <FileText className="w-4 h-4" />
+                      <FileText className="w-4 h-4 opacity-70" />
                       <span>Financial Statement</span>
                     </Link>
                   </div>
@@ -181,15 +181,15 @@ export function LeftDrawer({ isOpen, onClose }: LeftDrawerProps) {
                   </div>
                   <div className="space-y-1">
                     <Link to="/campaigns" onClick={onClose} className={navLinkClass('/campaigns')}>
-                      <Target className="w-4 h-4 text-blue-500" />
+                      <Target className="w-4 h-4 opacity-70" />
                       <span>Active Projects</span>
                     </Link>
                     <Link to="/welfare" onClick={onClose} className={navLinkClass('/welfare')}>
-                      <HeartHandshake className="w-4 h-4 text-rose-500" />
+                      <HeartHandshake className="w-4 h-4 opacity-70" />
                       <span>Welfare & Solidarity</span>
                     </Link>
                     <Link to="/contribute" onClick={onClose} className={navLinkClass('/contribute')}>
-                      <Wallet className="w-4 h-4 text-emerald-500" />
+                      <Wallet className="w-4 h-4 opacity-70" />
                       <span>Pay Dues & Support</span>
                     </Link>
                   </div>
@@ -198,24 +198,24 @@ export function LeftDrawer({ isOpen, onClose }: LeftDrawerProps) {
                 {/* Governance / Admin Portal Section */}
                 {isExecutive && (
                   <div>
-                    <div className="text-[10px] font-extrabold uppercase tracking-widest text-amber-600 dark:text-amber-400 px-3 mb-2 flex items-center gap-1.5">
+                    <div className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 dark:text-slate-500 px-3 mb-2 flex items-center gap-1.5">
                       <Shield className="w-3 h-3" />
                       <span>Executive Governance</span>
                     </div>
                     <div className="space-y-1">
                       <Link to="/admin" onClick={onClose} className={navLinkClass('/admin')}>
-                        <Shield className="w-4 h-4 text-amber-500" />
+                        <Shield className="w-4 h-4 opacity-70" />
                         <span>Governance Portal</span>
                       </Link>
                       {canSeeExpenses && (
                         <Link to="/expenses" onClick={onClose} className={navLinkClass('/expenses')}>
-                          <TrendingUp className="w-4 h-4 text-blue-500" />
+                          <TrendingUp className="w-4 h-4 opacity-70" />
                           <span>Requisitions & Approvals</span>
                         </Link>
                       )}
                       {canSeeMoneyOut && (
                         <Link to="/money-out" onClick={onClose} className={navLinkClass('/money-out')}>
-                          <ArrowUpRight className="w-4 h-4 text-rose-500" />
+                          <ArrowUpRight className="w-4 h-4 opacity-70" />
                           <span>Money Out Disburse</span>
                         </Link>
                       )}

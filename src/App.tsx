@@ -95,17 +95,17 @@ function Layout() {
       {/* Left Drawer Menu */}
       <LeftDrawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
 
-      {/* Vibrant Light Blue Fixed Top Header */}
-      <header className="bg-blue-600 dark:bg-blue-700 text-white border-b border-blue-500/40 shrink-0 h-16 z-50 shadow-md transition-colors">
+      {/* Fixed Top Header */}
+      <header className="bg-blue-600 dark:bg-blue-700 text-white border-b border-blue-500/30 shrink-0 h-14 z-50 shadow-xs transition-colors">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-full flex items-center justify-between">
           
           {/* Left Side: Drawer Toggle + User Profile Photo / Name */}
-          <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
             {userProfile ? (
               <button
                 type="button"
                 onClick={() => setDrawerOpen(true)}
-                className="p-2 rounded-2xl bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer shrink-0"
+                className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer shrink-0"
                 aria-label="Open menu drawer"
               >
                 <Menu className="w-5 h-5" />
@@ -119,26 +119,26 @@ function Layout() {
             {userProfile && (
               <Link 
                 to="/profile" 
-                className="flex items-center gap-2.5 group p-1 -ml-1 rounded-2xl hover:bg-white/10 transition-colors min-w-0"
+                className="flex items-center gap-2.5 group p-1 -ml-1 rounded-xl hover:bg-white/10 transition-colors min-w-0"
               >
                 {userProfile.profilePictureUrl ? (
                   <img 
                     src={userProfile.profilePictureUrl} 
                     alt={userProfile.fullName} 
-                    className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover border border-white/20 shrink-0" 
+                    className="w-8 h-8 rounded-full object-cover border border-white/20 shrink-0" 
                     referrerPolicy="no-referrer"
                   />
                 ) : (
-                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-blue-800 text-white font-extrabold text-xs flex items-center justify-center border border-white/30 shrink-0">
+                  <div className="w-8 h-8 rounded-full bg-blue-800 text-white font-extrabold text-xs flex items-center justify-center border border-white/30 shrink-0">
                     {userProfile.fullName ? userProfile.fullName.slice(0, 2).toUpperCase() : 'AM'}
                   </div>
                 )}
                 <div className="min-w-0 hidden xs:block sm:block">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs sm:text-sm font-bold text-white truncate group-hover:text-amber-300 transition-colors">
+                    <span className="text-xs sm:text-sm font-semibold text-white truncate group-hover:text-blue-100 transition-colors">
                       {userProfile.fullName || 'Member'}
                     </span>
-                    <span className="text-[9px] font-extrabold bg-amber-400 text-slate-950 px-1.5 py-0.2 rounded-full uppercase tracking-wider hidden md:inline">
+                    <span className="text-[9px] font-bold bg-white/20 text-white px-1.5 py-0.5 rounded-full uppercase tracking-wider hidden md:inline">
                       {userProfile.role?.replace('_', ' ') || 'MEMBER'}
                     </span>
                   </div>
@@ -148,7 +148,7 @@ function Layout() {
           </div>
 
           {/* Right Side: Theme, Notifications, Directory Button */}
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0 text-white">
+          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0 text-white">
             <ThemeIconButton />
 
             {userProfile && <NotificationBell />}
@@ -156,7 +156,7 @@ function Layout() {
             {userProfile && (
               <Link
                 to="/directory"
-                className="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 text-white border border-white/20 px-3 py-1.5 rounded-full text-xs font-bold transition-all shadow-xs active:scale-95 cursor-pointer"
+                className="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 text-white border border-white/20 px-2.5 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer"
                 title="Open Alumni Directory"
               >
                 <Users className="w-3.5 h-3.5" />
@@ -193,7 +193,14 @@ function ProtectedRoute({ children, requiredRole, allowPending = false }: { chil
   const { currentUser, userProfile, loading } = useAuth();
   const location = useLocation();
 
-  if (loading) return <div className="p-8 text-center text-mamas-text-muted">Loading...</div>;
+  if (loading) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center p-8">
+        <div className="w-7 h-7 border-2 border-slate-200 dark:border-slate-700 border-t-blue-600 rounded-full animate-spin" />
+        <span className="text-xs font-medium text-slate-400 dark:text-slate-500 mt-3">Loading application...</span>
+      </div>
+    );
+  }
 
   if (!currentUser) return <Navigate to="/login" state={{ from: location.pathname + location.search }} replace />;
   if (!userProfile) return <Navigate to="/register" state={{ from: location.pathname + location.search }} replace />;

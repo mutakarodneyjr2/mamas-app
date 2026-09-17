@@ -9,7 +9,6 @@ import {
 } from 'lucide-react';
 import { formatUGX, safeGetDate, safeFormatDate } from '../lib/utils';
 import { StatusBadge } from '../components/StatusBadge';
-import { EmptyState } from '../components/EmptyState';
 
 export default function Statement() {
   const { currentUser, userProfile } = useAuth();
@@ -149,136 +148,133 @@ export default function Statement() {
         <div>
           <div className="flex items-center gap-2">
             <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-            <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+            <h1 className="text-xl sm:text-2xl font-semibold text-slate-900 dark:text-white tracking-tight">
               Financial Statement
             </h1>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Complete record of your verified contributions & support
+            Verified records of dues, campaign support & solidarity giving
           </p>
         </div>
 
         <button 
           onClick={exportCSV}
           disabled={filteredContributions.length === 0}
-          className="flex items-center gap-1.5 bg-white dark:bg-[#0c1731] hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 px-3.5 py-2 rounded-2xl font-bold text-xs border border-slate-200 dark:border-slate-700 shadow-xs transition-all disabled:opacity-50 cursor-pointer active:scale-95 shrink-0"
+          className="flex items-center gap-1.5 bg-white dark:bg-[#0c1731] hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 px-3 py-1.5 rounded-xl font-medium text-xs border border-slate-200 dark:border-slate-700 shadow-xs transition-all disabled:opacity-50 cursor-pointer active:scale-95 shrink-0"
         >
-          <Download className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+          <Download className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
           <span className="hidden sm:inline">Export CSV</span>
           <span className="sm:hidden">Export</span>
         </button>
       </div>
 
-      {/* COMPACT SUMMARY HEADER (3 CATEGORIES IN ONE ROW) */}
-      <div className="bg-white dark:bg-[#0c1731] py-4 px-2 sm:px-4 border-b border-slate-200/60 dark:border-slate-800/60 mb-6 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
+      {/* COMPACT SUMMARY HEADER */}
+      <div className="bg-white dark:bg-[#0c1731] rounded-2xl p-4 sm:p-5 border border-slate-200/80 dark:border-slate-800 mb-5 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 pb-3.5 border-b border-slate-100 dark:border-slate-800">
           <div>
-            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500 block">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 block">
               Total Verified Contributions
             </span>
-            <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+            <span className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
               {formatUGX(totalVerified)}
             </span>
           </div>
 
-          <div className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-800/80 w-fit">
+          <div className="flex items-center gap-1 text-[11px] text-emerald-700 dark:text-emerald-400 font-medium bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800/60 w-fit">
             <ShieldCheck className="w-3.5 h-3.5" />
-            <span>Audited & Immutable</span>
+            <span>Audited & Verified</span>
           </div>
         </div>
 
         {/* 3 Categories in 1 Compact Row */}
-        <div className="grid grid-cols-3 gap-2 sm:gap-3">
+        <div className="grid grid-cols-3 gap-2 sm:gap-3 pt-3.5">
           {/* Welfare Relief */}
-          <div className="bg-slate-50 dark:bg-slate-900/60 p-3 sm:p-3.5 rounded-2xl border border-slate-100 dark:border-slate-800 flex flex-col justify-between">
-            <div className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400 mb-1">
-              <Heart className="w-3.5 h-3.5 shrink-0" />
-              <span className="text-[10px] sm:text-xs font-bold truncate">Welfare Dues</span>
+          <div className="bg-slate-50 dark:bg-slate-800/50 p-2.5 sm:p-3 rounded-xl border border-slate-100 dark:border-slate-800 flex flex-col justify-between">
+            <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300 mb-1">
+              <Heart className="w-3 h-3 text-blue-500 shrink-0" />
+              <span className="text-[10px] sm:text-xs font-medium truncate">Welfare Dues</span>
             </div>
-            <span className="font-extrabold text-xs sm:text-base text-slate-900 dark:text-white">
+            <span className="font-semibold text-xs sm:text-sm text-slate-900 dark:text-white">
               {formatUGX(welfareTotal)}
             </span>
           </div>
 
           {/* School Campaigns */}
-          <div className="bg-slate-50 dark:bg-slate-900/60 p-3 sm:p-3.5 rounded-2xl border border-slate-100 dark:border-slate-800 flex flex-col justify-between">
-            <div className="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400 mb-1">
-              <Target className="w-3.5 h-3.5 shrink-0" />
-              <span className="text-[10px] sm:text-xs font-bold truncate">Campaigns</span>
+          <div className="bg-slate-50 dark:bg-slate-800/50 p-2.5 sm:p-3 rounded-xl border border-slate-100 dark:border-slate-800 flex flex-col justify-between">
+            <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300 mb-1">
+              <Target className="w-3 h-3 text-indigo-500 shrink-0" />
+              <span className="text-[10px] sm:text-xs font-medium truncate">Campaigns</span>
             </div>
-            <span className="font-extrabold text-xs sm:text-base text-slate-900 dark:text-white">
+            <span className="font-semibold text-xs sm:text-sm text-slate-900 dark:text-white">
               {formatUGX(campaignTotal)}
             </span>
           </div>
 
           {/* Solidarity Support */}
-          <div className="bg-slate-50 dark:bg-slate-900/60 p-3 sm:p-3.5 rounded-2xl border border-slate-100 dark:border-slate-800 flex flex-col justify-between">
-            <div className="flex items-center gap-1.5 text-rose-600 dark:text-rose-400 mb-1">
-              <HeartHandshake className="w-3.5 h-3.5 shrink-0" />
-              <span className="text-[10px] sm:text-xs font-bold truncate">Solidarity</span>
+          <div className="bg-slate-50 dark:bg-slate-800/50 p-2.5 sm:p-3 rounded-xl border border-slate-100 dark:border-slate-800 flex flex-col justify-between">
+            <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300 mb-1">
+              <HeartHandshake className="w-3 h-3 text-rose-500 shrink-0" />
+              <span className="text-[10px] sm:text-xs font-medium truncate">Solidarity</span>
             </div>
-            <span className="font-extrabold text-xs sm:text-base text-slate-900 dark:text-white">
+            <span className="font-semibold text-xs sm:text-sm text-slate-900 dark:text-white">
               {formatUGX(solidarityTotal)}
             </span>
           </div>
         </div>
       </div>
 
-      {/* FILTER BUTTONS */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-2 mb-4 no-scrollbar">
+      {/* FILTER SEGMENTED CONTROL */}
+      <div className="bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl flex gap-1 border border-slate-200/80 dark:border-slate-700/60 mb-4 overflow-x-auto no-scrollbar">
         <button
           onClick={() => setFilter('all')}
-          className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+          className={`flex-1 min-w-[70px] py-1.5 px-2.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer text-center ${
             filter === 'all'
               ? 'bg-blue-600 text-white shadow-xs'
-              : 'bg-white dark:bg-[#0c1731] text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+              : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
           }`}
         >
-          All Activity ({contributions.length})
+          All ({contributions.length})
         </button>
         <button
           onClick={() => setFilter('welfare')}
-          className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1 ${
+          className={`flex-1 min-w-[90px] py-1.5 px-2.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer text-center ${
             filter === 'welfare'
               ? 'bg-blue-600 text-white shadow-xs'
-              : 'bg-white dark:bg-[#0c1731] text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+              : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
           }`}
         >
-          <Heart className="w-3 h-3 text-blue-500" />
-          <span>Welfare Dues</span>
+          Welfare Dues
         </button>
         <button
           onClick={() => setFilter('school_support')}
-          className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1 ${
+          className={`flex-1 min-w-[90px] py-1.5 px-2.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer text-center ${
             filter === 'school_support'
               ? 'bg-blue-600 text-white shadow-xs'
-              : 'bg-white dark:bg-[#0c1731] text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+              : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
           }`}
         >
-          <Target className="w-3 h-3 text-indigo-500" />
-          <span>School Campaigns</span>
+          Campaigns
         </button>
         <button
           onClick={() => setFilter('welfare_support')}
-          className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1 ${
+          className={`flex-1 min-w-[90px] py-1.5 px-2.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer text-center ${
             filter === 'welfare_support'
               ? 'bg-blue-600 text-white shadow-xs'
-              : 'bg-white dark:bg-[#0c1731] text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+              : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
           }`}
         >
-          <HeartHandshake className="w-3 h-3 text-rose-500" />
-          <span>Solidarity Support</span>
+          Solidarity
         </button>
       </div>
 
       {/* TRANSACTION LIST */}
       <div>
         {loading ? (
-          <div className="flex justify-center py-16 bg-white dark:bg-[#0c1731]">
-            <div className="w-7 h-7 border-3 border-blue-200 dark:border-blue-900 border-t-blue-600 rounded-full animate-spin"></div>
+          <div className="flex justify-center py-16 bg-white dark:bg-[#0c1731] rounded-2xl border border-slate-200/80 dark:border-slate-800">
+            <div className="w-6 h-6 border-2 border-blue-200 dark:border-blue-900 border-t-blue-600 rounded-full animate-spin"></div>
           </div>
         ) : filteredContributions.length > 0 ? (
-          <div className="divide-y divide-slate-200/60 dark:divide-slate-800/60">
+          <div className="bg-white dark:bg-[#0c1731] rounded-2xl border border-slate-200/80 dark:border-slate-800 divide-y divide-slate-100 dark:divide-slate-800/80 overflow-hidden shadow-xs">
             {filteredContributions.map((item: any) => {
               const isVerified = item.status === 'verified';
               const isPending = item.status === 'pending';
@@ -290,71 +286,68 @@ export default function Statement() {
               return (
                 <div 
                   key={item.id} 
-                  className="bg-white dark:bg-[#0c1731] py-4 px-2 sm:px-4 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                  className="p-3.5 sm:p-4 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors flex items-center justify-between gap-3"
                 >
-                  <div className="flex items-start gap-3.5 min-w-0">
-                    <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
                       isSolidarity 
-                        ? 'bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900' 
+                        ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400' 
                         : isCampaign 
-                        ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-900' 
-                        : 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900'
+                        ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400' 
+                        : 'bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400'
                     }`}>
                       {isSolidarity ? (
-                        <HeartHandshake className="w-5 h-5" />
+                        <HeartHandshake className="w-4 h-4" />
                       ) : isCampaign ? (
-                        <Target className="w-5 h-5" />
+                        <Target className="w-4 h-4" />
                       ) : (
-                        <Heart className="w-5 h-5" />
+                        <Heart className="w-4 h-4" />
                       )}
                     </div>
 
                     <div className="min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <span className="font-bold text-slate-900 dark:text-white text-sm sm:text-base truncate">
-                          {isSolidarity 
-                            ? 'Solidarity Welfare Support' 
-                            : isCampaign 
-                            ? 'School Infrastructure Campaign' 
-                            : 'Welfare Relief Pool'}
-                        </span>
-                        <StatusBadge status={item.status} />
+                      <div className="font-medium text-slate-900 dark:text-white text-xs sm:text-sm truncate">
+                        {isSolidarity 
+                          ? 'Solidarity Welfare Support' 
+                          : isCampaign 
+                          ? 'School Infrastructure Campaign' 
+                          : 'Welfare Relief Pool'}
                       </div>
 
-                      <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400 dark:text-slate-500">
+                      <div className="flex items-center gap-1.5 text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
                         <span>{dateStr}</span>
                         {item.network && (
                           <>
-                            <span className="opacity-40">•</span>
+                            <span>•</span>
                             <span>{item.network}</span>
                           </>
                         )}
                         {item.phoneNumber && (
                           <>
-                            <span className="opacity-40">•</span>
-                            <span>{item.phoneNumber}</span>
+                            <span>•</span>
+                            <span className="font-mono">{item.phoneNumber}</span>
                           </>
                         )}
                       </div>
 
                       {/* Recheck outcome notification */}
                       {recheckMessage && recheckMessage.id === item.id && (
-                        <div className={`mt-2 text-xs p-2 rounded-xl font-bold flex items-center gap-1.5 ${
+                        <div className={`mt-1.5 text-[11px] p-1.5 rounded-lg font-medium flex items-center gap-1 ${
                           recheckMessage.success 
-                            ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' 
-                            : 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
+                            ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300' 
+                            : 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300'
                         }`}>
-                          <RefreshCw className="w-3.5 h-3.5 shrink-0" />
+                          <RefreshCw className="w-3 h-3 shrink-0" />
                           <span>{recheckMessage.text}</span>
                         </div>
                       )}
                     </div>
                   </div>
 
-                  {/* Right side: Amount & Recheck action */}
-                  <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-0 border-slate-100 dark:border-slate-800">
-                    <div className="text-left sm:text-right">
-                      <span className={`block font-extrabold text-base sm:text-lg ${
+                  {/* Right side: Amount, status, recheck */}
+                  <div className="flex items-center gap-3 shrink-0">
+                    <div className="text-right">
+                      <span className={`block font-semibold text-xs sm:text-sm ${
                         isVerified 
                           ? 'text-slate-900 dark:text-white' 
                           : isPending 
@@ -363,9 +356,9 @@ export default function Statement() {
                       }`}>
                         {formatUGX(item.amount)}
                       </span>
-                      <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
-                        {item.id.slice(0, 10)}...
-                      </span>
+                      <div className="mt-0.5">
+                        <StatusBadge status={item.status} />
+                      </div>
                     </div>
 
                     {isPending && (
@@ -373,11 +366,10 @@ export default function Statement() {
                         type="button"
                         onClick={() => handleRecheckStatus(item.id)}
                         disabled={recheckingId === item.id}
-                        className="px-3 py-1.5 bg-amber-50 dark:bg-amber-950/60 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
-                        title="Recheck pending payment with Mobile Money provider"
+                        className="p-1 text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors cursor-pointer"
+                        title="Recheck pending payment"
                       >
                         <RefreshCw className={`w-3.5 h-3.5 ${recheckingId === item.id ? 'animate-spin' : ''}`} />
-                        <span>{recheckingId === item.id ? 'Checking' : 'Recheck'}</span>
                       </button>
                     )}
                   </div>
@@ -386,12 +378,12 @@ export default function Statement() {
             })}
           </div>
         ) : (
-          <div className="bg-white dark:bg-[#0c1731] rounded-3xl shadow-xs border border-slate-200/80 dark:border-slate-800">
-            <EmptyState
-              icon={FileText}
-              title="No Transactions Found"
-              subtitle="When you make contributions through Mobile Money, your verified statement and timestamps will be visible here."
-            />
+          <div className="bg-white dark:bg-[#0c1731] rounded-2xl p-8 text-center border border-slate-200/80 dark:border-slate-800 shadow-xs">
+            <FileText className="w-8 h-8 text-slate-300 dark:text-slate-600 mx-auto mb-2" strokeWidth={1.5} />
+            <h3 className="text-xs font-semibold text-slate-700 dark:text-slate-300">No transactions found</h3>
+            <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
+              Contributions made via Mobile Money will appear here after verification.
+            </p>
           </div>
         )}
       </div>
