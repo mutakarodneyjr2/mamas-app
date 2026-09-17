@@ -3,10 +3,12 @@ import { useAuth } from '../contexts/AuthContext';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 import { SchoolCampaign } from '../types';
-import { createSchoolCampaign, updateCampaignStatus, logActivity, transferCampaignExcessFunds, deleteSchoolCampaign } from '../lib/services';
+import { createSchoolCampaign, updateCampaignStatus, logActivity, transferCampaignExcessFunds, deleteSchoolCampaign, archiveSchoolCampaign } from '../lib/services';
 import { formatUGX, DEFAULT_CAMPAIGN_PLACEHOLDER } from '../lib/utils';
 import { Target, Plus, Shield, CheckCircle, ArrowRightLeft, XCircle, Clock, Trash2, Image as ImageIcon, Loader2, AlertCircle } from 'lucide-react';
 import { uploadImage } from '../lib/storage';
+import { PromptModal } from '../components/PromptModal';
+import { ConfirmationModal } from '../components/ConfirmationModal';
 
 export default function AdminCampaigns() {
   const { currentUser, userProfile } = useAuth();
@@ -21,6 +23,13 @@ export default function AdminCampaigns() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+
+  const [promptModalOpen, setPromptModalOpen] = useState(false);
+  const [promptAction, setPromptAction] = useState<"close" | "transfer" | null>(null);
+  const [activeCampaignId, setActiveCampaignId] = useState<string | null>(null);
+
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [campaignToDelete, setCampaignToDelete] = useState<{id: string, title: string, isFunded: boolean} | null>(null);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -82,48 +91,59 @@ export default function AdminCampaigns() {
     }
   };
 
-  const handleAction = async (campaignId: string, action: "close" | "transfer") => {
-    if (!currentUser) return;
-    
-    let note = "";
-    if (action === "transfer") {
-      const promptNote = window.prompt("Reason/Note for transferring excess funds to Welfare Pool:");
-      if (promptNote === null) return;
-      note = promptNote;
-    } else {
-      const promptNote = window.prompt("Reason/Note for closing this campaign:");
-      if (promptNote === null) return;
-      note = promptNote;
-    }
+  const initiateAction = (campaignId: string, action: "close" | "transfer") => {
+    setActiveCampaignId(campaignId);
+    setPromptAction(action);
+    setPromptModalOpen(true);
+  };
+
+  const handleActionConfirm = async (note: string) => {
+    if (!currentUser || !activeCampaignId || !promptAction) return;
 
     try {
-      if (action === "transfer") {
-        await transferCampaignExcessFunds(campaignId, currentUser.uid, note);
+      if (promptAction === "transfer") {
+        await transferCampaignExcessFunds(activeCampaignId, currentUser.uid, note);
         setMessage('Campaign excess funds transferred and closed.');
       } else {
-        await updateCampaignStatus(campaignId, currentUser.uid, 'closed', note);
+        await updateCampaignStatus(activeCampaignId, currentUser.uid, 'closed', note);
         setMessage('Campaign successfully closed.');
       }
       setTimeout(() => setMessage(''), 3000);
     } catch (err: any) {
       setError("Failed to update campaign: " + err.message);
+    } finally {
+      setPromptModalOpen(false);
+      setActiveCampaignId(null);
+      setPromptAction(null);
     }
   };
 
-  const handleDelete = async (campaignId: string, campaignTitle: string) => {
-    if (!currentUser) return;
-    if (!window.confirm(`Are you sure you want to permanently delete the campaign "${campaignTitle}"? This cannot be undone.`)) return;
+  const initiateDelete = (campaignId: string, campaignTitle: string, isFunded: boolean) => {
+    setCampaignToDelete({ id: campaignId, title: campaignTitle, isFunded });
+    setDeleteModalOpen(true);
+  };
 
+  const handleDeleteConfirm = async () => {
+    if (!currentUser || !campaignToDelete) return;
+    
     try {
-      await deleteSchoolCampaign(campaignId, currentUser.uid);
-      setMessage('Campaign deleted successfully.');
+      if (campaignToDelete.isFunded) {
+        await archiveSchoolCampaign(campaignToDelete.id, currentUser.uid);
+        setMessage('Campaign archived successfully.');
+      } else {
+        await deleteSchoolCampaign(campaignToDelete.id, currentUser.uid);
+        setMessage('Campaign deleted successfully.');
+      }
       setTimeout(() => setMessage(''), 3000);
     } catch (err: any) {
-      setError("Failed to delete campaign: " + err.message);
+      setError(`Failed to ${campaignToDelete.isFunded ? 'archive' : 'delete'} campaign: ` + err.message);
+    } finally {
+      setDeleteModalOpen(false);
+      setCampaignToDelete(null);
     }
   };
 
-  const isChairperson = userProfile?.role === 'chairperson' || userProfile?.role === 'vice_chairperson' || userProfile?.role === 'super_admin';
+  const isChairperson = userProfile?.role === 'chairperson' || userProfile?.role === 'super_admin';
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-16 px-4 font-sans">
@@ -346,7 +366,7 @@ export default function AdminCampaigns() {
                       <div className="flex gap-2 items-center">
                         {!isClosed && isFullyFunded && (
                           <button
-                            onClick={() => handleAction(camp.id, 'transfer')}
+                            onClick={() => initiateAction(camp.id, 'transfer')}
                             className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 py-2.5 px-3 rounded-2xl border border-blue-200 dark:border-blue-900/60 transition-colors cursor-pointer"
                           >
                             <ArrowRightLeft className="w-3.5 h-3.5" /> Transfer
@@ -354,16 +374,16 @@ export default function AdminCampaigns() {
                         )}
                         {!isClosed && (
                           <button
-                            onClick={() => handleAction(camp.id, 'close')}
+                            onClick={() => initiateAction(camp.id, 'close')}
                             className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 py-2.5 px-3 rounded-2xl transition-colors cursor-pointer"
                           >
                             <XCircle className="w-3.5 h-3.5" /> Close
                           </button>
                         )}
                         <button
-                          onClick={() => handleDelete(camp.id, camp.title)}
+                          onClick={() => initiateDelete(camp.id, camp.title, (camp.raisedAmount || 0) > 0)}
                           className="inline-flex items-center justify-center p-2.5 text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 rounded-2xl transition-colors border border-rose-200/60 dark:border-rose-900/50 cursor-pointer"
-                          title="Delete Campaign"
+                          title={(camp.raisedAmount || 0) > 0 ? "Archive Campaign" : "Delete Campaign"}
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -377,6 +397,30 @@ export default function AdminCampaigns() {
         )}
       </div>
 
+      <PromptModal
+        isOpen={promptModalOpen}
+        title={promptAction === 'transfer' ? "Transfer Excess Funds" : "Close Campaign"}
+        label={promptAction === 'transfer' ? "Reason/Note for transferring excess funds to Welfare Pool:" : "Reason/Note for closing this campaign:"}
+        placeholder="e.g. Campaign completed successfully"
+        confirmText="Confirm"
+        onConfirm={handleActionConfirm}
+        onCancel={() => {
+          setPromptModalOpen(false);
+          setActiveCampaignId(null);
+          setPromptAction(null);
+        }}
+        minLength={3}
+      />
+
+      <ConfirmationModal
+        isOpen={deleteModalOpen}
+        title={campaignToDelete?.isFunded ? "Archive Campaign" : "Delete Campaign"}
+        message={`Are you sure you want to ${campaignToDelete?.isFunded ? 'archive' : 'permanently delete'} the campaign "${campaignToDelete?.title}"? ${campaignToDelete?.isFunded ? '(This hides the campaign but keeps records)' : 'This action cannot be undone.'}`}
+        confirmText={campaignToDelete?.isFunded ? "Archive" : "Delete"}
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setDeleteModalOpen(false)}
+        isDanger={true}
+      />
     </div>
   );
 }

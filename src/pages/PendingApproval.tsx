@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { db } from '../firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { getAppSettings } from '../lib/services';
-import { cancelAccountDeletion } from '../lib/auth';
+import { cancelAccountDeletion, reapplyForMembership } from '../lib/auth';
 import { Logo } from '../components/Logo';
 import { getActiveBanners } from '../lib/bannerService';
 import { 
@@ -35,7 +35,7 @@ import {
 } from 'lucide-react';
 
 export default function PendingApproval() {
-  const { currentUser, userProfile, logout } = useAuth();
+  const { currentUser, userProfile, logout, reloadProfile } = useAuth();
   const navigate = useNavigate();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -48,6 +48,29 @@ export default function PendingApproval() {
   const [activeBanners, setActiveBanners] = useState<string[]>([]);
   const [activeBannerIdx, setActiveBannerIdx] = useState(0);
   const [isAutoplay, setIsAutoplay] = useState(true);
+
+  // Re-apply state
+  const [reapplying, setReapplying] = useState(false);
+  const [reapplyData, setReapplyData] = useState({
+    fullName: userProfile?.fullName || '',
+    phoneNumber: userProfile?.phoneNumber || '',
+    yearOfCompletion: userProfile?.yearLeftSchool || ''
+  });
+
+  const handleReapply = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentUser) return;
+    setReapplying(true);
+    try {
+      await reapplyForMembership(reapplyData);
+      setToastMessage("Your re-application has been submitted!");
+      if (reloadProfile) await reloadProfile();
+    } catch (err: any) {
+      setToastMessage("Failed to re-apply: " + (err.message || 'Unknown error'));
+    } finally {
+      setReapplying(false);
+    }
+  };
 
   // Fetch active banners for slider
   useEffect(() => {
@@ -93,6 +116,7 @@ export default function PendingApproval() {
     if (manual) setIsRefreshing(true);
 
     try {
+      await currentUser.reload();
       const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
       if (userDoc.exists()) {
         const data = userDoc.data();
@@ -104,7 +128,11 @@ export default function PendingApproval() {
             navigate('/dashboard', { replace: true });
           }, 1500);
         } else if (manual) {
-          setToastMessage("Status checked: Account is under review.");
+          if (!currentUser.emailVerified && data.authProvider === 'email') {
+            setToastMessage("Email is not verified yet.");
+          } else {
+            setToastMessage("Status checked: Account is under review.");
+          }
           setTimeout(() => setToastMessage(null), 3000);
         }
       }
@@ -146,6 +174,9 @@ export default function PendingApproval() {
   const isDeleted = userProfile?.status === 'deleted';
   const isRejected = userProfile?.status === 'rejected';
   const isApproved = userProfile?.status === 'approved';
+  
+  // Email verification check
+  const isUnverifiedEmail = Boolean(currentUser && !currentUser.emailVerified && userProfile?.authProvider === 'email');
 
   const effectiveDate = userProfile?.deletionEffectiveAt 
     ? new Date(userProfile.deletionEffectiveAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
@@ -238,7 +269,9 @@ export default function PendingApproval() {
           </div>
 
           <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-            {isPendingDeletion
+            {isUnverifiedEmail
+              ? "Verify Your Email Address"
+              : isPendingDeletion
               ? "Account Scheduled for Deletion"
               : isSuspended
               ? "Account Suspended"
@@ -252,7 +285,9 @@ export default function PendingApproval() {
           </h1>
 
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
-            {isPendingDeletion
+            {isUnverifiedEmail
+              ? `We have sent a verification link to ${currentUser?.email}. Please check your inbox and click the link to verify your email address.`
+              : isPendingDeletion
               ? `Your account is scheduled for deletion on ${effectiveDate}. You may cancel anytime during this grace period.`
               : isSuspended
               ? (userProfile?.suspendReason ? `Reason: ${userProfile.suspendReason}` : "Your account access has been suspended.")
@@ -265,6 +300,32 @@ export default function PendingApproval() {
               : "Thank you for joining MAMAS! Your account is currently being verified by our admin team (usually 1–2 business days)."}
           </p>
         </div>
+
+        {/* Unverified Email Resend Banner */}
+        {isUnverifiedEmail && (
+          <div className="bg-amber-50 dark:bg-amber-950/30 p-4 rounded-2xl border border-amber-200 dark:border-amber-800/60 space-y-3">
+            <div className="flex items-center gap-2 text-amber-900 dark:text-amber-200 font-bold text-xs sm:text-sm">
+              <Mail className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>Did not receive the email?</span>
+            </div>
+            <button
+              onClick={async () => {
+                if (!currentUser) return;
+                try {
+                  const { sendEmailVerification } = await import('firebase/auth');
+                  await sendEmailVerification(currentUser);
+                  setToastMessage("Verification email resent! Check your inbox.");
+                } catch (err: any) {
+                  setToastMessage("Failed to resend: " + (err.message || 'Unknown error'));
+                }
+              }}
+              className="w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>Resend Verification Email</span>
+            </button>
+          </div>
+        )}
 
         {/* Pending Deletion Cancel Banner */}
         {isPendingDeletion && (
@@ -281,6 +342,69 @@ export default function PendingApproval() {
               {cancellingDeletion ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Undo2 className="w-3.5 h-3.5" />}
               <span>Restore Account & Full Access</span>
             </button>
+          </div>
+        )}
+
+        {/* Rejected Re-apply Banner */}
+        {isRejected && (
+          <div className="bg-rose-50 dark:bg-rose-950/30 p-5 rounded-3xl border border-rose-200 dark:border-rose-900/60 space-y-4 shadow-sm">
+            <div className="flex items-start gap-3 text-rose-900 dark:text-rose-200 font-bold text-sm">
+              <ShieldAlert className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+              <div>
+                <p>Registration Declined</p>
+                {userProfile?.rejectionReason && (
+                  <p className="text-xs font-normal mt-1 opacity-90">Reason: {userProfile.rejectionReason}</p>
+                )}
+              </div>
+            </div>
+            
+            <p className="text-xs text-rose-700 dark:text-rose-300">
+              You can update your details and re-apply for membership. Your application will be reviewed again by the admin team.
+            </p>
+            
+            <form onSubmit={handleReapply} className="space-y-3 pt-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Full Name</label>
+                  <input
+                    type="text"
+                    value={reapplyData.fullName}
+                    onChange={(e) => setReapplyData({ ...reapplyData, fullName: e.target.value })}
+                    required
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-rose-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Phone Number</label>
+                  <input
+                    type="tel"
+                    value={reapplyData.phoneNumber}
+                    onChange={(e) => setReapplyData({ ...reapplyData, phoneNumber: e.target.value })}
+                    required
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-rose-500 outline-none"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Year of Completion</label>
+                  <input
+                    type="text"
+                    value={reapplyData.yearOfCompletion}
+                    onChange={(e) => setReapplyData({ ...reapplyData, yearOfCompletion: e.target.value })}
+                    required
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-rose-500 outline-none"
+                  />
+                </div>
+              </div>
+              
+              <button
+                type="submit"
+                disabled={reapplying}
+                className="w-full bg-rose-600 hover:bg-rose-500 text-white font-bold py-3 px-4 rounded-xl text-xs transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 mt-2 shadow-md"
+              >
+                {reapplying ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                <span>Update Details & Re-apply</span>
+              </button>
+            </form>
           </div>
         )}
 

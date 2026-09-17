@@ -218,6 +218,7 @@ export const verifyContribution = async (contributionId: string, adminId: string
   let contType = "";
 
   await runTransaction(db, async (transaction) => {
+    // 1. ALL READS FIRST
     const contributionDoc = await transaction.get(contributionRef);
     if (!contributionDoc.exists()) throw new Error("Contribution not found");
     
@@ -233,6 +234,25 @@ export const verifyContribution = async (contributionId: string, adminId: string
     const userDoc = await transaction.get(userRef);
     if (!userDoc.exists()) throw new Error("User not found");
 
+    let campaignRef: any = null;
+    let campaignDoc: any = null;
+    if (contribution.type === 'school_support' && contribution.campaignId) {
+      campaignRef = doc(db, 'schoolCampaigns', contribution.campaignId);
+      campaignDoc = await transaction.get(campaignRef);
+    }
+
+    let welfareRef: any = null;
+    let pubFeedRef: any = null;
+    let welfareDoc: any = null;
+    let pubFeedDoc: any = null;
+    if (contribution.type === 'welfare_support' && contribution.welfareRequestId) {
+      welfareRef = doc(db, 'welfareRequests', contribution.welfareRequestId);
+      pubFeedRef = doc(db, 'publishedWelfareFeed', contribution.welfareRequestId);
+      welfareDoc = await transaction.get(welfareRef);
+      pubFeedDoc = await transaction.get(pubFeedRef);
+    }
+
+    // 2. ALL WRITES AFTER READS
     const userData = userDoc.data();
     
     // Update contribution
@@ -265,34 +285,34 @@ export const verifyContribution = async (contributionId: string, adminId: string
     });
 
     // If campaign, update campaign total
-    if (contribution.type === 'school_support' && contribution.campaignId) {
-      const campaignRef = doc(db, 'schoolCampaigns', contribution.campaignId);
-      const campaignDoc = await transaction.get(campaignRef);
-      if (campaignDoc.exists()) {
-        const campaignData = campaignDoc.data();
-        const newRaisedAmount = (campaignData.raisedAmount || 0) + contribution.amount;
-        const updates: any = {
-          raisedAmount: newRaisedAmount,
-          updatedAt: Date.now()
-        };
-        
-        if (campaignData.targetAmount > 0 && newRaisedAmount >= campaignData.targetAmount && campaignData.status === 'active') {
-          updates.status = 'fully_funded';
-        }
-        
-        transaction.update(campaignRef, updates);
+    if (campaignDoc && campaignDoc.exists()) {
+      const campaignData = campaignDoc.data();
+      const newRaisedAmount = (campaignData.raisedAmount || 0) + contribution.amount;
+      const updates: any = {
+        raisedAmount: newRaisedAmount,
+        updatedAt: Date.now()
+      };
+      
+      if (campaignData.targetAmount > 0 && newRaisedAmount >= campaignData.targetAmount && campaignData.status === 'active') {
+        updates.status = 'fully_funded';
       }
+      
+      transaction.update(campaignRef, updates);
     }
 
-    // If welfare solidarity support, update welfare request raised total
-    if (contribution.type === 'welfare_support' && contribution.welfareRequestId) {
-      const welfareRef = doc(db, 'welfareRequests', contribution.welfareRequestId);
-      const welfareDoc = await transaction.get(welfareRef);
-      if (welfareDoc.exists()) {
-        const welfareData = welfareDoc.data();
-        const newSupportRaised = (welfareData.supportRaisedAmount || 0) + contribution.amount;
-        const newContributorCount = (welfareData.supportContributorCount || 0) + 1;
-        transaction.update(welfareRef, {
+    // If welfare solidarity support, dual-write to both welfareRequests and publishedWelfareFeed
+    if (welfareDoc && welfareDoc.exists()) {
+      const welfareData = welfareDoc.data();
+      const newSupportRaised = (welfareData.supportRaisedAmount || 0) + contribution.amount;
+      const newContributorCount = (welfareData.supportContributorCount || 0) + 1;
+      transaction.update(welfareRef, {
+        supportRaisedAmount: newSupportRaised,
+        supportContributorCount: newContributorCount,
+        updatedAt: Date.now()
+      });
+
+      if (pubFeedDoc && pubFeedDoc.exists()) {
+        transaction.update(pubFeedRef, {
           supportRaisedAmount: newSupportRaised,
           supportContributorCount: newContributorCount,
           updatedAt: Date.now()
@@ -319,6 +339,7 @@ export const rejectContribution = async (contributionId: string, adminId: string
   const contributionRef = doc(db, 'contributions', contributionId);
 
   await runTransaction(db, async (transaction) => {
+    // 1. ALL READS FIRST
     const contributionDoc = await transaction.get(contributionRef);
     if (!contributionDoc.exists()) throw new Error("Contribution not found");
     
@@ -326,11 +347,35 @@ export const rejectContribution = async (contributionId: string, adminId: string
     if (contribution.userId === adminId) throw new Error("Two-person rule: You cannot verify your own contribution.");
     if (contribution.status === "rejected") throw new Error("Contribution is already rejected");
 
-    const userRef = doc(db, 'users', contribution.userId);
-    const userDoc = await transaction.get(userRef);
-    
+    let userRef: any = null;
+    let userDoc: any = null;
+    let campaignRef: any = null;
+    let campaignDoc: any = null;
+    let welfareRef: any = null;
+    let pubFeedRef: any = null;
+    let welfareDoc: any = null;
+    let pubFeedDoc: any = null;
+
     if (contribution.status === "verified") {
+      userRef = doc(db, 'users', contribution.userId);
+      userDoc = await transaction.get(userRef);
       if (!userDoc.exists()) throw new Error("User not found");
+
+      if (contribution.type === 'school_support' && contribution.campaignId) {
+        campaignRef = doc(db, 'schoolCampaigns', contribution.campaignId);
+        campaignDoc = await transaction.get(campaignRef);
+      }
+
+      if (contribution.type === 'welfare_support' && contribution.welfareRequestId) {
+        welfareRef = doc(db, 'welfareRequests', contribution.welfareRequestId);
+        pubFeedRef = doc(db, 'publishedWelfareFeed', contribution.welfareRequestId);
+        welfareDoc = await transaction.get(welfareRef);
+        pubFeedDoc = await transaction.get(pubFeedRef);
+      }
+    }
+
+    // 2. ALL WRITES AFTER READS
+    if (contribution.status === "verified" && userDoc && userDoc.exists()) {
       const userData = userDoc.data();
       
       const newTotalContributed = contribution.type === 'welfare'
@@ -347,32 +392,31 @@ export const rejectContribution = async (contributionId: string, adminId: string
         updatedAt: Date.now()
       });
 
-      if (contribution.type === 'school_support' && contribution.campaignId) {
-        const campaignRef = doc(db, 'schoolCampaigns', contribution.campaignId);
-        const campaignDoc = await transaction.get(campaignRef);
-        if (campaignDoc.exists()) {
-          const campaignData = campaignDoc.data();
-          const newRaisedAmount = Math.max(0, (campaignData.raisedAmount || 0) - contribution.amount);
-          const updates: any = {
-            raisedAmount: newRaisedAmount,
-            updatedAt: Date.now()
-          };
-          // Re-evaluate campaign status if it dropped below target
-          if (campaignData.targetAmount > 0 && newRaisedAmount < campaignData.targetAmount && campaignData.status === 'fully_funded') {
-            updates.status = 'active';
-          }
-          transaction.update(campaignRef, updates);
+      if (campaignDoc && campaignDoc.exists()) {
+        const campaignData = campaignDoc.data();
+        const newRaisedAmount = Math.max(0, (campaignData.raisedAmount || 0) - contribution.amount);
+        const updates: any = {
+          raisedAmount: newRaisedAmount,
+          updatedAt: Date.now()
+        };
+        // Re-evaluate campaign status if it dropped below target
+        if (campaignData.targetAmount > 0 && newRaisedAmount < campaignData.targetAmount && campaignData.status === 'fully_funded') {
+          updates.status = 'active';
         }
+        transaction.update(campaignRef, updates);
       }
 
-      if (contribution.type === 'welfare_support' && contribution.welfareRequestId) {
-        const welfareRef = doc(db, 'welfareRequests', contribution.welfareRequestId);
-        const welfareDoc = await transaction.get(welfareRef);
-        if (welfareDoc.exists()) {
-          const welfareData = welfareDoc.data();
-          const newSupportRaised = Math.max(0, (welfareData.supportRaisedAmount || 0) - contribution.amount);
-          const newContributorCount = Math.max(0, (welfareData.supportContributorCount || 1) - 1);
-          transaction.update(welfareRef, {
+      if (welfareDoc && welfareDoc.exists()) {
+        const welfareData = welfareDoc.data();
+        const newSupportRaised = Math.max(0, (welfareData.supportRaisedAmount || 0) - contribution.amount);
+        const newContributorCount = Math.max(0, (welfareData.supportContributorCount || 1) - 1);
+        transaction.update(welfareRef, {
+          supportRaisedAmount: newSupportRaised,
+          supportContributorCount: newContributorCount,
+          updatedAt: Date.now()
+        });
+        if (pubFeedDoc && pubFeedDoc.exists()) {
+          transaction.update(pubFeedRef, {
             supportRaisedAmount: newSupportRaised,
             supportContributorCount: newContributorCount,
             updatedAt: Date.now()
@@ -496,7 +540,7 @@ export const castWelfareVote = async (requestId: string, voterId: string, vote: 
     let rejectCount = 0;
 
     newVotes.forEach(v => {
-      if (eligibleApprovers.includes(v.userId) || (eligibleApprovers.length < 2 && ['super_admin', 'chairperson', 'vice_chairperson'].includes(voterRole || ''))) {
+      if (eligibleApprovers.includes(v.userId) || (eligibleApprovers.length < 2 && ['super_admin', 'chairperson'].includes(voterRole || ''))) {
          if (v.vote === 'approve') approveCount++;
          if (v.vote === 'reject') rejectCount++;
       }
@@ -1222,11 +1266,40 @@ export const transferCampaignExcessFunds = async (campaignId: string, adminId: s
   await logActivity('TRANSFER_CAMPAIGN_EXCESS', adminId, campaignId, `Transferred excess funds to welfare pool`);
 };
 
+export const archiveSchoolCampaign = async (campaignId: string, adminId: string) => {
+  const adminDoc = await getDoc(doc(db, 'users', adminId));
+  if (!adminDoc.exists()) throw new Error("Admin user not found");
+  const adminRole = adminDoc.data().role;
+  if (!['super_admin', 'chairperson'].includes(adminRole)) {
+    throw new Error("Only authorized executives can archive campaigns.");
+  }
+
+  const campaignRef = doc(db, 'schoolCampaigns', campaignId);
+  const campaignSnap = await getDoc(campaignRef);
+  
+  if (!campaignSnap.exists()) {
+    throw new Error("Campaign not found.");
+  }
+
+  const data = campaignSnap.data() as SchoolCampaign;
+  const now = Date.now();
+
+  await updateDoc(campaignRef, {
+    status: 'archived',
+    isActive: false,
+    archivedAt: now,
+    archivedBy: adminId,
+    updatedAt: now
+  });
+
+  await logActivity('ARCHIVE_CAMPAIGN', adminId, campaignId, `Archived campaign: ${data.title}`);
+};
+
 export const deleteSchoolCampaign = async (campaignId: string, adminId: string) => {
   const adminDoc = await getDoc(doc(db, 'users', adminId));
   if (!adminDoc.exists()) throw new Error("Admin user not found");
   const adminRole = adminDoc.data().role;
-  if (!['super_admin', 'chairperson', 'vice_chairperson'].includes(adminRole)) {
+  if (!['super_admin', 'chairperson'].includes(adminRole)) {
     throw new Error("Only authorized executives can delete campaigns.");
   }
 
@@ -1307,7 +1380,9 @@ export const publishWelfareRequest = async (
   let applicantUserId = "";
 
   await runTransaction(db, async (transaction) => {
+    // 1. ALL READS FIRST
     const requestDoc = await transaction.get(requestRef);
+    const pubFeedDoc = await transaction.get(pubFeedRef);
     if (!requestDoc.exists()) throw new Error("Welfare request not found");
     const requestData = requestDoc.data() as WelfareRequest;
 
@@ -1315,8 +1390,16 @@ export const publishWelfareRequest = async (
       throw new Error("Conflict of Interest: You cannot publish or moderate your own welfare case.");
     }
 
-    if (requestData.isPublishedToFeed) {
-      throw new Error("Already published. Edit publication instead.");
+    // Strict Publish-Once Enforcement (AUD-014 / Hardening)
+    if (requestData.isPublishedToFeed || pubFeedDoc.exists()) {
+      throw new Error("This welfare case is already published to the public feed. Please edit the existing publication instead.");
+    }
+
+    // Re-publish restriction: Only super_admin or chairperson can re-publish a case that was previously unpublished
+    if (requestData.wasPublished || requestData.publishedAt) {
+      if (adminRole !== 'super_admin' && adminRole !== 'chairperson') {
+        throw new Error("Only the Super Admin or Chairperson can re-publish a previously unpublished welfare case.");
+      }
     }
 
     if (requestData.status !== "accepted" && requestData.status !== "paid") {
@@ -1327,9 +1410,13 @@ export const publishWelfareRequest = async (
     beneficiaryName = requestData.personName || "Member";
     welfareCategory = requestData.category;
 
+    // 2. ALL WRITES AFTER READS
+    const now = Date.now();
     const updates: Partial<WelfareRequest> & Record<string, any> = {
       isPublishedToFeed: true,
-      publishedAt: Date.now(),
+      wasPublished: true,
+      publishedAt: requestData.publishedAt || now,
+      lastPublishedAt: now,
       publishedBy: adminId,
       publicTitle: title,
       publicSummary: summary,
@@ -1338,15 +1425,15 @@ export const publishWelfareRequest = async (
       supportTargetAmount: Number(params.supportTargetAmount) || 0,
       supportRaisedAmount: requestData.supportRaisedAmount || 0,
       supportContributorCount: requestData.supportContributorCount || 0,
-      supportStartAt: params.supportStartAt || Date.now(),
+      supportStartAt: params.supportStartAt || now,
       supportEndAt: params.supportEndAt || null,
       publicationVersion: (requestData.publicationVersion || 0) + 1,
-      updatedAt: Date.now()
+      updatedAt: now
     };
 
     transaction.update(requestRef, updates);
 
-    // CRIT-02: Write public-safe projection to publishedWelfareFeed
+    // CRIT-02 / AUD-014: Write public-safe projection to publishedWelfareFeed
     transaction.set(pubFeedRef, {
       id: requestId,
       requestId: requestId,
@@ -1361,12 +1448,13 @@ export const publishWelfareRequest = async (
       amountRequested: requestData.amountRequested,
       status: requestData.status,
       isPublishedToFeed: true,
-      publishedAt: Date.now(),
+      publishedAt: requestData.publishedAt || now,
+      lastPublishedAt: now,
       publishedBy: adminId,
       beneficiaryName: beneficiaryName,
       userId: applicantUserId,
       publicationVersion: (requestData.publicationVersion || 0) + 1,
-      updatedAt: Date.now()
+      updatedAt: now
     });
   });
 
@@ -1568,7 +1656,9 @@ export const unpublishWelfareRequest = async (
   let publicTitle = "";
 
   await runTransaction(db, async (transaction) => {
+    // 1. ALL READS FIRST
     const requestDoc = await transaction.get(requestRef);
+    const pubFeedDoc = await transaction.get(pubFeedRef);
     if (!requestDoc.exists()) throw new Error("Welfare request not found");
     const requestData = requestDoc.data() as WelfareRequest;
 
@@ -1579,15 +1669,23 @@ export const unpublishWelfareRequest = async (
     applicantUserId = requestData.userId;
     publicTitle = requestData.publicTitle || requestData.category;
 
+    // 2. ALL WRITES AFTER READS
+    const now = Date.now();
     transaction.update(requestRef, {
       isPublishedToFeed: false,
+      wasPublished: true,
       supportStatus: 'closed',
       closeReason: finalReason,
-      updatedAt: Date.now()
+      unpublishReason: finalReason,
+      unpublishedBy: adminId,
+      unpublishedAt: now,
+      updatedAt: now
     });
 
-    // Delete or remove from publishedWelfareFeed
-    transaction.delete(pubFeedRef);
+    // Delete projection from publishedWelfareFeed if it exists
+    if (pubFeedDoc.exists()) {
+      transaction.delete(pubFeedRef);
+    }
   });
 
   await logActivity(
@@ -1606,6 +1704,64 @@ export const unpublishWelfareRequest = async (
       targetUrl: "/"
     }).catch(err => console.error("Notification error:", err));
   }
+};
+
+export const reconcileWelfareSupportTotals = async (requestId: string, adminId: string) => {
+  const adminDoc = await getDoc(doc(db, 'users', adminId));
+  if (!adminDoc.exists()) throw new Error("Admin user not found");
+  const adminRole = adminDoc.data().role;
+  const allowedRoles = ['super_admin', 'chairperson', 'treasurer', 'auditor', 'vice_chairperson'];
+  if (!allowedRoles.includes(adminRole)) {
+    throw new Error("Only authorized executive committee members can reconcile solidarity totals.");
+  }
+
+  // Query all verified contributions targeting this welfare request
+  const contribsRef = collection(db, 'contributions');
+  const [q1, q2] = await Promise.all([
+    getDocs(query(contribsRef, where('welfareRequestId', '==', requestId), where('status', '==', 'verified'))),
+    getDocs(query(contribsRef, where('type', '==', 'welfare_support'), where('campaignId', '==', requestId), where('status', '==', 'verified')))
+  ]);
+
+  const uniqueDocs = new Map<string, any>();
+  q1.forEach(d => uniqueDocs.set(d.id, d.data()));
+  q2.forEach(d => uniqueDocs.set(d.id, d.data()));
+
+  let totalRaised = 0;
+  uniqueDocs.forEach(data => {
+    totalRaised += Number(data.amount || 0);
+  });
+  const contributorCount = uniqueDocs.size;
+
+  const welfareRef = doc(db, 'welfareRequests', requestId);
+  const pubFeedRef = doc(db, 'publishedWelfareFeed', requestId);
+
+  await runTransaction(db, async (transaction) => {
+    const welfareDoc = await transaction.get(welfareRef);
+    const pubFeedDoc = await transaction.get(pubFeedRef);
+    if (!welfareDoc.exists()) throw new Error("Welfare request not found");
+
+    const now = Date.now();
+    transaction.update(welfareRef, {
+      supportRaisedAmount: totalRaised,
+      supportContributorCount: contributorCount,
+      supportReconciledAt: now,
+      supportReconciledBy: adminId,
+      updatedAt: now
+    });
+
+    if (pubFeedDoc.exists()) {
+      transaction.update(pubFeedRef, {
+        supportRaisedAmount: totalRaised,
+        supportContributorCount: contributorCount,
+        supportReconciledAt: now,
+        supportReconciledBy: adminId,
+        updatedAt: now
+      });
+    }
+  });
+
+  await logActivity('RECONCILE_WELFARE_SUPPORT_TOTALS', adminId, requestId, `Reconciled solidarity totals to UGX ${totalRaised.toLocaleString()} (${contributorCount} verified contributors)`);
+  return { totalRaised, contributorCount };
 };
 
 export const reconcileContribution = async (contributionId: string) => {

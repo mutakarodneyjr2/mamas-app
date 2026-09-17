@@ -44,20 +44,23 @@ export function ThemeIconButton({ className = '' }: { className?: string }) {
     else setTheme('light');
   };
 
+  const defaultStyles = "p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-800";
+  const finalClass = className ? `p-2 rounded-xl transition-colors focus:outline-none cursor-pointer ${className}` : `${defaultStyles} transition-colors focus:outline-none cursor-pointer`;
+
   return (
     <button
       type="button"
       onClick={toggleNext}
-      className={`p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-800 transition-colors focus:outline-none cursor-pointer ${className}`}
+      className={finalClass}
       title={`Theme: ${theme} (click to cycle)`}
       aria-label="Toggle visual theme"
     >
       {theme === 'light' ? (
-        <Sun className="w-5 h-5 text-amber-500" />
+        <Sun className="w-5 h-5 text-current" />
       ) : theme === 'dark' ? (
-        <Moon className="w-5 h-5 text-blue-400" />
+        <Moon className="w-5 h-5 text-current" />
       ) : (
-        <Monitor className="w-5 h-5 text-slate-500 dark:text-slate-400" />
+        <Monitor className="w-5 h-5 text-current" />
       )}
     </button>
   );

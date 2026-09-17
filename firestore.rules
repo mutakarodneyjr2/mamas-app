@@ -68,7 +68,7 @@ service cloud.firestore {
       allow create: if isAuthenticated() && request.auth.uid == userId;
       allow update: if (isAuthenticated() && request.auth.uid == userId && (
                         !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'status'])
-                        || (request.resource.data.status in ['pending_deletion', 'approved', 'active'] && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']))
+                        || (request.resource.data.status == 'pending_deletion' && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']))
                       ))
                     || isSuperAdmin() 
                     || (isApprovalAdmin() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'rejectionReason', 'rejectedAt', 'rejectedBy', 'updatedAt']));
@@ -124,15 +124,13 @@ service cloud.firestore {
       allow read: if isAuthenticated() && ((resource.data.userId == request.auth.uid) || hasRole(['super_admin', 'chairperson', 'vice_chairperson', 'secretary', 'treasurer', 'auditor']));
       allow create: if isVerifiedMember() && request.resource.data.userId == request.auth.uid && request.resource.data.recipientPhoneNumber is string;
       allow update: if (
-        (isPayoutAdmin() && (
-          !(request.resource.data.diff(resource.data).affectedKeys().hasAny(['paidAt', 'disbursementStatus', 'paidAmount', 'isPublishedToFeed'])) || 
-          request.auth.uid != resource.data.userId
+        // Authorized admins updating another member's welfare case (strict conflict-of-interest enforcement)
+        (request.auth.uid != resource.data.userId && (
+          isPayoutAdmin() ||
+          (hasRole(['vice_chairperson', 'secretary', 'auditor']) && notUpdatingRelworxFields())
         )) ||
-        (hasRole(['vice_chairperson', 'secretary', 'auditor']) && (
-          !(request.resource.data.diff(resource.data).affectedKeys().hasAny(['isPublishedToFeed'])) || 
-          request.auth.uid != resource.data.userId
-        ) && notUpdatingRelworxFields()) ||
-        (isAuthenticated() && resource.data.userId == request.auth.uid && resource.data.status == 'pending' && notUpdatingRelworxFields() && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['isPublishedToFeed', 'supportRaisedAmount', 'supportStatus', 'votes', 'status']))
+        // Applicant editing basic details while pending (cannot touch votes, status, approval, or financial fields)
+        (isAuthenticated() && resource.data.userId == request.auth.uid && resource.data.status == 'pending' && notUpdatingRelworxFields() && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['isPublishedToFeed', 'supportRaisedAmount', 'supportStatus', 'votes', 'status', 'paidAt', 'disbursementStatus', 'paidAmount', 'rejectionReason', 'approvedAt', 'finalizedAt']))
       );
       allow delete: if false;
     }
@@ -145,7 +143,7 @@ service cloud.firestore {
     match /publishedWelfareFeed/{feedId} {
       allow read: if isVerifiedMember() || hasRole(['super_admin', 'chairperson', 'vice_chairperson', 'secretary', 'treasurer', 'auditor', 'mobiliser']);
       allow write: if hasRole(['super_admin', 'chairperson', 'vice_chairperson', 'secretary', 'treasurer']);
-      allow delete: if hasRole(['super_admin', 'chairperson', 'treasurer']);
+      allow delete: if hasRole(['super_admin', 'chairperson', 'vice_chairperson', 'secretary', 'treasurer']);
     }
 
     // =========================================
@@ -155,12 +153,13 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() && hasRole(['super_admin', 'chairperson', 'vice_chairperson', 'treasurer', 'secretary']) && request.resource.data.userId == request.auth.uid && request.resource.data.recipientPhoneNumber is string;
       allow update: if (
-        (isPayoutAdmin() && (
-          !(request.resource.data.diff(resource.data).affectedKeys().hasAny(['paidAt', 'disbursementStatus', 'paidAmount'])) || 
-          request.auth.uid != resource.data.userId
+        // Authorized admins updating another member's expense claim (strict conflict-of-interest enforcement)
+        (request.auth.uid != resource.data.userId && (
+          isPayoutAdmin() ||
+          (hasRole(['vice_chairperson', 'secretary', 'auditor']) && notUpdatingRelworxFields())
         )) ||
-        (hasRole(['vice_chairperson', 'secretary', 'auditor']) && notUpdatingRelworxFields()) ||
-        (isAuthenticated() && resource.data.userId == request.auth.uid && resource.data.status == 'pending' && notUpdatingRelworxFields())
+        // Applicant editing basic details while pending (cannot touch votes, status, approval, or financial fields)
+        (isAuthenticated() && resource.data.userId == request.auth.uid && resource.data.status == 'pending' && notUpdatingRelworxFields() && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['status', 'approvalStatus', 'votes', 'paidAt', 'disbursementStatus', 'paidAmount', 'rejectionReason', 'finalDecisionBy']))
       );
       allow delete: if false;
     }

@@ -5,6 +5,7 @@ import { db } from '../firebase';
 import { Notice } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { Megaphone, Pin, Trash2, Shield } from 'lucide-react';
+import { ConfirmationModal } from '../components/ConfirmationModal';
 
 export default function AdminNotices() {
   const { currentUser, userProfile } = useAuth();
@@ -18,6 +19,9 @@ export default function AdminNotices() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [noticeToDelete, setNoticeToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -69,17 +73,24 @@ export default function AdminNotices() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (window.confirm("Are you sure you want to delete this notice?")) {
-      setError(''); setSuccessMsg('');
-      try {
-        await deleteDoc(doc(db, 'notices', id));
-        setSuccessMsg("Notice deleted.");
-        setTimeout(() => setSuccessMsg(''), 3000);
-      } catch (err) {
-        setError('Failed to delete notice.');
-        setTimeout(() => setError(''), 5000);
-      }
+  const confirmDelete = (id: string) => {
+    setNoticeToDelete(id);
+    setDeleteModalOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!noticeToDelete) return;
+    setError(''); setSuccessMsg('');
+    try {
+      await deleteDoc(doc(db, 'notices', noticeToDelete));
+      setSuccessMsg("Notice deleted.");
+      setTimeout(() => setSuccessMsg(''), 3000);
+    } catch (err) {
+      setError('Failed to delete notice.');
+      setTimeout(() => setError(''), 5000);
+    } finally {
+      setDeleteModalOpen(false);
+      setNoticeToDelete(null);
     }
   };
 
@@ -227,7 +238,7 @@ export default function AdminNotices() {
                     <Pin className="w-3.5 h-3.5" /> {notice.isPinned ? 'Unpin' : 'Pin'}
                   </button>
                   <button 
-                    onClick={() => handleDelete(notice.id)}
+                    onClick={() => confirmDelete(notice.id)}
                     className="flex items-center gap-1.5 text-xs font-bold text-rose-600 dark:text-rose-400 hover:text-rose-700 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 border border-rose-200/60 dark:border-rose-900/50 px-3.5 py-2 rounded-xl transition-colors cursor-pointer"
                   >
                     <Trash2 className="w-3.5 h-3.5" /> Delete
@@ -238,6 +249,16 @@ export default function AdminNotices() {
           </div>
         )}
       </div>
+
+      <ConfirmationModal
+        isOpen={deleteModalOpen}
+        title="Delete Notice"
+        message="Are you sure you want to delete this notice? This action cannot be undone."
+        confirmText="Delete"
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteModalOpen(false)}
+        isDanger={true}
+      />
     </div>
   );
 }

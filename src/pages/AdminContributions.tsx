@@ -8,6 +8,7 @@ import { triggerContributionReminders } from '../lib/reminderService';
 import { formatUGX, exportToCSV } from '../lib/utils';
 import { Check, X, FileText, Search, Filter, Download, ChevronDown, Calendar, DollarSign, Bell, Send, Users, Sparkles, RefreshCw } from 'lucide-react';
 import { SelectDropdown } from '../components/SelectDropdown';
+import { PromptModal } from '../components/PromptModal';
 
 export default function AdminContributions() {
   const { currentUser, userProfile } = useAuth();
@@ -21,6 +22,9 @@ export default function AdminContributions() {
   const [errorMsg, setErrorMsg] = useState('');
   const [indexErrorLink, setIndexErrorLink] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const [contributionToReject, setContributionToReject] = useState<string | null>(null);
 
   // Reminders tab state
   const [approvedMembers, setApprovedMembers] = useState<User[]>([]);
@@ -234,12 +238,16 @@ export default function AdminContributions() {
     }
   };
 
-  const handleReject = async (contributionId: string) => {
-    if (!currentUser) return;
+  const confirmReject = (contributionId: string) => {
+    setContributionToReject(contributionId);
+    setRejectModalOpen(true);
+  };
+
+  const handleReject = async (reason: string) => {
+    if (!currentUser || !contributionToReject) return;
     setErrorMsg('');
     setSuccessMsg('');
-    const reason = window.prompt("Reason for rejection:");
-    if (reason === null) return;
+    
     if (reason.trim() === "") {
       setErrorMsg("A reason is required to reject a payment.");
       setTimeout(() => setErrorMsg(''), 5000);
@@ -247,13 +255,16 @@ export default function AdminContributions() {
     }
 
     try {
-      await rejectContribution(contributionId, currentUser.uid, reason);
-      await logActivity('REJECT_CONTRIBUTION', currentUser.uid, contributionId, `Rejected payment contribution: ${reason}`);
+      await rejectContribution(contributionToReject, currentUser.uid, reason);
+      await logActivity('REJECT_CONTRIBUTION', currentUser.uid, contributionToReject, `Rejected payment contribution: ${reason}`);
       setSuccessMsg('Contribution successfully rejected.');
       setTimeout(() => setSuccessMsg(''), 3000);
     } catch (err: any) {
       setErrorMsg("Failed to reject: " + err.message);
       setTimeout(() => setErrorMsg(''), 5000);
+    } finally {
+      setRejectModalOpen(false);
+      setContributionToReject(null);
     }
   };
 
@@ -602,7 +613,7 @@ export default function AdminContributions() {
                             <button onClick={() => handleRecheck(contribution.id)} disabled={reconcilingId === contribution.id} className="flex-1 md:flex-none inline-flex items-center justify-center gap-1.5 bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 hover:bg-blue-100 py-2.5 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer disabled:opacity-50">
                               <RefreshCw className={`w-3.5 h-3.5 ${reconcilingId === contribution.id ? 'animate-spin' : ''}`} /> Recheck
                             </button>
-                            <button onClick={() => handleReject(contribution.id)} className="flex-1 md:flex-none inline-flex items-center justify-center gap-1.5 bg-white dark:bg-slate-800 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50 py-2.5 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer">
+                            <button onClick={() => confirmReject(contribution.id)} className="flex-1 md:flex-none inline-flex items-center justify-center gap-1.5 bg-white dark:bg-slate-800 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50 py-2.5 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer">
                               <X className="w-4 h-4" /> Reject
                             </button>
                           </div>
@@ -616,6 +627,17 @@ export default function AdminContributions() {
           </div>
         </>
       )}
+
+      <PromptModal
+        isOpen={rejectModalOpen}
+        title="Reject Contribution"
+        label="Reason for rejection:"
+        placeholder="e.g. Invalid reference code"
+        confirmText="Reject"
+        onConfirm={handleReject}
+        onCancel={() => setRejectModalOpen(false)}
+        minLength={3}
+      />
     </div>
   );
 }

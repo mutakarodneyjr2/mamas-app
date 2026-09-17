@@ -114,7 +114,7 @@ export default function ApplyWelfare() {
       if (evidenceFiles) {
         for (let i = 0; i < evidenceFiles.length; i++) {
           const file = evidenceFiles[i];
-          const path = `welfare_evidence/${currentUser.uid}_${Date.now()}_${file.name}`;
+          const path = `welfare_evidence/${currentUser.uid}/${Date.now()}_${file.name}`;
           const url = await uploadImage(file, path, { timeoutMs: 10000, allowDataUrlFallback: true });
           if (url) {
             evidenceUrls.push(url);

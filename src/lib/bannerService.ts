@@ -1,5 +1,6 @@
 import { collection, query, orderBy, getDocs, doc, getDoc, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
-import { db } from '../firebase';
+import { ref, deleteObject } from 'firebase/storage';
+import { db, storage } from '../firebase';
 import { Banner } from '../types';
 
 export const getBanners = async (): Promise<Banner[]> => {
@@ -101,14 +102,38 @@ export const updateBanner = async (id: string, data: Partial<Banner>): Promise<v
 };
 
 export const deleteBanner = async (id: string): Promise<void> => {
+  let imageUrl = '';
+  try {
+    const landingDoc = await getDoc(doc(db, 'landingBanners', id));
+    if (landingDoc.exists()) {
+      imageUrl = landingDoc.data().imageUrl || landingDoc.data().image || '';
+    } else {
+      const bannerDoc = await getDoc(doc(db, 'banners', id));
+      if (bannerDoc.exists()) {
+        imageUrl = bannerDoc.data().imageUrl || bannerDoc.data().image || '';
+      }
+    }
+  } catch (e) {
+    console.warn("Could not read banner doc before deletion:", e);
+  }
+
+  if (imageUrl) {
+    try {
+      const bannerRef = ref(storage, imageUrl);
+      await deleteObject(bannerRef);
+    } catch (e) {
+      console.warn("Could not delete banner image from storage (it may not exist or not be a storage URL):", e);
+    }
+  }
+
   try {
     await deleteDoc(doc(db, 'landingBanners', id));
   } catch (e) {
-    console.warn(e);
+    console.warn("Could not delete from landingBanners:", e);
   }
   try {
     await deleteDoc(doc(db, 'banners', id));
   } catch (e) {
-    console.warn(e);
+    console.warn("Could not delete from banners:", e);
   }
 };

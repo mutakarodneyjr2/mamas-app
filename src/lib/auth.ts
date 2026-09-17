@@ -1,5 +1,6 @@
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp, runTransaction, getDocs, collection, query, where } from "firebase/firestore";
-import { db } from "../firebase";
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp, runTransaction, getDocs, collection, query, where, deleteDoc } from "firebase/firestore";
+import { ref, deleteObject } from "firebase/storage";
+import { db, storage } from "../firebase";
 import { User, UserRole, UserStatus } from "../types";
 import { uploadImage } from "./storage";
 
@@ -58,6 +59,29 @@ export const getUserProfile = async (uid: string): Promise<User | null> => {
   return null;
 };
 
+export const reapplyForMembership = async (data: { fullName?: string, phoneNumber?: string, yearOfCompletion?: string }) => {
+  const { auth } = await import('../firebase');
+  const user = auth.currentUser;
+  if (!user) throw new Error("Not authenticated");
+  
+  const token = await user.getIdToken();
+  const response = await fetch('/api/auth/reapply', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(data)
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || "Failed to submit re-application");
+  }
+
+  return response.json();
+};
+
 export const completeProfile = async (
   uid: string,
   phoneNumber: string,
@@ -67,7 +91,7 @@ export const completeProfile = async (
   let profilePictureUrl = "";
   if (profilePicFile) {
     try {
-      profilePictureUrl = await uploadImage(profilePicFile, `profile_pictures/${uid}_${Date.now()}.jpg`, {
+      profilePictureUrl = await uploadImage(profilePicFile, `profile_pictures/${uid}/${Date.now()}.jpg`, {
         timeoutMs: 8000,
         allowDataUrlFallback: true
       });
@@ -356,6 +380,26 @@ export const finalizeAccountDeletion = async (userId: string) => {
   const now = Date.now();
   const historicalName = userData.historicalDisplayName || userData.fullName || "Former Member";
 
+  // 1. Delete profile picture from Storage if exists
+  if (userData.profilePictureUrl) {
+    try {
+      // Firebase Storage URLs often contain '/o/path%2Fto%2Ffile' which can be parsed, or we just try ref
+      // Passing the full download URL to ref() works in the Web SDK.
+      const picRef = ref(storage, userData.profilePictureUrl);
+      await deleteObject(picRef);
+    } catch (e) {
+      console.warn("Could not delete profile picture from storage:", e);
+    }
+  }
+
+  // 2. Delete the directory profile so they no longer appear in the directory
+  try {
+    await deleteDoc(doc(db, 'directoryProfiles', userId));
+  } catch (e) {
+    console.warn("Could not delete directory profile:", e);
+  }
+
+  // 3. Redact the user document
   await updateDoc(userRef, {
     status: "deleted",
     historicalDisplayName: historicalName,

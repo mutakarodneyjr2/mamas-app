@@ -13,6 +13,7 @@ import { ThemeIconButton } from './components/ThemeToggle';
 import { OnboardingTour } from './components/OnboardingTour';
 import { LeftDrawer } from './components/LeftDrawer';
 import { BottomNav } from './components/BottomNav';
+import AuthResolver from './pages/AuthResolver';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Landing from './pages/Landing';
@@ -144,18 +145,20 @@ function Layout() {
 
           {/* Right Side: Theme, Notifications, Directory Button */}
           <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0 text-white">
-            <ThemeIconButton />
+            <ThemeIconButton className="text-white hover:text-blue-100 hover:bg-white/10 dark:text-white dark:hover:text-blue-100 dark:hover:bg-white/10" />
 
-            {userProfile && <NotificationBell />}
+            {userProfile && (
+              <NotificationBell className="text-white hover:text-blue-100 hover:bg-white/10 dark:text-white dark:hover:text-blue-100 dark:hover:bg-white/10" />
+            )}
 
             {userProfile && (
               <Link
                 to="/directory"
-                className="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 text-white border border-white/20 px-2.5 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer"
+                className="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 text-white border border-white/20 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer"
                 title="Open Alumni Directory"
               >
-                <Users className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Directory</span>
+                <Users className="w-4 h-4 text-white" />
+                <span className="hidden sm:inline text-white">Directory</span>
               </Link>
             )}
 
@@ -313,8 +316,9 @@ export default function App() {
       <ThemeProvider>
         <BrowserRouter>
           <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
+            <Route path="/login" element={<AuthResolver initialMode="login" />} />
+            <Route path="/register" element={<AuthResolver initialMode="register" />} />
+            <Route path="/register/details" element={<Register />} />
             <Route path="/" element={<Landing />} />
             <Route path="/terms" element={<TermsOfService />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />

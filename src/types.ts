@@ -152,8 +152,13 @@ export interface WelfareRequest {
   gatewayResponse?: any;
   // Public Feed & Solidarity Support Fields
   isPublishedToFeed?: boolean;
+  wasPublished?: boolean;
   publishedAt?: number;
+  lastPublishedAt?: number;
   publishedBy?: string;
+  unpublishedAt?: number;
+  unpublishedBy?: string;
+  unpublishReason?: string;
   publicTitle?: string;
   publicSummary?: string;
   supportEnabled?: boolean;
@@ -162,12 +167,14 @@ export interface WelfareRequest {
   supportRaisedAmount?: number;
   supportContributorCount?: number;
   supportStartAt?: number;
-  supportEndAt?: number;
+  supportEndAt?: number | null;
   lastPublicationEditAt?: number;
   lastPublicationEditBy?: string;
   publicationVersion?: number;
   closeReason?: string;
   disbursedSupportAmount?: number;
+  supportReconciledAt?: number;
+  supportReconciledBy?: string;
 }
 
 export type CampaignStatus = "active" | "completed" | "cancelled" | "fully_funded" | "closed" | "paused" | "draft";

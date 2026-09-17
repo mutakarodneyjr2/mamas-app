@@ -19,6 +19,7 @@ interface AuthContextType {
   isSuspended: boolean;
   isDeleted: boolean;
   accessTier: AccessTier;
+  reloadProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -27,6 +28,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const reloadProfile = useCallback(async () => {
+    if (!currentUser) return;
+    try {
+      const snap = await getDoc(doc(db, "users", currentUser.uid));
+      if (snap.exists()) {
+        setUserProfile(snap.data() as UserProfile);
+      }
+    } catch (err) {
+      console.warn("Failed to reload profile manually:", err);
+    }
+  }, [currentUser]);
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
@@ -121,7 +134,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isPendingDeletion,
       isSuspended,
       isDeleted,
-      accessTier
+      accessTier,
+      reloadProfile
     }}>
       {children}
     </AuthContext.Provider>

@@ -24,7 +24,8 @@ import {
   School,
   MapPin,
   Briefcase,
-  Users
+  Users,
+  Upload
 } from 'lucide-react';
 import type { User } from '../types';
 import { GoogleSignInButton } from '../components/GoogleSignInButton';
@@ -124,42 +125,21 @@ export default function Register() {
   const { userProfile, googleSignIn, checkUserExists, logout } = useAuth();
   const navigate = useNavigate();
   
-  const [currentStep, setCurrentStep] = useState<RegisterStep>(1);
+  const location = useLocation();
+  const returnUrl = (location.state as any)?.from || '/dashboard';
+  const initialState = location.state as any || {};
+
+  const [currentStep, setCurrentStep] = useState<RegisterStep>(initialState.email || initialState.googleUid ? 2 : 1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   
-  const [authProvider, setAuthProvider] = useState<'email' | 'google'>('email');
-  const [googleUid, setGoogleUid] = useState('');
-
-  const [activeBanners, setActiveBanners] = useState<string[]>([]);
-  const [activeBannerIdx, setActiveBannerIdx] = useState(0);
-
-  useEffect(() => {
-    let isMounted = true;
-    getActiveBanners().then(banners => {
-      if (isMounted) {
-        const urls = banners.map(b => b.url).filter(Boolean);
-        if (urls.length > 0) {
-          setActiveBanners(urls);
-        }
-      }
-    }).catch(err => console.error("Error loading banners for Register page:", err));
-
-    return () => { isMounted = false; };
-  }, []);
-
-  useEffect(() => {
-    if (activeBanners.length <= 1) return;
-    const interval = setInterval(() => {
-      setActiveBannerIdx(prev => (prev + 1) % activeBanners.length);
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [activeBanners]);
+  const [authProvider, setAuthProvider] = useState<'email' | 'google'>(initialState.authProvider || 'email');
+  const [googleUid, setGoogleUid] = useState(initialState.googleUid || '');
 
   const [formData, setFormData] = useState({
-    fullName: '',
-    email: '',
+    fullName: initialState.fullName || '',
+    email: initialState.email || '',
     password: '',
     confirmPassword: '',
     phoneNumber: '',
@@ -176,12 +156,31 @@ export default function Register() {
     showEmail: true
   });
 
-  const location = useLocation();
-  const returnUrl = (location.state as any)?.from || '/dashboard';
-
   const [showPassword, setShowPassword] = useState(false);
   const [profilePicFile, setProfilePicFile] = useState<File | null>(null);
   const [profilePicPreview, setProfilePicPreview] = useState<string>('');
+
+  const [activeBanners, setActiveBanners] = useState<string[]>([]);
+  const [activeBannerIdx, setActiveBannerIdx] = useState(0);
+
+  useEffect(() => {
+    let isMounted = true;
+    getActiveBanners().then(banners => {
+      if (isMounted) {
+        const urls = banners.map(b => b.url).filter(Boolean);
+        if (urls.length > 0) setActiveBanners(urls);
+      }
+    }).catch(console.error);
+    return () => { isMounted = false; };
+  }, []);
+
+  useEffect(() => {
+    if (activeBanners.length <= 1) return;
+    const interval = setInterval(() => {
+      setActiveBannerIdx(prev => (prev + 1) % activeBanners.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [activeBanners]);
 
   useEffect(() => {
     if (userProfile && currentStep !== 'success') {
@@ -492,11 +491,11 @@ export default function Register() {
       </div>
 
       {/* Main Register Form Container below */}
-      <div className="w-full max-w-3xl mx-auto py-8 px-4 sm:px-6 flex-1">
+      <div className="w-full max-w-7xl mx-auto py-8 px-4 sm:px-10 flex-1">
         
         {/* STEP PROGRESS INDICATOR (Steps 1, 2, 3) */}
         {currentStep !== 'success' && (
-          <div className="px-6 py-5 bg-slate-50 dark:bg-slate-900/60 border-b border-slate-200/80 dark:border-slate-800">
+          <div className="px-6 py-5 bg-transparent border-b border-slate-200/80 dark:border-slate-800/80">
             <div className="max-w-md mx-auto relative flex items-center justify-between">
               
               {/* Connecting Progress Line */}
@@ -593,7 +592,7 @@ export default function Register() {
 
                   <div className="relative flex items-center justify-center my-6">
                     <div className="w-full border-t border-slate-200 dark:border-slate-800" />
-                    <span className="absolute bg-white dark:bg-[#0c1731] px-3 text-[11px] font-bold tracking-widest text-slate-400 uppercase">
+                    <span className="absolute bg-mamas-bg px-3 text-[11px] font-bold tracking-widest text-slate-400 uppercase">
                       OR REGISTER WITH EMAIL
                     </span>
                   </div>
@@ -1132,7 +1131,7 @@ export default function Register() {
 
         {/* Footer info */}
         {currentStep !== 'success' && (
-          <div className="px-6 py-4 bg-slate-100/70 dark:bg-[#0c1731] border-t border-slate-200/80 dark:border-slate-800 text-center text-xs text-slate-500 flex items-center justify-between">
+          <div className="px-6 py-4 bg-transparent border-t border-slate-200/80 dark:border-slate-800/80 text-center text-xs text-slate-500 flex items-center justify-between">
             <span>Already registered? <Link to="/login" className="font-bold text-blue-600 dark:text-blue-400 hover:underline">Log In</Link></span>
             <span className="flex items-center gap-1 text-[11px]"><ShieldCheck className="w-3.5 h-3.5 text-blue-500" /> Secure Member Portal</span>
           </div>

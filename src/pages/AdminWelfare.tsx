@@ -11,7 +11,8 @@ import {
   publishWelfareRequest,
   updateWelfarePublication,
   setWelfareSupportStatus,
-  unpublishWelfareRequest
+  unpublishWelfareRequest,
+  reconcileWelfareSupportTotals
 } from '../lib/services';
 import { formatUGX, exportToCSV } from '../lib/utils';
 import { 
@@ -36,7 +37,8 @@ import {
   PauseCircle,
   PlayCircle,
   EyeOff,
-  Edit3
+  Edit3,
+  RotateCw
 } from 'lucide-react';
 
 export default function AdminWelfare() {
@@ -85,6 +87,12 @@ export default function AdminWelfare() {
   const [editPubSupportEnabled, setEditPubSupportEnabled] = useState(true);
   const [editPubTargetAmount, setEditPubTargetAmount] = useState('');
   const [editPubLoading, setEditPubLoading] = useState(false);
+
+  // Unpublish Modal
+  const [unpublishModal, setUnpublishModal] = useState<WelfareRequest | null>(null);
+  const [unpublishReason, setUnpublishReason] = useState('');
+  const [unpublishLoading, setUnpublishLoading] = useState(false);
+  const [reconcilingId, setReconcilingId] = useState<string | null>(null);
 
   // Reversal Modal
   const [reverseModalId, setReverseModalId] = useState<string | null>(null);
@@ -354,7 +362,7 @@ export default function AdminWelfare() {
     }
   };
 
-  const handleUnpublish = async (request: WelfareRequest) => {
+  const handleOpenUnpublish = (request: WelfareRequest) => {
     setErrorMsg('');
     setSuccessMsg('');
     if (!isExecutive) {
@@ -365,13 +373,48 @@ export default function AdminWelfare() {
       setErrorMsg("Conflict of Interest: You cannot unpublish your own case.");
       return;
     }
+    setUnpublishReason('');
+    setUnpublishModal(request);
+  };
+
+  const submitUnpublish = async () => {
+    if (!unpublishModal) return;
+    const trimmedReason = unpublishReason.trim();
+    if (!trimmedReason || trimmedReason.length < 5) {
+      setErrorMsg("Please provide a reason for unpublishing (at least 5 characters).");
+      return;
+    }
+    setUnpublishLoading(true);
+    setErrorMsg('');
+    setSuccessMsg('');
     try {
-      await unpublishWelfareRequest(request.id!, currentUser.uid);
+      await unpublishWelfareRequest(unpublishModal.id!, currentUser.uid, trimmedReason);
       setSuccessMsg("Case unpublished from Member Feed.");
+      setUnpublishModal(null);
+      setUnpublishReason('');
       setTimeout(() => setSuccessMsg(''), 3000);
     } catch (err: any) {
       setErrorMsg(err.message || "Failed to unpublish case.");
       setTimeout(() => setErrorMsg(''), 5000);
+    } finally {
+      setUnpublishLoading(false);
+    }
+  };
+
+  const handleReconcileSupportTotals = async (request: WelfareRequest) => {
+    if (!request.id) return;
+    setErrorMsg('');
+    setSuccessMsg('');
+    setReconcilingId(request.id);
+    try {
+      const result = await reconcileWelfareSupportTotals(request.id, currentUser.uid);
+      setSuccessMsg(`Reconciled: UGX ${result.totalRaised.toLocaleString()} from ${result.contributorCount} verified contributors.`);
+      setTimeout(() => setSuccessMsg(''), 4000);
+    } catch (err: any) {
+      setErrorMsg(err.message || "Failed to reconcile solidarity totals.");
+      setTimeout(() => setErrorMsg(''), 5000);
+    } finally {
+      setReconcilingId(null);
     }
   };
 
@@ -677,6 +720,16 @@ export default function AdminWelfare() {
                             Edit Details
                           </button>
 
+                          <button
+                            type="button"
+                            disabled={reconcilingId === request.id}
+                            onClick={(e) => { e.stopPropagation(); handleReconcileSupportTotals(request); }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
+                          >
+                            <RotateCw className={`w-3.5 h-3.5 ${reconcilingId === request.id ? 'animate-spin' : ''}`} />
+                            {reconcilingId === request.id ? 'Reconciling...' : 'Reconcile'}
+                          </button>
+
                           {request.supportStatus === 'paused' ? (
                             <button
                               type="button"
@@ -710,7 +763,7 @@ export default function AdminWelfare() {
 
                           <button
                             type="button"
-                            onClick={(e) => { e.stopPropagation(); handleUnpublish(request); }}
+                            onClick={(e) => { e.stopPropagation(); handleOpenUnpublish(request); }}
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900 text-xs font-bold transition-all cursor-pointer"
                           >
                             <EyeOff className="w-3.5 h-3.5" />
@@ -1255,6 +1308,66 @@ export default function AdminWelfare() {
                 className="flex-1 py-3 px-4 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold uppercase tracking-wider shadow-md shadow-blue-600/25 transition-all disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
               >
                 {editPubLoading ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Unpublish Confirmation Modal */}
+      {unpublishModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs animate-in fade-in duration-200" onClick={() => !unpublishLoading && setUnpublishModal(null)}>
+          <div 
+            className="bg-white dark:bg-[#0c1731] rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col gap-4 animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3.5">
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border bg-rose-50 text-rose-600 border-rose-200 dark:bg-rose-950/60 dark:text-rose-400 dark:border-rose-900">
+                <EyeOff className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-slate-900 dark:text-white text-base sm:text-lg">
+                  Unpublish Appeal from Feed
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {unpublishModal.publicTitle || `${unpublishModal.category} Solidarity Support`}
+                </p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 dark:text-slate-300">
+              Removing this appeal from the public feed will hide it from member view and stop new solidarity contributions.
+            </p>
+
+            <div>
+              <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">
+                Reason for Unpublishing (Required)
+              </label>
+              <textarea
+                value={unpublishReason}
+                onChange={(e) => setUnpublishReason(e.target.value)}
+                placeholder="e.g. Target reached, or member requested withdrawal..."
+                rows={3}
+                className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl p-3 text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-rose-500 resize-none"
+              />
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setUnpublishModal(null)}
+                disabled={unpublishLoading}
+                className="flex-1 py-3 px-4 rounded-2xl border border-slate-200 dark:border-slate-700 text-xs font-extrabold uppercase text-slate-700 dark:text-slate-300 hover:bg-slate-50 transition-colors disabled:opacity-50 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={submitUnpublish}
+                disabled={unpublishLoading || !unpublishReason.trim() || unpublishReason.trim().length < 5}
+                className="flex-1 py-3 px-4 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-extrabold uppercase tracking-wider shadow-md shadow-rose-600/25 transition-all disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+              >
+                {unpublishLoading ? 'Unpublishing...' : 'Confirm Unpublish'}
               </button>
             </div>
           </div>

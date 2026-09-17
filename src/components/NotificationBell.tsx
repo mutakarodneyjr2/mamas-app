@@ -16,7 +16,7 @@ import {
   CheckCheck
 } from 'lucide-react';
 
-export const NotificationBell: React.FC = () => {
+export const NotificationBell: React.FC<{ className?: string }> = ({ className = '' }) => {
   const { currentUser, userProfile } = useAuth();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
@@ -130,7 +130,7 @@ export const NotificationBell: React.FC = () => {
       {/* Bell Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-800 transition-colors focus:outline-none cursor-pointer"
+        className={className ? `relative p-2 rounded-xl transition-colors focus:outline-none cursor-pointer ${className}` : "relative p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-800 transition-colors focus:outline-none cursor-pointer"}
         title="Notifications"
         aria-label="Notifications"
       >

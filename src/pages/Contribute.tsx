@@ -5,6 +5,7 @@ import { Heart, Target, Lock, Loader2, Check, Smartphone, RefreshCw, AlertCircle
 import { db } from '../firebase';
 import { collection, query, where, getDocs, addDoc, doc, onSnapshot, getDoc, serverTimestamp } from 'firebase/firestore';
 import { SelectDropdown } from '../components/SelectDropdown';
+import { ConfirmationModal } from '../components/ConfirmationModal';
 import { normalizePhoneNumber, formatUGX } from '../lib/utils';
 
 export default function Contribute() {
@@ -38,6 +39,8 @@ export default function Contribute() {
   const [fetchingCampaigns, setFetchingCampaigns] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  
+  const [confirmModalOpen, setConfirmModalOpen] = useState(false);
 
   // Payment prompt state
   const [promptSent, setPromptSent] = useState(false);
@@ -169,8 +172,7 @@ export default function Contribute() {
     }
   };
 
-  const handlePay = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const validateAndConfirm = () => {
     if (!currentUser) {
       setError('You must be logged in to contribute.');
       return;
@@ -207,7 +209,6 @@ export default function Contribute() {
       }
     }
 
-    // Phone number normalization and validation
     const normPhone = normalizePhoneNumber(phone);
     const digitsOnly = normPhone.replace(/[^0-9]/g, '');
     if (!normPhone.startsWith('+256') || digitsOnly.length < 12 || digitsOnly.length > 13) {
@@ -215,10 +216,19 @@ export default function Contribute() {
       return;
     }
 
-    // Set loading state immediately (synchronous)
+    setError('');
+    setConfirmModalOpen(true);
+  };
+
+  const executePayment = async () => {
+    setConfirmModalOpen(false);
     setLoading(true);
     setError('');
     setSuccess(false);
+
+    let docId = '';
+    const numericAmount = parseInt(amount, 10);
+    const normPhone = normalizePhoneNumber(phone);
 
     try {
       const contribType = purpose === 'campaign' 
@@ -232,7 +242,7 @@ export default function Contribute() {
 
       // 1. Create Firestore contribution doc
       const docRef = await addDoc(collection(db, 'contributions'), {
-        userId: currentUser.uid,
+        userId: currentUser?.uid || '',
         userName: actualUserName,
         displayName: displayName,
         isAnonymous: isAnonymous,
@@ -247,9 +257,10 @@ export default function Contribute() {
         timestamp: serverTimestamp(),
         createdAt: serverTimestamp(),
       });
+      docId = docRef.id;
 
       // 2. Obtain ID Token for API Authorization
-      const idToken = await currentUser.getIdToken();
+      const idToken = await currentUser?.getIdToken();
 
       // 3. Call Backend Relworx Initiate Collection API with 30s timeout
       const controller = new AbortController();
@@ -266,11 +277,11 @@ export default function Contribute() {
           amount: numericAmount,
           phoneNumber: normPhone,
           network: network,
-          userId: currentUser.uid,
+          userId: currentUser?.uid,
           purpose: purpose,
           metadata: {
-            contributionId: docRef.id,
-            reference: docRef.id,
+            contributionId: docId,
+            reference: docId,
             userName: actualUserName,
             displayName: displayName,
             isAnonymous: String(isAnonymous),
@@ -296,15 +307,25 @@ export default function Contribute() {
 
       // 4. Success initiating prompt - Show Mobile Money check phone card
       setNormalizedPhoneUsed(normPhone);
-      setPendingDocId(docRef.id);
+      setPendingDocId(docId);
       setPromptSent(true);
 
     } catch (err: any) {
       console.error("Payment submission failed:", err);
+      let errorMessage = err.message || 'Payment could not be started. Try again.';
       if (err.name === 'AbortError') {
-        setError('Payment request timed out after 30 seconds. Please try again.');
-      } else {
-        setError(err.message || 'Payment could not be started. Try again.');
+        errorMessage = 'Payment request timed out after 30 seconds. Please try again.';
+      }
+      setError(errorMessage);
+
+      if (docId) {
+        import('firebase/firestore').then(({ updateDoc, doc }) => {
+          updateDoc(doc(db, 'contributions', docId), {
+            status: 'failed',
+            failureReason: errorMessage,
+            failedAt: serverTimestamp()
+          }).catch(e => console.warn("Could not mark aborted contribution as failed", e));
+        });
       }
     } finally {
       setLoading(false);
@@ -414,7 +435,7 @@ export default function Contribute() {
             </div>
           </div>
         ) : (
-          <form onSubmit={handlePay} className="space-y-6">
+          <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
             
             {/* PURPOSE SELECTION (SEGMENTED CONTROL) */}
             <div>
@@ -536,6 +557,7 @@ export default function Contribute() {
                   min="1000"
                   value={amount}
                   onChange={e => setAmount(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && e.preventDefault()}
                   className="w-full pl-16 pr-4 py-3 bg-white dark:bg-[#0c1731] border border-slate-200 dark:border-slate-800 rounded-xl text-xl sm:text-2xl font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all text-right"
                   placeholder="0"
                 />
@@ -610,6 +632,7 @@ export default function Contribute() {
                   required
                   value={phone}
                   onChange={e => setPhone(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && e.preventDefault()}
                   className="w-full px-4 py-3 bg-white dark:bg-[#0c1731] border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm"
                   placeholder="e.g. 0771234567 or 0701234567"
                 />
@@ -631,7 +654,8 @@ export default function Contribute() {
             {/* PAY BUTTON */}
             <div className="pt-2">
               <button
-                type="submit"
+                type="button"
+                onClick={validateAndConfirm}
                 disabled={loading || success}
                 className="w-full bg-blue-600 hover:bg-blue-500 text-white rounded-xl py-3.5 text-sm font-bold shadow-md flex items-center justify-center gap-2 transition-colors disabled:opacity-70 cursor-pointer"
               >
@@ -651,6 +675,17 @@ export default function Contribute() {
           </form>
         )}
       </div>
+
+      <ConfirmationModal
+        isOpen={confirmModalOpen}
+        title="Confirm Payment"
+        message={`Are you sure you want to initiate a ${network} Mobile Money payment of UGX ${amount ? parseInt(amount, 10).toLocaleString() : 0} to phone number ${normalizePhoneNumber(phone)} for ${
+          purpose === 'campaign' ? 'school campaign support' : purpose === 'welfare_support' ? 'welfare solidarity' : 'welfare dues'
+        }?`}
+        confirmText="Initiate Payment"
+        onConfirm={executePayment}
+        onCancel={() => setConfirmModalOpen(false)}
+      />
     </div>
   );
 }

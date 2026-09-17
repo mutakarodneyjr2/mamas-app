@@ -5,6 +5,7 @@ import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { Banner } from '../types';
 import { createBanner, updateBanner, deleteBanner } from '../lib/bannerService';
 import { uploadImage } from '../lib/storage';
+import { ConfirmationModal } from '../components/ConfirmationModal';
 import { 
   Loader2, Image as ImageIcon, Trash2, Plus, ArrowUp, ArrowDown, 
   Eye, EyeOff, ShieldAlert, CheckCircle, AlertCircle, X, ChevronLeft, 
@@ -26,6 +27,9 @@ export default function AdminMedia() {
   const [activeSlideIndex, setActiveSlideIndex] = useState(0);
   const [isAutoplay, setIsAutoplay] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [bannerToDelete, setBannerToDelete] = useState<string | null>(null);
 
   if (userProfile?.role !== 'super_admin') {
     return (
@@ -128,15 +132,23 @@ export default function AdminMedia() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this banner permanently?')) return;
+  const confirmDelete = (id: string) => {
+    setBannerToDelete(id);
+    setDeleteModalOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!bannerToDelete) return;
     try {
-      await deleteBanner(id);
+      await deleteBanner(bannerToDelete);
       showMessage('Banner deleted successfully');
       // Reset active slide index in case it goes out of bounds
       setActiveSlideIndex(0);
     } catch (err: any) {
       setError('Failed to delete banner');
+    } finally {
+      setDeleteModalOpen(false);
+      setBannerToDelete(null);
     }
   };
 
@@ -443,7 +455,7 @@ export default function AdminMedia() {
                     )}
                   </button>
                   <button
-                    onClick={() => handleDelete(banner.id)}
+                    onClick={() => confirmDelete(banner.id)}
                     className="p-2.5 text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 rounded-2xl border border-rose-200/60 dark:border-rose-900/50 transition-colors cursor-pointer"
                     title="Delete Banner"
                   >
@@ -455,6 +467,16 @@ export default function AdminMedia() {
           )}
         </div>
       </div>
+
+      <ConfirmationModal
+        isOpen={deleteModalOpen}
+        title="Delete Banner"
+        message="Are you sure you want to permanently delete this banner? This action cannot be undone."
+        confirmText="Delete"
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteModalOpen(false)}
+        isDanger={true}
+      />
     </div>
   );
 }

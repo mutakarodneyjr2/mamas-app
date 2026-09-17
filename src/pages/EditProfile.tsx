@@ -56,7 +56,7 @@ export default function EditProfile() {
     setErrorMsg('');
     setSuccessMsg('');
     try {
-      const storageRef = ref(storage, `profile_pictures/${userProfile.uid}_${Date.now()}`);
+      const storageRef = ref(storage, `profile_pictures/${userProfile.uid}/${Date.now()}`);
       await uploadBytes(storageRef, file);
       const downloadURL = await getDownloadURL(storageRef);
 

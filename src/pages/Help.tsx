@@ -38,6 +38,8 @@ import {
   Users
 } from 'lucide-react';
 
+import { ConfirmationModal } from '../components/ConfirmationModal';
+
 export default function Help() {
   const { currentUser, userProfile } = useAuth();
 
@@ -49,6 +51,10 @@ export default function Help() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [expandedArticleId, setExpandedArticleId] = useState<string | null>(null);
+
+  // Modal State
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [articleToDelete, setArticleToDelete] = useState<string | null>(null);
 
   // Support Contacts
   const [supportPhone, setSupportPhone] = useState('+256 770 000000');
@@ -222,13 +228,21 @@ export default function Help() {
     }
   };
 
-  const handleDeleteArticle = async (id: string) => {
-    if (!window.confirm("Are you sure you want to delete this help article?")) return;
+  const confirmDeleteArticle = (id: string) => {
+    setArticleToDelete(id);
+    setDeleteModalOpen(true);
+  };
+
+  const handleDeleteArticle = async () => {
+    if (!articleToDelete) return;
     try {
-      await deleteHelpArticle(id);
+      await deleteHelpArticle(articleToDelete);
       await loadHelpData();
     } catch (err) {
       console.error(err);
+    } finally {
+      setDeleteModalOpen(false);
+      setArticleToDelete(null);
     }
   };
 
@@ -616,7 +630,7 @@ export default function Help() {
                       <Edit3 className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => handleDeleteArticle(art.id)}
+                      onClick={() => confirmDeleteArticle(art.id)}
                       className="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/50 rounded-xl transition-colors cursor-pointer"
                       title="Delete"
                     >
@@ -629,6 +643,16 @@ export default function Help() {
           </div>
         </div>
       )}
+
+      <ConfirmationModal
+        isOpen={deleteModalOpen}
+        title="Delete Help Article"
+        message="Are you sure you want to delete this help article? This action cannot be undone."
+        confirmText="Delete"
+        onConfirm={handleDeleteArticle}
+        onCancel={() => setDeleteModalOpen(false)}
+        isDanger={true}
+      />
 
       {/* TAB 4: ADMIN SUPPORT TICKETS */}
       {activeTab === 'admin-tickets' && isAdmin && (

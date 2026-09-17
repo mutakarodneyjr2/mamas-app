@@ -1,40 +1,91 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    // Users profile pictures
-    match /users/{userId}/{allPaths=**} {
-      allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == userId;
+
+    function isAuthenticated() {
+      return request.auth != null;
     }
     
-    // General profile pictures
-    match /profile_pictures/{allPaths=**} {
+    function getUserRole() {
+      return isAuthenticated() && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)) != null 
+        ? firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role 
+        : 'none';
+    }
+
+    function isSuperAdmin() {
+      return getUserRole() == 'super_admin';
+    }
+
+    function hasRole(allowedRoles) {
+      return getUserRole() in allowedRoles;
+    }
+
+    function isPayoutAdmin() {
+      return hasRole(['super_admin', 'treasurer', 'chairperson']);
+    }
+
+    function isApprovalAdmin() {
+      return hasRole(['super_admin', 'chairperson', 'vice_chairperson', 'secretary']);
+    }
+
+    // Users profile pictures (assuming old flat structure might still be read)
+    match /users/{userId}/{allPaths=**} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if isAuthenticated() && request.auth.uid == userId;
+    }
+        
+    // General profile pictures - new nested structure
+    match /profile_pictures/{userId}/{fileName} {
+      allow read: if true;
+      allow write: if isAuthenticated() && request.auth.uid == userId;
+      allow delete: if isAuthenticated() && (request.auth.uid == userId || isSuperAdmin());
+    }
+
+    // General profile pictures - old flat structure (legacy read/delete only)
+    match /profile_pictures/{fileName} {
+      allow read: if true;
+      allow write: if false; // force new uploads to folder
+      allow delete: if isAuthenticated() && (fileName.matches(request.auth.uid + '_.*') || isSuperAdmin());
     }
 
     // Campaign images
     match /campaigns/{allPaths=**} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if hasRole(['super_admin', 'chairperson', 'vice_chairperson']);
+      allow delete: if hasRole(['super_admin', 'chairperson', 'vice_chairperson']);
     }
 
     // Banners and media
     match /banners/{allPaths=**} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if isSuperAdmin();
+      allow delete: if isSuperAdmin();
+    }
+    
+    match /landingBanners/{allPaths=**} {
+      allow read: if true;
+      allow write: if isSuperAdmin();
+      allow delete: if isSuperAdmin();
     }
 
-    // Welfare evidence
-    match /welfare_evidence/{allPaths=**} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
+    // Welfare evidence - new nested structure
+    match /welfare_evidence/{userId}/{fileName} {
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isApprovalAdmin() || isPayoutAdmin());
+      allow write: if isAuthenticated() && request.auth.uid == userId;
+      allow delete: if isAuthenticated() && (request.auth.uid == userId || isSuperAdmin());
+    }
+
+    // Welfare evidence - old flat structure
+    match /welfare_evidence/{fileName} {
+      allow read: if isAuthenticated() && (fileName.matches(request.auth.uid + '_.*') || isApprovalAdmin() || isPayoutAdmin());
+      allow write: if false;
+      allow delete: if isAuthenticated() && (fileName.matches(request.auth.uid + '_.*') || isSuperAdmin());
     }
 
     // Default fallback
     match /{allPaths=**} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if isSuperAdmin(); // restrict default fallback to super_admin instead of any auth user
     }
   }
 }
