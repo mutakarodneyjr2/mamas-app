@@ -114,8 +114,12 @@ export const NotificationBell: React.FC<{ className?: string }> = ({ className =
       await markNotificationAsRead(notification.id);
     }
     setIsOpen(false);
-    if (notification.targetUrl) {
-      navigate(notification.targetUrl);
+    let target = notification.targetUrl;
+    if (target === '/notices' || target === '/admin/notices') {
+      target = '/dashboard?filter=notice';
+    }
+    if (target) {
+      navigate(target);
     }
   };
 

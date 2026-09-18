@@ -3,9 +3,9 @@ import { useAuth } from '../contexts/AuthContext';
 import { collection, query, orderBy, onSnapshot, doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Notice } from '../types';
-import { v4 as uuidv4 } from 'uuid';
-import { Megaphone, Pin, Trash2, Shield } from 'lucide-react';
+import { Megaphone, Pin, Trash2, Shield, Check } from 'lucide-react';
 import { ConfirmationModal } from '../components/ConfirmationModal';
+import { postNotice } from '../lib/services';
 
 export default function AdminNotices() {
   const { currentUser, userProfile } = useAuth();
@@ -48,23 +48,18 @@ export default function AdminNotices() {
     setError('');
 
     try {
-      const noticeId = uuidv4();
-      const newNotice: Notice = {
-        id: noticeId,
+      await postNotice(currentUser.uid, {
         title: title.trim(),
         body: body.trim(),
-        postedBy: userProfile.fullName || currentUser.uid,
         isPinned,
-        createdAt: Date.now()
-      };
-      
-      await setDoc(doc(db, 'notices', noticeId), newNotice);
+        authorName: userProfile.fullName || 'Executive Committee'
+      });
       
       setTitle('');
       setBody('');
       setIsPinned(false);
-      setSuccessMsg("Notice posted successfully.");
-      setTimeout(() => setSuccessMsg(''), 3000);
+      setSuccessMsg("Notice published and broadcast notification sent to all approved members.");
+      setTimeout(() => setSuccessMsg(''), 4000);
     } catch (err: any) {
       setError(err.message || 'Failed to post notice.');
       setTimeout(() => setError(''), 5000);

@@ -1117,11 +1117,14 @@ export const postNotice = async (
     title: string;
     body: string;
     isPinned: boolean;
+    authorName?: string;
   }
 ) => {
   const noticeData: Omit<Notice, 'id'> = {
-    ...data,
-    postedBy,
+    title: data.title,
+    body: data.body,
+    isPinned: data.isPinned,
+    postedBy: data.authorName || postedBy,
     createdAt: Date.now()
   };
 
@@ -1129,11 +1132,11 @@ export const postNotice = async (
   await logActivity('POST_NOTICE', postedBy, docRef.id, `Posted notice: ${data.title}`);
 
   await notifyAllApprovedMembers({
-    title: `New Notice: ${data.title}`,
-    body: data.body.length > 100 ? data.body.substring(0, 100) + '...' : data.body,
+    title: `📢 Official Notice: ${data.title}`,
+    body: data.body.length > 120 ? data.body.substring(0, 120) + '...' : data.body,
     type: 'notice',
     targetId: docRef.id,
-    targetUrl: '/notices'
+    targetUrl: '/dashboard?filter=notice'
   }).catch(err => console.error("Notification error:", err));
 
   return docRef.id;
