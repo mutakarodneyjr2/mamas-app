@@ -10,7 +10,8 @@ import {
   where, 
   runTransaction,
   orderBy,
-  setDoc
+  setDoc,
+  serverTimestamp
 } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { apiFetch } from './apiClient';
@@ -176,7 +177,17 @@ export const initiateMobileMoneyContribution = async (
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error || errorData.message || "Failed to initiate mobile money prompt.");
+    const errorMsg = errorData.error || errorData.message || `Failed to initiate mobile money prompt (HTTP ${response.status}).`;
+    try {
+      await updateDoc(doc(db, 'contributions', docRef.id), {
+        status: 'failed',
+        failureReason: errorMsg,
+        failedAt: serverTimestamp()
+      });
+    } catch (e) {
+      console.warn("Could not mark failed contribution in Firestore:", e);
+    }
+    throw new Error(errorMsg);
   }
 
   return docRef.id;

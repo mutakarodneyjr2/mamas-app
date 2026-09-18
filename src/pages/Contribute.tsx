@@ -306,6 +306,12 @@ export default function Contribute() {
       return;
     }
     
+    const savedPending = loadPersistedPending(currentUser.uid);
+    if (savedPending && savedPending.status === 'pending' && promptSent) {
+      setError('A payment is already in progress. Please complete or cancel it before starting a new payment.');
+      return;
+    }
+
     if (!navigator.onLine) {
       setError('No connection. Check internet and try again.');
       return;
@@ -427,10 +433,10 @@ export default function Contribute() {
       if (!response.ok || !resData.success) {
         clearPersistedPending();
         const errorMsg = resData.message || resData.error || '';
-        if (errorMsg.includes('Server configuration error')) {
-          throw new Error('Payment service temporarily unavailable.');
+        if (errorMsg) {
+          throw new Error(errorMsg);
         } else {
-          throw new Error('Payment could not be started. Try again.');
+          throw new Error(`Payment could not be started (${response.status}). Please try again.`);
         }
       }
 
@@ -843,6 +849,15 @@ export default function Contribute() {
         message="If you already entered your PIN on your mobile phone, the payment may still process and be reflected on your statement. Abandoning will stop waiting on this screen and let you start a new contribution."
         confirmText="Yes, Abandon Payment"
         onConfirm={() => {
+          if (pendingDocId) {
+            import('firebase/firestore').then(({ updateDoc, doc, serverTimestamp }) => {
+              updateDoc(doc(db, 'contributions', pendingDocId), {
+                status: 'failed',
+                failureReason: 'Payment cancelled by user.',
+                failedAt: serverTimestamp()
+              }).catch(e => console.warn("Could not mark abandoned contribution as failed", e));
+            });
+          }
           clearPersistedPending();
           setPromptSent(false);
           setPendingDocId(null);

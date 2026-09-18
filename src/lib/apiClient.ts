@@ -8,7 +8,15 @@ import { auth } from '../firebase';
 export function getApiBaseUrl(): string {
   const envUrl = import.meta.env.VITE_API_BASE_URL;
   if (envUrl && typeof envUrl === 'string') {
-    return envUrl.trim().replace(/\/+$/, '');
+    const trimmed = envUrl.trim().replace(/\/+$/, '');
+    if (
+      trimmed && 
+      !trimmed.includes('YOUR_PRODUCTION') && 
+      !trimmed.includes('example.com') &&
+      !trimmed.includes('localhost:3000') // normalize same-origin
+    ) {
+      return trimmed;
+    }
   }
   return '';
 }
