@@ -5,11 +5,11 @@ import { doc, updateDoc, setDoc } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 import { 
   User, Mail, Phone, MapPin, Briefcase, GraduationCap, 
-  Camera, Lock, Bell, LogOut, Trash2, AlertTriangle, Clock, Check, ShieldCheck 
+  Camera, Lock, Bell, LogOut, Trash2, AlertTriangle, Clock, Check, ShieldCheck, X 
 } from 'lucide-react';
 import { PrivacyLevel } from '../types';
 import { registerFCMToken } from '../lib/fcmService';
-import { cancelAccountDeletion } from '../lib/auth';
+import { cancelAccountDeletion, scheduleAccountDeletion } from '../lib/auth';
 import { StatusBadge } from '../components/StatusBadge';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -35,6 +35,9 @@ export default function Profile() {
 
   // Account deletion state
   const [cancellingDeletion, setCancellingDeletion] = useState(false);
+  const [showDeletionModal, setShowDeletionModal] = useState(false);
+  const [deletionReason, setDeletionReason] = useState('');
+  const [schedulingDeletion, setSchedulingDeletion] = useState(false);
 
   const isPendingDeletion = userProfile?.status === 'pending_deletion';
 
@@ -125,6 +128,27 @@ export default function Profile() {
       setErrorMsg(err.message || 'Failed to cancel deletion request');
     } finally {
       setCancellingDeletion(false);
+    }
+  };
+
+  const handleScheduleDeletion = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!userProfile?.uid || !currentUser) return;
+    setSchedulingDeletion(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+
+    try {
+      const res = await scheduleAccountDeletion(currentUser.uid, deletionReason.trim());
+      setShowDeletionModal(false);
+      setDeletionReason('');
+      setSuccessMsg(`Account deletion scheduled. Effective: ${new Date(res.deletionEffectiveAt).toLocaleDateString()}. You have a 30-day grace period to restore.`);
+      setTimeout(() => setSuccessMsg(''), 8000);
+    } catch (err: any) {
+      console.error('Failed to schedule account deletion:', err);
+      setErrorMsg(err.message || 'Failed to schedule account deletion');
+    } finally {
+      setSchedulingDeletion(false);
     }
   };
 
@@ -406,23 +430,122 @@ export default function Profile() {
                 <Trash2 className="w-4 h-4" />
               </div>
               <div>
-                <h4 className="font-semibold text-rose-700 dark:text-rose-400">Schedule Account Deletion</h4>
+                <h4 className="font-semibold text-rose-700 dark:text-rose-400">
+                  {isPendingDeletion ? 'Account Scheduled for Deletion' : 'Schedule Account Deletion'}
+                </h4>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                  Schedules 30-day protected grace period before permanent deletion
+                  {isPendingDeletion 
+                    ? `Protected grace period active until ${userProfile?.deletionEffectiveAt ? new Date(userProfile.deletionEffectiveAt).toLocaleDateString() : '30 days'}`
+                    : 'Schedules 30-day protected grace period before permanent anonymization'
+                  }
                 </p>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={() => navigate('/profile/edit')}
-              className="px-3 py-1.5 rounded-lg border border-rose-200 dark:border-rose-900/60 hover:bg-rose-50 dark:hover:bg-rose-950/30 font-semibold text-xs text-rose-700 dark:text-rose-400 cursor-pointer"
-            >
-              Delete...
-            </button>
+            {isPendingDeletion ? (
+              <button
+                type="button"
+                onClick={handleCancelDeletion}
+                disabled={cancellingDeletion}
+                className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 font-semibold text-xs text-white transition-colors cursor-pointer disabled:opacity-50"
+              >
+                {cancellingDeletion ? 'Restoring...' : 'Cancel Deletion'}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowDeletionModal(true)}
+                className="px-3 py-1.5 rounded-lg border border-rose-200 dark:border-rose-900/60 hover:bg-rose-50 dark:hover:bg-rose-950/30 font-semibold text-xs text-rose-700 dark:text-rose-400 cursor-pointer transition-colors"
+              >
+                Delete Account
+              </button>
+            )}
           </div>
         </div>
 
       </div>
+
+      {/* Account Deletion Schedule Modal */}
+      <AnimatePresence>
+        {showDeletionModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl"
+            >
+              <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400">
+                  <AlertTriangle className="w-5 h-5" />
+                  <h3 className="font-bold text-slate-900 dark:text-white text-sm">
+                    Schedule Account Deletion
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowDeletionModal(false)}
+                  className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleScheduleDeletion} className="p-5 space-y-4">
+                <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-900/60 rounded-xl p-3.5 space-y-2 text-xs text-amber-900 dark:text-amber-300 leading-relaxed">
+                  <div className="font-bold flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 shrink-0" />
+                    30-Day Protected Grace Period
+                  </div>
+                  <p className="text-[11px]">
+                    Your account will enter a 30-day pending deletion state. During this time, you can log in at any time to cancel the deletion and restore full access.
+                  </p>
+                  <p className="text-[11px] text-amber-800 dark:text-amber-400">
+                    Past verified financial contribution records and association audit trails remain permanently preserved in the ledger as required by financial regulations.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Reason for leaving (Optional)
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={deletionReason}
+                    onChange={(e) => setDeletionReason(e.target.value)}
+                    placeholder="Let us know why you are deleting your account..."
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-rose-500"
+                  />
+                </div>
+
+                <div className="flex items-center gap-2.5 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowDeletionModal(false)}
+                    disabled={schedulingDeletion}
+                    className="flex-1 py-2.5 px-4 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                  >
+                    Keep Account
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={schedulingDeletion}
+                    className="flex-1 py-2.5 px-4 rounded-xl bg-rose-600 hover:bg-rose-500 text-xs font-bold text-white transition-all shadow-xs active:scale-[0.98] cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
+                  >
+                    {schedulingDeletion ? (
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Confirm Deletion</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
