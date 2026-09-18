@@ -27,7 +27,7 @@ import {
 } from 'lucide-react';
 
 export default function Landing() {
-  const { currentUser } = useAuth();
+  const { currentUser, userProfile } = useAuth();
   const [stats, setStats] = useState({
     totalContributions: '15.4M+',
     membersCount: '350+',
@@ -113,6 +113,9 @@ export default function Landing() {
   };
 
   if (currentUser) {
+    if (userProfile && userProfile.status !== 'approved') {
+      return <Navigate to="/pending-approval" replace />;
+    }
     return <Navigate to="/dashboard" replace />;
   }
 

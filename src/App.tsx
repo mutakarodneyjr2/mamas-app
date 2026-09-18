@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { BrowserRouter, Routes, Route, Outlet, Navigate, Link, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Outlet, Navigate, Link, useLocation, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { Logo } from './components/Logo';
@@ -13,6 +13,7 @@ import { ThemeIconButton } from './components/ThemeToggle';
 import { OnboardingTour } from './components/OnboardingTour';
 import { LeftDrawer } from './components/LeftDrawer';
 import { BottomNav } from './components/BottomNav';
+import { setupNativeBack } from './lib/nativeBack';
 import AuthResolver from './pages/AuthResolver';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -97,7 +98,7 @@ function Layout() {
       <LeftDrawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
 
       {/* Fixed Top Header */}
-      <header className="bg-blue-600 dark:bg-blue-700 text-white border-b border-blue-500/30 shrink-0 h-14 z-50 shadow-xs transition-colors">
+      <header className="bg-blue-600 dark:bg-blue-700 text-white border-b border-blue-500/30 shrink-0 h-[calc(3.5rem+env(safe-area-inset-top,0px))] pt-[env(safe-area-inset-top,0px)] z-50 shadow-xs transition-colors">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-full flex items-center justify-between">
           
           {/* Left Side: Drawer Toggle + User Profile Photo / Name */}
@@ -173,7 +174,7 @@ function Layout() {
       </header>
 
       {/* Main Inner Content Area (ONLY THIS SCROLLS) */}
-      <main className="flex-1 w-full max-w-7xl mx-auto p-0 pb-28 overflow-y-auto text-slate-900 dark:text-slate-100">
+      <main className="flex-1 w-full max-w-7xl mx-auto p-0 pb-[calc(7rem+env(safe-area-inset-bottom,0px))] overflow-y-auto text-slate-900 dark:text-slate-100">
         <Outlet />
       </main>
 
@@ -201,7 +202,7 @@ function ProtectedRoute({ children, requiredRole, allowPending = false }: { chil
   }
 
   if (!currentUser) return <Navigate to="/login" state={{ from: location.pathname + location.search }} replace />;
-  if (!userProfile) return <Navigate to="/register" state={{ from: location.pathname + location.search }} replace />;
+  if (!userProfile) return <Navigate to="/register/details" state={{ from: location.pathname + location.search }} replace />;
 
   if (userProfile?.status === "deleted") {
     return <PendingApproval />;
@@ -310,15 +311,31 @@ const AdminLayout = () => {
   );
 };
 
+function NativeNavigationBridge() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  React.useEffect(() => {
+    const cleanup = setupNativeBack(navigate, () => location.pathname);
+    return () => {
+      if (cleanup) cleanup();
+    };
+  }, [navigate, location.pathname]);
+
+  return null;
+}
+
 export default function App() {
   return (
     <AuthProvider>
       <ThemeProvider>
         <BrowserRouter>
+          <NativeNavigationBridge />
           <Routes>
             <Route path="/login" element={<AuthResolver initialMode="login" />} />
             <Route path="/register" element={<AuthResolver initialMode="register" />} />
             <Route path="/register/details" element={<Register />} />
+            <Route path="/pending-approval" element={<PendingApproval />} />
             <Route path="/" element={<Landing />} />
             <Route path="/terms" element={<TermsOfService />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />

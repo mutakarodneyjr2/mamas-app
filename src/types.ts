@@ -48,6 +48,8 @@ export interface User {
   totalCampaignContributed?: number;
   fcmTokens?: string[];
   themePreference?: 'light' | 'dark' | 'system';
+  emailVerified?: boolean;
+  reappliedAt?: number;
   rejectionReason?: string;
   rejectedAt?: number;
   rejectedBy?: string;
@@ -329,5 +331,40 @@ export interface SupportTicket {
   adminNotes?: string;
   createdAt: number;
   updatedAt: number;
+}
+
+export type AccountRecoveryStatus = 'submitted' | 'needs_info' | 'approved_change' | 'rejected' | 'closed' | 'not_found';
+
+export interface RecoveryMessage {
+  at: number;
+  by: 'user' | 'admin';
+  text: string;
+}
+
+export interface AccountRecoveryRequest {
+  id: string;
+  referenceCode: string;
+  type: 'lost_email';
+  status: AccountRecoveryStatus;
+  fullName: string;
+  graduationYear: string | number;
+  oldEmail: string;
+  newEmail: string;
+  phone?: string;
+  reason: string;
+  optionalProofNote?: string;
+  targetUid?: string | null;
+  matchedUserStatus?: string | null;
+  matchedUserRole?: string | null;
+  matchedUserFullName?: string | null;
+  messages: RecoveryMessage[];
+  decidedBy?: string;
+  decidedAt?: number;
+  decisionNote?: string;
+  createdAt: number;
+  updatedAt: number;
+  clientMeta?: {
+    userAgent?: string;
+  };
 }
 

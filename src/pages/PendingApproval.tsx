@@ -7,6 +7,8 @@ import { getAppSettings } from '../lib/services';
 import { cancelAccountDeletion, reapplyForMembership } from '../lib/auth';
 import { Logo } from '../components/Logo';
 import { getActiveBanners } from '../lib/bannerService';
+import { openTel, openWhatsApp, openMailto } from '../lib/openExternal';
+import { getAuthActionSettings } from '../lib/authActionSettings';
 import { 
   Clock, 
   Hourglass, 
@@ -48,14 +50,37 @@ export default function PendingApproval() {
   const [activeBanners, setActiveBanners] = useState<string[]>([]);
   const [activeBannerIdx, setActiveBannerIdx] = useState(0);
   const [isAutoplay, setIsAutoplay] = useState(true);
+  const [resendCooldown, setResendCooldown] = useState(0);
 
   // Re-apply state
   const [reapplying, setReapplying] = useState(false);
   const [reapplyData, setReapplyData] = useState({
     fullName: userProfile?.fullName || '',
     phoneNumber: userProfile?.phoneNumber || '',
-    yearOfCompletion: userProfile?.yearLeftSchool || ''
+    yearOfCompletion: userProfile?.yearLeftSchool || '',
+    district: userProfile?.district || '',
+    occupation: userProfile?.occupation || ''
   });
+
+  useEffect(() => {
+    if (userProfile) {
+      setReapplyData({
+        fullName: userProfile.fullName || '',
+        phoneNumber: userProfile.phoneNumber || '',
+        yearOfCompletion: userProfile.yearLeftSchool || '',
+        district: userProfile.district || '',
+        occupation: userProfile.occupation || ''
+      });
+    }
+  }, [userProfile]);
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const t = setInterval(() => {
+      setResendCooldown((c) => Math.max(0, c - 1));
+    }, 1000);
+    return () => clearInterval(t);
+  }, [resendCooldown]);
 
   const handleReapply = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -162,6 +187,35 @@ export default function PendingApproval() {
 
     return () => clearInterval(interval);
   }, [userProfile, checkStatus, navigate]);
+
+  // Auto-refresh auth status on app resume / tab visibility change
+  useEffect(() => {
+    const handleResume = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        checkStatus(false);
+      }
+    };
+    document.addEventListener('visibilitychange', handleResume);
+    window.addEventListener('focus', handleResume);
+
+    let capAppListener: any = null;
+    const cap = (window as any).Capacitor;
+    if (cap?.Plugins?.App?.addListener) {
+      capAppListener = cap.Plugins.App.addListener('appStateChange', (state: { isActive: boolean }) => {
+        if (state.isActive) {
+          checkStatus(false);
+        }
+      });
+    }
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleResume);
+      window.removeEventListener('focus', handleResume);
+      if (capAppListener && typeof capAppListener.remove === 'function') {
+        capAppListener.remove();
+      }
+    };
+  }, [checkStatus]);
 
   const copyToClipboard = (text: string, field: string) => {
     navigator.clipboard.writeText(text);
@@ -306,24 +360,41 @@ export default function PendingApproval() {
           <div className="bg-amber-50 dark:bg-amber-950/30 p-4 rounded-2xl border border-amber-200 dark:border-amber-800/60 space-y-3">
             <div className="flex items-center gap-2 text-amber-900 dark:text-amber-200 font-bold text-xs sm:text-sm">
               <Mail className="w-4 h-4 text-amber-600 shrink-0" />
-              <span>Did not receive the email?</span>
+              <span>Email Verification Required</span>
             </div>
-            <button
-              onClick={async () => {
-                if (!currentUser) return;
-                try {
-                  const { sendEmailVerification } = await import('firebase/auth');
-                  await sendEmailVerification(currentUser);
-                  setToastMessage("Verification email resent! Check your inbox.");
-                } catch (err: any) {
-                  setToastMessage("Failed to resend: " + (err.message || 'Unknown error'));
-                }
-              }}
-              className="w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              <span>Resend Verification Email</span>
-            </button>
+            <p className="text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
+              We sent a verification link to <strong>{currentUser?.email}</strong>. Please click the link to confirm your email address. Committee members review verified accounts first.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-2 pt-1">
+              <button
+                type="button"
+                disabled={resendCooldown > 0}
+                onClick={async () => {
+                  if (!currentUser) return;
+                  try {
+                    const { sendEmailVerification } = await import('firebase/auth');
+                    await sendEmailVerification(currentUser, getAuthActionSettings('/pending-approval?mode=verifyEmail'));
+                    setToastMessage("Verification email resent! Check your inbox.");
+                    setResendCooldown(60);
+                  } catch (err: any) {
+                    setToastMessage("Failed to resend: " + (err.message || 'Unknown error'));
+                  }
+                }}
+                className="flex-1 bg-amber-600 hover:bg-amber-500 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>{resendCooldown > 0 ? `Resend Email (${resendCooldown}s)` : 'Resend Verification Email'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => checkStatus(true)}
+                disabled={isRefreshing}
+                className="flex-1 bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-200 font-bold py-2.5 px-4 rounded-xl text-xs transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                <span>{isRefreshing ? 'Checking...' : "I've Verified (Refresh)"}</span>
+              </button>
+            </div>
           </div>
         )}
 
@@ -579,35 +650,40 @@ export default function PendingApproval() {
 
           <div className="flex flex-wrap items-center justify-center gap-2">
             {supportPhone && (
-              <a
-                href={`tel:${supportPhone}`}
+              <button
+                type="button"
+                onClick={() => openTel(supportPhone)}
                 className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs border border-slate-200 dark:border-slate-700 transition-all active:scale-95 cursor-pointer"
               >
                 <Phone className="w-3.5 h-3.5 text-blue-600" />
                 <span>Call Admin</span>
-              </a>
+              </button>
             )}
 
             {supportWhatsApp && (
-              <a
-                href={whatsappUrl}
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                type="button"
+                onClick={() => openWhatsApp(supportWhatsApp, `Hello MAMAS Support, I need assistance with my account review for ${userProfile?.fullName || userProfile?.email || 'my account'}.`)}
                 className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-all active:scale-95 cursor-pointer shadow-xs"
               >
                 <MessageSquare className="w-3.5 h-3.5" />
                 <span>WhatsApp Admin</span>
-              </a>
+              </button>
             )}
 
             {supportEmail && (
-              <a
-                href={mailtoUrl}
+              <button
+                type="button"
+                onClick={() => openMailto(
+                  supportEmail || 'support@mamas.org',
+                  `Account Verification Inquiry - ${userProfile?.fullName || 'Member'}`,
+                  `Hello Admin Team,\n\nI registered for MAMAS with the email ${userProfile?.email || ''}.\n\nPlease assist in reviewing my account verification.\n\nThank you!`
+                )}
                 className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs border border-slate-200 dark:border-slate-700 transition-all active:scale-95 cursor-pointer"
               >
                 <Mail className="w-3.5 h-3.5 text-blue-600" />
                 <span>Email Support</span>
-              </a>
+              </button>
             )}
           </div>
         </div>

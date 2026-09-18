@@ -7,6 +7,8 @@ import { Search, MapPin, Briefcase, Phone, Mail, MessageSquare, X, ChevronRight,
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../contexts/AuthContext';
 import { StatusBadge } from '../components/StatusBadge';
+import { useRegisterModal } from '../lib/nativeBack';
+import { openExternalUrl, openTel, openWhatsApp, openMailto } from '../lib/openExternal';
 
 export default function Directory() {
   const { userProfile, isAdminOrCommittee } = useAuth();
@@ -19,6 +21,8 @@ export default function Directory() {
   
   const [selectedMember, setSelectedMember] = useState<User | null>(null);
   const [appSettings, setAppSettings] = useState<any>(null);
+
+  useRegisterModal(!!selectedMember, () => setSelectedMember(null), 'directory-member-modal');
 
   useEffect(() => {
     const fetchMembers = async () => {
@@ -132,14 +136,13 @@ export default function Directory() {
               </div>
             </div>
             
-            <a 
-              href={appSettings.whatsappGroupLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="shrink-0 bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-1.5 px-3 rounded-xl text-xs transition-colors"
+            <button 
+              type="button"
+              onClick={() => openExternalUrl(appSettings.whatsappGroupLink)}
+              className="shrink-0 bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-1.5 px-3 rounded-xl text-xs transition-colors cursor-pointer"
             >
               Join Group
-            </a>
+            </button>
           </div>
         )}
 
@@ -344,35 +347,36 @@ export default function Directory() {
                     <div className="space-y-2">
                       <div className="flex gap-2">
                         {canViewField(selectedMember, 'phone') && selectedMember.phoneNumber && (
-                          <a 
-                            href={`tel:${selectedMember.phoneNumber}`} 
-                            className="flex-1 flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-900 dark:text-white py-2 rounded-xl text-xs font-medium transition-colors"
+                          <button 
+                            type="button"
+                            onClick={() => openTel(selectedMember.phoneNumber!)}
+                            className="flex-1 flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-900 dark:text-white py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer"
                           >
                             <Phone className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" /> 
                             <span>Call</span>
-                          </a>
+                          </button>
                         )}
                         {canViewField(selectedMember, 'whatsapp') && selectedMember.phoneNumber && (
-                          <a 
-                            href={`https://wa.me/${selectedMember.phoneNumber.replace(/[^0-9]/g, '')}`} 
-                            target="_blank" 
-                            rel="noopener noreferrer" 
-                            className="flex-1 flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white py-2 rounded-xl text-xs font-medium transition-colors"
+                          <button 
+                            type="button"
+                            onClick={() => openWhatsApp(selectedMember.phoneNumber!)}
+                            className="flex-1 flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer"
                           >
                             <MessageSquare className="w-3.5 h-3.5" /> 
                             <span>WhatsApp</span>
-                          </a>
+                          </button>
                         )}
                       </div>
                       
                       {canViewField(selectedMember, 'email') && selectedMember.email && (
-                        <a 
-                          href={`mailto:${selectedMember.email}`} 
-                          className="w-full flex items-center justify-center gap-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/40 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 py-2 rounded-xl text-xs font-medium border border-slate-200 dark:border-slate-700/80 transition-colors"
+                        <button 
+                          type="button"
+                          onClick={() => openMailto(selectedMember.email!)}
+                          className="w-full flex items-center justify-center gap-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/40 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 py-2 rounded-xl text-xs font-medium border border-slate-200 dark:border-slate-700/80 transition-colors cursor-pointer"
                         >
                           <Mail className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400" /> 
                           <span className="truncate">{selectedMember.email}</span>
-                        </a>
+                        </button>
                       )}
                     </div>
                   ) : (

@@ -13,6 +13,7 @@ import {
   setDoc
 } from 'firebase/firestore';
 import { db, auth } from '../firebase';
+import { apiFetch } from './apiClient';
 import { deleteImage } from './storage';
 import { notifyAllApprovedMembers, notifyUser } from './fcmService';
 import { 
@@ -154,7 +155,7 @@ export const initiateMobileMoneyContribution = async (
     headers['Authorization'] = `Bearer ${idToken}`;
   }
 
-  const response = await fetch('/api/relworx/initiate-collection', {
+  const response = await apiFetch('/api/relworx/initiate-collection', {
     method: 'POST',
     headers,
     body: JSON.stringify({
@@ -647,7 +648,7 @@ export const initiateWelfareDisbursement = async (
   }
   const idToken = await currentUser.getIdToken();
 
-  const response = await fetch('/api/relworx/initiate-disbursement', {
+  const response = await apiFetch('/api/relworx/initiate-disbursement', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -981,7 +982,7 @@ export const initiateExpenseDisbursement = async (
   }
   const idToken = await currentUser.getIdToken();
 
-  const response = await fetch('/api/relworx/initiate-disbursement', {
+  const response = await apiFetch('/api/relworx/initiate-disbursement', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -1768,7 +1769,7 @@ export const reconcileContribution = async (contributionId: string) => {
   const user = auth.currentUser;
   if (!user) throw new Error("Authentication required");
   const token = await user.getIdToken();
-  const response = await fetch('/api/relworx/reconcile-contribution', {
+  const response = await apiFetch('/api/relworx/reconcile-contribution', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,

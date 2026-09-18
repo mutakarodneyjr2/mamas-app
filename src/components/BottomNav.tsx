@@ -19,7 +19,7 @@ export function BottomNav() {
   ];
 
   return (
-    <div className="md:hidden fixed bottom-4 left-4 right-4 z-40 pb-safe">
+    <div className="md:hidden fixed bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] left-4 right-4 z-40">
       <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-2xl shadow-blue-950/15 dark:shadow-black/50 rounded-3xl border border-slate-200/80 dark:border-slate-800 h-16 px-2 flex justify-around items-center">
         {links.map(({ to, icon: Icon, label }) => {
           const isActive = location.pathname.startsWith(to) && (to !== '/dashboard' || location.pathname === '/dashboard');

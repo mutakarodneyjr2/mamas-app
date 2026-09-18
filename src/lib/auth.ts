@@ -3,6 +3,7 @@ import { ref, deleteObject } from "firebase/storage";
 import { db, storage } from "../firebase";
 import { User, UserRole, UserStatus } from "../types";
 import { uploadImage } from "./storage";
+import { apiFetch } from "./apiClient";
 
 const compressImageToBlob = async (file: File, maxWidth = 500, maxHeight = 500, quality = 0.8): Promise<Blob> => {
   return new Promise((resolve, reject) => {
@@ -59,13 +60,21 @@ export const getUserProfile = async (uid: string): Promise<User | null> => {
   return null;
 };
 
-export const reapplyForMembership = async (data: { fullName?: string, phoneNumber?: string, yearOfCompletion?: string }) => {
+export const reapplyForMembership = async (data: { 
+  fullName?: string; 
+  phoneNumber?: string; 
+  yearOfCompletion?: string;
+  district?: string;
+  occupation?: string;
+  nextOfKinName?: string;
+  nextOfKinPhone?: string;
+}) => {
   const { auth } = await import('../firebase');
   const user = auth.currentUser;
   if (!user) throw new Error("Not authenticated");
   
   const token = await user.getIdToken();
-  const response = await fetch('/api/auth/reapply', {
+  const response = await apiFetch('/api/auth/reapply', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

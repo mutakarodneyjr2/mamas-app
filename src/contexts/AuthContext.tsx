@@ -1,8 +1,42 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
-import { User as FirebaseUser, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup, UserCredential } from "firebase/auth";
+import { 
+  User as FirebaseUser, 
+  onAuthStateChanged, 
+  signOut, 
+  GoogleAuthProvider, 
+  signInWithPopup, 
+  signInWithRedirect, 
+  getRedirectResult, 
+  signInWithCredential, 
+  UserCredential 
+} from "firebase/auth";
 import { auth, db } from "../firebase";
 import { User as UserProfile, AccessTier } from "../types";
 import { doc, onSnapshot, getDoc } from "firebase/firestore";
+
+/**
+ * Safely checks if the app is currently running within a native WebView shell (e.g. Capacitor/Android/iOS).
+ */
+export function isNativeWebView(): boolean {
+  if (typeof window === 'undefined') return false;
+
+  // 1. Capacitor global check
+  const cap = (window as any).Capacitor;
+  if (cap?.isNativePlatform?.() === true || (typeof cap?.getPlatform === 'function' && cap.getPlatform() !== 'web')) {
+    return true;
+  }
+
+  // 2. User-Agent heuristics for embedded WebViews
+  const ua = navigator.userAgent || '';
+  if (/\bwv\b|Android.*Version\/[0-9.]+\s+Chrome\/|;\s*wv\)/i.test(ua)) {
+    return true;
+  }
+  if (/iPhone|iPad|iPod/i.test(ua) && !/Safari/i.test(ua) && !/CriOS|FxiOS|OPiOS|EdgiOS/i.test(ua)) {
+    return true;
+  }
+
+  return false;
+}
 
 interface AuthContextType {
   currentUser: FirebaseUser | null;
@@ -79,6 +113,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
+    // Check for redirect result if returning from a web signInWithRedirect
+    getRedirectResult(auth).catch((err) => {
+      console.warn("getRedirectResult info/error:", err);
+    });
+
     return () => unsubscribeAuth();
   }, []);
 
@@ -86,11 +125,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await signOut(auth);
   }, []);
 
-  const googleSignIn = useCallback(async () => {
+  const googleSignIn = useCallback(async (): Promise<UserCredential> => {
+    // 1. Native WebView path
+    if (isNativeWebView()) {
+      let nativeAuthPlugin: any = 
+        (window as any).FirebaseAuthentication || 
+        (window as any).Capacitor?.Plugins?.FirebaseAuthentication;
+
+      if (!nativeAuthPlugin) {
+        try {
+          // Attempt dynamic import if plugin package is installed
+          const mod = await (Function('return import("@capacitor-firebase/authentication")')() as Promise<any>);
+          nativeAuthPlugin = mod?.FirebaseAuthentication;
+        } catch {
+          // Not available
+        }
+      }
+
+      if (nativeAuthPlugin && typeof nativeAuthPlugin.signInWithGoogle === 'function') {
+        const res = await nativeAuthPlugin.signInWithGoogle();
+        const idToken = res?.credential?.idToken;
+        if (!idToken) {
+          throw new Error("Could not retrieve Google ID token from native authenticator.");
+        }
+        const credential = GoogleAuthProvider.credential(idToken);
+        return await signInWithCredential(auth, credential);
+      }
+
+      // Native detected but native plugin is not yet bundled into the build
+      throw new Error("Google sign-in requires the mobile app build. Use email and password, or open mamas in Chrome.");
+    }
+
+    // 2. Standard Web browser path
     const provider = new GoogleAuthProvider();
     provider.addScope('email');
     provider.addScope('profile');
-    return await signInWithPopup(auth, provider);
+    try {
+      return await signInWithPopup(auth, provider);
+    } catch (popupErr: any) {
+      if (
+        popupErr?.code === 'auth/popup-blocked' ||
+        popupErr?.code === 'auth/cancelled-popup-request'
+      ) {
+        console.info("Popup blocked or cancelled, falling back to signInWithRedirect...");
+        await signInWithRedirect(auth, provider);
+        // Will not resolve in current window session as redirect triggers
+        return await new Promise<never>(() => {});
+      }
+      throw popupErr;
+    }
   }, []);
 
   const checkUserExists = useCallback(async (uid: string) => {

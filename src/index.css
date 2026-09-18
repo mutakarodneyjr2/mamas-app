@@ -109,9 +109,19 @@ h1, h2, h3, h4, h5, h6 {
   color: #f8fafc;
 }
 
-/* Safe area padding for bottom nav */
+/* Safe area utilities */
 .pb-safe {
-  padding-bottom: env(safe-area-inset-bottom, 20px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.mb-safe {
+  margin-bottom: env(safe-area-inset-bottom, 0px);
+}
+/* Clearance for pages with floating bottom navigation */
+.pb-nav-clearance {
+  padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px));
 }
 
 /* Custom scrollbars */

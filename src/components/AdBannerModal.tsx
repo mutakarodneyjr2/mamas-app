@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getActiveBanners } from '../lib/bannerService';
 import { X, ChevronLeft, ChevronRight, Megaphone } from 'lucide-react';
+import { useRegisterModal } from '../lib/nativeBack';
 
 export function AdBannerModal() {
   const [bannerUrls, setBannerUrls] = useState<string[]>([]);
@@ -35,6 +36,8 @@ export function AdBannerModal() {
     sessionStorage.setItem('mamas_ad_modal_dismissed', 'true');
     setIsOpen(false);
   };
+
+  useRegisterModal(isOpen, handleClose, 'ad-banner-modal');
 
   if (!isOpen || bannerUrls.length === 0) return null;
 

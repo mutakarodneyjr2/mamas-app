@@ -8,6 +8,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { Logo } from './Logo';
 import { motion, AnimatePresence } from 'motion/react';
+import { useRegisterModal } from '../lib/nativeBack';
 
 interface LeftDrawerProps {
   isOpen: boolean;
@@ -17,6 +18,8 @@ interface LeftDrawerProps {
 export function LeftDrawer({ isOpen, onClose }: LeftDrawerProps) {
   const { userProfile, logout } = useAuth();
   const location = useLocation();
+
+  useRegisterModal(isOpen, onClose, 'left-drawer');
 
   if (!isOpen) return null;
 

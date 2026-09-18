@@ -7,6 +7,57 @@ import { collection, query, where, getDocs, addDoc, doc, onSnapshot, getDoc, ser
 import { SelectDropdown } from '../components/SelectDropdown';
 import { ConfirmationModal } from '../components/ConfirmationModal';
 import { normalizePhoneNumber, formatUGX } from '../lib/utils';
+import { apiFetch } from '../lib/apiClient';
+
+const PENDING_PAYMENT_STORAGE_KEY = 'mamas_pending_payment';
+const PENDING_EXPIRY_MS = 60 * 60 * 1000; // 60 minutes
+
+interface PersistedPendingPayment {
+  contributionId: string;
+  userId?: string;
+  amount: number;
+  phone: string;
+  network?: string;
+  purpose?: 'welfare' | 'campaign' | 'welfare_support';
+  campaignId?: string | null;
+  welfareRequestId?: string | null;
+  createdAt: number;
+  status: 'pending' | 'failed' | 'verified';
+}
+
+function loadPersistedPending(currentUid?: string): PersistedPendingPayment | null {
+  try {
+    const raw = localStorage.getItem(PENDING_PAYMENT_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed: PersistedPendingPayment = JSON.parse(raw);
+    if (currentUid && parsed.userId && parsed.userId !== currentUid) {
+      return null;
+    }
+    if (Date.now() - parsed.createdAt > PENDING_EXPIRY_MS) {
+      localStorage.removeItem(PENDING_PAYMENT_STORAGE_KEY);
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function savePersistedPending(item: PersistedPendingPayment) {
+  try {
+    localStorage.setItem(PENDING_PAYMENT_STORAGE_KEY, JSON.stringify(item));
+  } catch (e) {
+    console.warn("Failed to persist pending payment:", e);
+  }
+}
+
+function clearPersistedPending() {
+  try {
+    localStorage.removeItem(PENDING_PAYMENT_STORAGE_KEY);
+  } catch (e) {
+    console.warn("Failed to clear persisted pending payment:", e);
+  }
+}
 
 export default function Contribute() {
   const { currentUser, userProfile, isUnverified } = useAuth();
@@ -41,6 +92,8 @@ export default function Contribute() {
   const [success, setSuccess] = useState(false);
   
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+  const [abandonModalOpen, setAbandonModalOpen] = useState(false);
+  const [isRestoredFromStorage, setIsRestoredFromStorage] = useState(false);
 
   // Payment prompt state
   const [promptSent, setPromptSent] = useState(false);
@@ -48,6 +101,43 @@ export default function Contribute() {
   const [normalizedPhoneUsed, setNormalizedPhoneUsed] = useState('');
   const [checkingStatus, setCheckingStatus] = useState(false);
   const [pollingMessage, setPollingMessage] = useState('Waiting for mobile money PIN confirmation...');
+
+  // Restore pending payment across page reloads and mobile WebView backgrounding
+  useEffect(() => {
+    if (!currentUser) return;
+    const saved = loadPersistedPending(currentUser.uid);
+    if (saved && saved.status === 'pending') {
+      setPendingDocId(saved.contributionId);
+      setAmount(saved.amount.toString());
+      setNormalizedPhoneUsed(saved.phone);
+      setPhone(saved.phone);
+      if (saved.network) setNetwork(saved.network);
+      if (saved.purpose) setPurpose(saved.purpose);
+      if (saved.campaignId) setCampaignId(saved.campaignId);
+      if (saved.welfareRequestId) setWelfareRequestId(saved.welfareRequestId);
+      setPromptSent(true);
+      setIsRestoredFromStorage(true);
+      setPollingMessage('Payment in progress resumed. Waiting for mobile network verification...');
+    }
+  }, [currentUser]);
+
+  // Automatically check payment status when returning from MoMo USSD prompt
+  useEffect(() => {
+    const handleResumeCheck = () => {
+      if (document.visibilityState === 'visible' && pendingDocId && promptSent) {
+        setPollingMessage('App resumed. Checking latest payment status...');
+        handleManualRefresh();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleResumeCheck);
+    window.addEventListener('focus', handleResumeCheck);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleResumeCheck);
+      window.removeEventListener('focus', handleResumeCheck);
+    };
+  }, [pendingDocId, promptSent]);
 
   useEffect(() => {
     async function fetchWelfareCase() {
@@ -119,15 +209,19 @@ export default function Contribute() {
       const data = docSnap.data();
 
       if (data?.status === 'verified') {
+        clearPersistedPending();
         setConfirmedAmount(data.amount || parseInt(amount, 10));
         setSuccess(true);
         setPromptSent(false);
+        setIsRestoredFromStorage(false);
         setTimeout(() => {
           navigate('/statement');
         }, 3000); // Wait 3s so user sees the verified state
       } else if (data?.status === 'failed') {
+        clearPersistedPending();
         setError('Payment cancelled or failed. No money was taken.');
         setPromptSent(false);
+        setIsRestoredFromStorage(false);
       }
     }, (err) => {
       console.error("Error listening to contribution status:", err);
@@ -148,23 +242,57 @@ export default function Contribute() {
     if (!pendingDocId) return;
     setCheckingStatus(true);
     try {
+      // 1. Check direct Firestore contribution document
       const docSnap = await getDoc(doc(db, 'contributions', pendingDocId));
       if (docSnap.exists()) {
         const data = docSnap.data();
         if (data?.status === 'verified') {
+          clearPersistedPending();
           setConfirmedAmount(data.amount || parseInt(amount, 10));
           setSuccess(true);
           setPromptSent(false);
+          setIsRestoredFromStorage(false);
           setTimeout(() => {
             navigate('/statement');
           }, 3000);
+          return;
         } else if (data?.status === 'failed') {
+          clearPersistedPending();
           setError('Payment cancelled or failed. No money was taken.');
           setPromptSent(false);
-        } else {
-          setPollingMessage('Still waiting for payment verification. Ensure you have entered your PIN.');
+          setIsRestoredFromStorage(false);
+          return;
         }
       }
+
+      // 2. Call backend reconciliation to sync status from Relworx gateway
+      try {
+        const idToken = await currentUser?.getIdToken();
+        const res = await apiFetch('/api/relworx/reconcile-contribution', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`
+          },
+          body: JSON.stringify({ contributionId: pendingDocId })
+        });
+        const recData = await res.json().catch(() => ({}));
+        if (recData?.success && (recData.status === 'verified' || recData.outcome === 'verified')) {
+          clearPersistedPending();
+          setConfirmedAmount(parseInt(amount, 10));
+          setSuccess(true);
+          setPromptSent(false);
+          setIsRestoredFromStorage(false);
+          setTimeout(() => {
+            navigate('/statement');
+          }, 3000);
+          return;
+        }
+      } catch (recErr) {
+        console.warn("Reconciliation check error:", recErr);
+      }
+
+      setPollingMessage('Still waiting for payment verification. Ensure you have entered your PIN.');
     } catch (err: any) {
       console.error("Error checking document status:", err);
     } finally {
@@ -266,7 +394,7 @@ export default function Contribute() {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000);
 
-      const response = await fetch('/api/relworx/initiate-collection', {
+      const response = await apiFetch('/api/relworx/initiate-collection', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -297,6 +425,7 @@ export default function Contribute() {
       const resData = await response.json().catch(() => ({}));
 
       if (!response.ok || !resData.success) {
+        clearPersistedPending();
         const errorMsg = resData.message || resData.error || '';
         if (errorMsg.includes('Server configuration error')) {
           throw new Error('Payment service temporarily unavailable.');
@@ -305,12 +434,27 @@ export default function Contribute() {
         }
       }
 
-      // 4. Success initiating prompt - Show Mobile Money check phone card
+      // 4. Success initiating prompt - Save to localStorage and Show Mobile Money check phone card
+      savePersistedPending({
+        contributionId: docId,
+        userId: currentUser?.uid,
+        amount: numericAmount,
+        phone: normPhone,
+        network: network,
+        purpose: purpose,
+        campaignId: purpose === 'campaign' ? campaignId : null,
+        welfareRequestId: purpose === 'welfare_support' ? welfareRequestId : null,
+        createdAt: Date.now(),
+        status: 'pending'
+      });
+
       setNormalizedPhoneUsed(normPhone);
       setPendingDocId(docId);
+      setIsRestoredFromStorage(false);
       setPromptSent(true);
 
     } catch (err: any) {
+      clearPersistedPending();
       console.error("Payment submission failed:", err);
       let errorMessage = err.message || 'Payment could not be started. Try again.';
       if (err.name === 'AbortError') {
@@ -381,6 +525,15 @@ export default function Contribute() {
         {/* MOBILE MONEY PROMPT SENT CARD */}
         {promptSent ? (
           <div className="bg-white dark:bg-[#0c1731] border border-slate-200/80 dark:border-slate-800 p-5 rounded-xl space-y-4 animate-in zoom-in-95 duration-200">
+            {isRestoredFromStorage && (
+              <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 p-3 rounded-xl flex items-start gap-2.5 text-amber-900 dark:text-amber-200 text-xs">
+                <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-bold">Payment in progress:</span> We restored your pending mobile money transaction. If you completed your PIN entry on your phone, we are waiting for network confirmation.
+                </div>
+              </div>
+            )}
+
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-900 rounded-xl flex items-center justify-center shrink-0">
                 <Smartphone className="w-5 h-5 text-blue-600 dark:text-blue-400" />
@@ -424,10 +577,7 @@ export default function Contribute() {
 
               <button
                 type="button"
-                onClick={() => {
-                  setPromptSent(false);
-                  setError('');
-                }}
+                onClick={() => setAbandonModalOpen(true)}
                 className="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 py-2.5 px-4 rounded-xl font-semibold text-xs transition-colors border border-slate-200 dark:border-slate-700 text-center cursor-pointer"
               >
                 Cancel / Try Again
@@ -685,6 +835,22 @@ export default function Contribute() {
         confirmText="Initiate Payment"
         onConfirm={executePayment}
         onCancel={() => setConfirmModalOpen(false)}
+      />
+
+      <ConfirmationModal
+        isOpen={abandonModalOpen}
+        title="Abandon In-Progress Payment?"
+        message="If you already entered your PIN on your mobile phone, the payment may still process and be reflected on your statement. Abandoning will stop waiting on this screen and let you start a new contribution."
+        confirmText="Yes, Abandon Payment"
+        onConfirm={() => {
+          clearPersistedPending();
+          setPromptSent(false);
+          setPendingDocId(null);
+          setIsRestoredFromStorage(false);
+          setError('');
+          setAbandonModalOpen(false);
+        }}
+        onCancel={() => setAbandonModalOpen(false)}
       />
     </div>
   );

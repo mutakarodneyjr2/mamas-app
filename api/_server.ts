@@ -10,7 +10,7 @@ import express from 'express';
 import cors from 'cors';
 import crypto from 'crypto';
 import { getApps, initializeApp, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
 import { getAuth } from 'firebase-admin/auth';
 import { getStorage } from 'firebase-admin/storage';
@@ -1138,7 +1138,7 @@ app.post('/api/auth/reapply', async (req, res) => {
       return res.status(401).json({ success: false, message: 'Invalid token' });
     }
 
-    const { fullName, phoneNumber, yearOfCompletion } = req.body || {};
+    const { fullName, phoneNumber, yearOfCompletion, district, occupation, nextOfKinName, nextOfKinPhone } = req.body || {};
     
     const firestore = getDb();
     const userRef = firestore.collection('users').doc(decodedToken.uid);
@@ -1160,9 +1160,28 @@ app.post('/api/auth/reapply', async (req, res) => {
     };
     if (fullName) updates.fullName = fullName;
     if (phoneNumber) updates.phoneNumber = phoneNumber;
-    if (yearOfCompletion) updates.yearOfCompletion = yearOfCompletion;
+    if (yearOfCompletion) {
+      updates.yearOfCompletion = yearOfCompletion;
+      updates.yearLeftSchool = yearOfCompletion;
+    }
+    if (district) updates.district = district;
+    if (occupation) updates.occupation = occupation;
+    if (nextOfKinName) updates.nextOfKinName = nextOfKinName;
+    if (nextOfKinPhone) updates.nextOfKinPhone = nextOfKinPhone;
 
     await userRef.update(updates);
+
+    try {
+      await firestore.collection('activityLogs').add({
+        action: 'MEMBER_REAPPLIED',
+        adminId: decodedToken.uid,
+        targetId: decodedToken.uid,
+        details: `${fullName || userData?.fullName || 'Member'} re-applied for membership after rejection`,
+        createdAt: Date.now()
+      });
+    } catch (logErr) {
+      console.warn("Could not log reapply activity:", logErr);
+    }
 
     return res.json({ success: true, message: 'Re-application submitted successfully' });
   } catch (error: any) {
@@ -1264,6 +1283,551 @@ app.post('/api/admin/finalize_deletions', async (req, res) => {
     return res.json({ success: true, message: `Successfully finalized ${finalizedCount} accounts.` });
   } catch (error: any) {
     console.error('Finalize deletions error:', error);
+    return res.status(500).json({ success: false, message: error?.message || 'Internal server error' });
+  }
+});
+
+// ========== ACCOUNT RECOVERY ENDPOINTS ==========
+
+function generateRecoveryRef(): string {
+  const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+  let result = 'REC-';
+  for (let i = 0; i < 6; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
+
+const recoveryIntakeLimiter = new InMemoryRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  maxRequests: 6,
+  message: "Too many recovery requests from this network. Please wait a few minutes before trying again."
+});
+
+const recoveryStatusLimiter = new InMemoryRateLimiter({
+  windowMs: 5 * 60 * 1000,
+  maxRequests: 30,
+  message: "Too many status checks. Please wait a moment."
+});
+
+app.post('/api/auth/recovery/request', async (req, res) => {
+  try {
+    ensureFirebaseInit();
+    const clientIp = getClientIp(req);
+    const rl = recoveryIntakeLimiter.check(clientIp);
+    if (!rl.allowed) {
+      return res.status(429).json({ success: false, message: 'Too many recovery requests. Please wait a few minutes before trying again.' });
+    }
+
+    const { fullName, graduationYear, oldEmail, newEmail, phone, reason, optionalProofNote } = req.body || {};
+    
+    if (!fullName || typeof fullName !== 'string' || !fullName.trim()) {
+      return res.status(400).json({ success: false, message: 'Full name is required.' });
+    }
+    if (!oldEmail || typeof oldEmail !== 'string' || !oldEmail.includes('@')) {
+      return res.status(400).json({ success: false, message: 'Valid previous registered email is required.' });
+    }
+    if (!newEmail || typeof newEmail !== 'string' || !newEmail.includes('@')) {
+      return res.status(400).json({ success: false, message: 'Valid new contact email is required.' });
+    }
+    if (!reason || typeof reason !== 'string' || !reason.trim()) {
+      return res.status(400).json({ success: false, message: 'Reason for recovery is required.' });
+    }
+
+    const normOldEmail = oldEmail.trim().toLowerCase();
+    const normNewEmail = newEmail.trim().toLowerCase();
+
+    if (normOldEmail === normNewEmail) {
+      return res.status(400).json({ success: false, message: 'New email must be different from previous email.' });
+    }
+
+    const firestore = getDb();
+    const now = Date.now();
+    const refCode = generateRecoveryRef();
+
+    // Check if user exists with oldEmail in Firestore users collection
+    const userQuery = await firestore.collection('users')
+      .where('email', '==', normOldEmail)
+      .limit(1)
+      .get();
+
+    let targetUid: string | null = null;
+    let matchedUserStatus: string | null = null;
+    let matchedUserRole: string | null = null;
+    let matchedUserFullName: string | null = null;
+
+    if (!userQuery.empty) {
+      const userDoc = userQuery.docs[0];
+      targetUid = userDoc.id;
+      const uData = userDoc.data();
+      matchedUserStatus = uData.status || null;
+      matchedUserRole = uData.role || null;
+      matchedUserFullName = uData.fullName || null;
+    } else {
+      // Also check Firebase Auth by oldEmail
+      try {
+        const authUser = await getAuth().getUserByEmail(normOldEmail);
+        if (authUser) {
+          targetUid = authUser.uid;
+          const uDoc = await firestore.collection('users').doc(authUser.uid).get();
+          if (uDoc.exists) {
+            const uData = uDoc.data()!;
+            matchedUserStatus = uData.status || null;
+            matchedUserRole = uData.role || null;
+            matchedUserFullName = uData.fullName || authUser.displayName || null;
+          }
+        }
+      } catch (authErr) {
+        // Not found in Auth
+      }
+    }
+
+    if (!targetUid) {
+      // Terminal outcome: NOT_FOUND
+      await firestore.collection('accountRecoveryRequests').add({
+        referenceCode: refCode,
+        type: 'lost_email',
+        status: 'not_found',
+        fullName: fullName.trim(),
+        graduationYear: graduationYear ? String(graduationYear).trim() : 'Not specified',
+        oldEmail: normOldEmail,
+        newEmail: normNewEmail,
+        phone: phone ? String(phone).trim() : '',
+        reason: reason.trim(),
+        optionalProofNote: optionalProofNote ? String(optionalProofNote).trim() : '',
+        targetUid: null,
+        matchedUserStatus: null,
+        matchedUserRole: null,
+        matchedUserFullName: null,
+        messages: [],
+        decisionNote: 'No registered membership account exists under this email address.',
+        createdAt: now,
+        updatedAt: now,
+        clientMeta: {
+          userAgent: req.headers['user-agent'] || ''
+        }
+      });
+
+      return res.json({
+        success: true,
+        referenceCode: refCode,
+        status: 'not_found',
+        message: 'No registered membership account was found for that previous email address. You may create a fresh account using your new email address.'
+      });
+    }
+
+    // Active recovery ticket
+    await firestore.collection('accountRecoveryRequests').add({
+      referenceCode: refCode,
+      type: 'lost_email',
+      status: 'submitted',
+      fullName: fullName.trim(),
+      graduationYear: graduationYear ? String(graduationYear).trim() : 'Not specified',
+      oldEmail: normOldEmail,
+      newEmail: normNewEmail,
+      phone: phone ? String(phone).trim() : '',
+      reason: reason.trim(),
+      optionalProofNote: optionalProofNote ? String(optionalProofNote).trim() : '',
+      targetUid,
+      matchedUserStatus,
+      matchedUserRole,
+      matchedUserFullName,
+      messages: [],
+      createdAt: now,
+      updatedAt: now,
+      clientMeta: {
+        userAgent: req.headers['user-agent'] || ''
+      }
+    });
+
+    try {
+      await firestore.collection('activityLogs').add({
+        action: 'ACCOUNT_RECOVERY_REQUESTED',
+        adminId: 'SYSTEM',
+        targetId: targetUid,
+        details: `Account recovery requested for ${fullName.trim()} (${normOldEmail} -> ${normNewEmail}), Ref: ${refCode}`,
+        createdAt: now
+      });
+    } catch (logErr) {
+      console.warn('Could not log recovery request activity:', logErr);
+    }
+
+    return res.json({
+      success: true,
+      referenceCode: refCode,
+      status: 'submitted',
+      message: 'Recovery request submitted. An administrator will review your record against alumni archives. Please save your reference code.'
+    });
+  } catch (error: any) {
+    console.error('Recovery request error:', error);
+    return res.status(500).json({ success: false, message: error?.message || 'Internal server error' });
+  }
+});
+
+app.get('/api/auth/recovery/status', async (req, res) => {
+  try {
+    ensureFirebaseInit();
+    const clientIp = getClientIp(req);
+    const rl = recoveryStatusLimiter.check(clientIp);
+    if (!rl.allowed) {
+      return res.status(429).json({ success: false, message: 'Too many requests. Please wait a moment.' });
+    }
+
+    const { ref: refCodeQuery, email: emailQuery, phone: phoneQuery } = req.query;
+    const refCode = typeof refCodeQuery === 'string' ? refCodeQuery.trim().toUpperCase() : '';
+    const email = typeof emailQuery === 'string' ? emailQuery.trim().toLowerCase() : '';
+    const phone = typeof phoneQuery === 'string' ? phoneQuery.trim() : '';
+
+    if (!refCode) {
+      return res.status(400).json({ success: false, message: 'Reference code is required.' });
+    }
+
+    const firestore = getDb();
+    const snap = await firestore.collection('accountRecoveryRequests')
+      .where('referenceCode', '==', refCode)
+      .limit(1)
+      .get();
+
+    if (snap.empty) {
+      return res.status(404).json({ success: false, message: 'No recovery request found with this reference code.' });
+    }
+
+    const ticketDoc = snap.docs[0];
+    const ticket = ticketDoc.data();
+
+    // Security verification: match email or phone if provided
+    if (email) {
+      const matchOld = (ticket.oldEmail || '').toLowerCase() === email;
+      const matchNew = (ticket.newEmail || '').toLowerCase() === email;
+      if (!matchOld && !matchNew) {
+        return res.status(403).json({ success: false, message: 'Email does not match this reference code.' });
+      }
+    } else if (phone) {
+      const matchPhone = (ticket.phone || '').includes(phone) || phone.includes(ticket.phone || '');
+      if (!matchPhone) {
+        return res.status(403).json({ success: false, message: 'Contact phone does not match this reference code.' });
+      }
+    }
+
+    return res.json({
+      success: true,
+      ticket: {
+        id: ticketDoc.id,
+        referenceCode: ticket.referenceCode,
+        type: ticket.type,
+        status: ticket.status,
+        fullName: ticket.fullName,
+        graduationYear: ticket.graduationYear,
+        oldEmail: ticket.oldEmail,
+        newEmail: ticket.newEmail,
+        phone: ticket.phone,
+        reason: ticket.reason,
+        optionalProofNote: ticket.optionalProofNote,
+        messages: ticket.messages || [],
+        decisionNote: ticket.decisionNote || '',
+        decidedAt: ticket.decidedAt || null,
+        createdAt: ticket.createdAt,
+        updatedAt: ticket.updatedAt
+      }
+    });
+  } catch (error: any) {
+    console.error('Recovery status lookup error:', error);
+    return res.status(500).json({ success: false, message: error?.message || 'Internal server error' });
+  }
+});
+
+app.post('/api/auth/recovery/message', async (req, res) => {
+  try {
+    ensureFirebaseInit();
+    const { referenceCode, email, text } = req.body || {};
+    if (!referenceCode || !email || !text || !String(text).trim()) {
+      return res.status(400).json({ success: false, message: 'Reference code, email, and message text are required.' });
+    }
+
+    const normRef = String(referenceCode).trim().toUpperCase();
+    const normEmail = String(email).trim().toLowerCase();
+    const firestore = getDb();
+
+    const snap = await firestore.collection('accountRecoveryRequests')
+      .where('referenceCode', '==', normRef)
+      .limit(1)
+      .get();
+
+    if (snap.empty) {
+      return res.status(404).json({ success: false, message: 'Recovery ticket not found.' });
+    }
+
+    const docRef = snap.docs[0].ref;
+    const ticket = snap.docs[0].data();
+
+    if ((ticket.newEmail || '').toLowerCase() !== normEmail && (ticket.oldEmail || '').toLowerCase() !== normEmail) {
+      return res.status(403).json({ success: false, message: 'Email does not match this ticket.' });
+    }
+
+    const now = Date.now();
+    const newMessage = {
+      at: now,
+      by: 'user' as const,
+      text: String(text).trim()
+    };
+
+    const updatedMessages = [...(ticket.messages || []), newMessage];
+
+    await docRef.update({
+      messages: updatedMessages,
+      status: ticket.status === 'needs_info' ? 'submitted' : ticket.status,
+      updatedAt: now
+    });
+
+    return res.json({
+      success: true,
+      message: 'Message appended to ticket successfully.',
+      messages: updatedMessages
+    });
+  } catch (error: any) {
+    console.error('Recovery user message error:', error);
+    return res.status(500).json({ success: false, message: error?.message || 'Internal server error' });
+  }
+});
+
+app.get('/api/auth/recovery/admin/list', async (req, res) => {
+  try {
+    ensureFirebaseInit();
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+    const token = authHeader.split('Bearer ')[1];
+    const decodedToken = await getAuth().verifyIdToken(token);
+
+    const firestore = getDb();
+    const adminDoc = await firestore.collection('users').doc(decodedToken.uid).get();
+    if (!adminDoc.exists || adminDoc.data()?.role !== 'super_admin') {
+      return res.status(403).json({ success: false, message: 'Super admin access required.' });
+    }
+
+    const snap = await firestore.collection('accountRecoveryRequests')
+      .orderBy('createdAt', 'desc')
+      .limit(100)
+      .get();
+
+    const requests = snap.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+
+    return res.json({ success: true, requests });
+  } catch (error: any) {
+    console.error('Admin recovery list error:', error);
+    return res.status(500).json({ success: false, message: error?.message || 'Internal server error' });
+  }
+});
+
+app.post('/api/auth/recovery/admin/action', async (req, res) => {
+  try {
+    ensureFirebaseInit();
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+    const token = authHeader.split('Bearer ')[1];
+    const decodedToken = await getAuth().verifyIdToken(token);
+
+    const firestore = getDb();
+    const adminDoc = await firestore.collection('users').doc(decodedToken.uid).get();
+    if (!adminDoc.exists || adminDoc.data()?.role !== 'super_admin') {
+      return res.status(403).json({ success: false, message: 'Super admin access required.' });
+    }
+
+    const { ticketId, action, note, messageText } = req.body || {};
+    if (!ticketId || !action) {
+      return res.status(400).json({ success: false, message: 'Ticket ID and action are required.' });
+    }
+
+    const ticketRef = firestore.collection('accountRecoveryRequests').doc(ticketId);
+    const ticketSnap = await ticketRef.get();
+    if (!ticketSnap.exists) {
+      return res.status(404).json({ success: false, message: 'Recovery ticket not found.' });
+    }
+
+    const ticket = ticketSnap.data()!;
+    const now = Date.now();
+    const updates: any = { updatedAt: now };
+
+    if (action === 'request_info') {
+      updates.status = 'needs_info';
+      if (note) updates.decisionNote = note;
+      if (messageText) {
+        updates.messages = [...(ticket.messages || []), {
+          at: now,
+          by: 'admin',
+          text: String(messageText).trim()
+        }];
+      }
+    } else if (action === 'reject') {
+      updates.status = 'rejected';
+      updates.decidedBy = decodedToken.uid;
+      updates.decidedAt = now;
+      updates.decisionNote = note || 'Identity verification could not be confirmed against alumni records.';
+    } else if (action === 'close') {
+      updates.status = 'closed';
+      updates.decidedBy = decodedToken.uid;
+      updates.decidedAt = now;
+      if (note) updates.decisionNote = note;
+    } else {
+      return res.status(400).json({ success: false, message: 'Invalid action.' });
+    }
+
+    await ticketRef.update(updates);
+
+    await firestore.collection('activityLogs').add({
+      action: `ACCOUNT_RECOVERY_${String(action).toUpperCase()}`,
+      adminId: decodedToken.uid,
+      targetId: ticket.targetUid || ticketId,
+      details: `Recovery ticket ${ticket.referenceCode} status changed to ${updates.status || action} by super_admin. Note: ${note || ''}`,
+      createdAt: now
+    });
+
+    return res.json({ success: true, message: `Recovery ticket updated to ${updates.status || action}.` });
+  } catch (error: any) {
+    console.error('Admin recovery action error:', error);
+    return res.status(500).json({ success: false, message: error?.message || 'Internal server error' });
+  }
+});
+
+app.post('/api/auth/recovery/approve', async (req, res) => {
+  try {
+    ensureFirebaseInit();
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+    const token = authHeader.split('Bearer ')[1];
+    const decodedToken = await getAuth().verifyIdToken(token);
+
+    const firestore = getDb();
+    const adminDoc = await firestore.collection('users').doc(decodedToken.uid).get();
+    if (!adminDoc.exists || adminDoc.data()?.role !== 'super_admin') {
+      return res.status(403).json({ success: false, message: 'Permission denied: Super Admin required.' });
+    }
+
+    const { ticketId, adminNote } = req.body || {};
+    if (!ticketId) {
+      return res.status(400).json({ success: false, message: 'Ticket ID is required.' });
+    }
+
+    const ticketRef = firestore.collection('accountRecoveryRequests').doc(ticketId);
+    const ticketSnap = await ticketRef.get();
+    if (!ticketSnap.exists) {
+      return res.status(404).json({ success: false, message: 'Recovery ticket not found.' });
+    }
+
+    const ticket = ticketSnap.data()!;
+    if (ticket.status === 'approved_change') {
+      return res.status(400).json({ success: false, message: 'This recovery request has already been approved.' });
+    }
+
+    const targetUid = ticket.targetUid;
+    if (!targetUid) {
+      return res.status(400).json({ success: false, message: 'No target member UID is attached to this recovery request.' });
+    }
+
+    const userRef = firestore.collection('users').doc(targetUid);
+    const userSnap = await userRef.get();
+    if (!userSnap.exists) {
+      return res.status(404).json({ success: false, message: 'Target user account not found in database.' });
+    }
+
+    const normNewEmail = (ticket.newEmail || '').trim().toLowerCase();
+    if (!normNewEmail || !normNewEmail.includes('@')) {
+      return res.status(400).json({ success: false, message: 'Invalid replacement email address.' });
+    }
+
+    // Check if new email is already taken in Firebase Auth by a DIFFERENT uid
+    try {
+      const existingUser = await getAuth().getUserByEmail(normNewEmail);
+      if (existingUser && existingUser.uid !== targetUid) {
+        return res.status(400).json({
+          success: false,
+          message: `The email ${normNewEmail} is already registered to a different account (UID: ${existingUser.uid}). Please use an unassociated email address.`
+        });
+      }
+    } catch (notFound) {
+      // Expected if email is not taken yet
+    }
+
+    // 1. Update Auth Email via Admin SDK
+    await getAuth().updateUser(targetUid, {
+      email: normNewEmail,
+      emailVerified: false
+    });
+
+    const now = Date.now();
+
+    // 2. Update Firestore users/{targetUid} document (preserving UID, contributions, roles)
+    await userRef.update({
+      email: normNewEmail,
+      emailVerified: false,
+      updatedAt: now,
+      previousEmails: FieldValue.arrayUnion({
+        email: ticket.oldEmail,
+        changedAt: now,
+        reason: 'account_recovery',
+        referenceCode: ticket.referenceCode,
+        approvedBy: decodedToken.uid
+      })
+    });
+
+    // 3. Update directoryProfiles if exists
+    try {
+      const dirRef = firestore.collection('directoryProfiles').doc(targetUid);
+      const dirSnap = await dirRef.get();
+      if (dirSnap.exists) {
+        await dirRef.update({ updatedAt: now });
+      }
+    } catch (dirErr) {
+      console.warn('Could not update directoryProfile timestamp:', dirErr);
+    }
+
+    // 4. Update recovery ticket status
+    await ticketRef.update({
+      status: 'approved_change',
+      decidedBy: decodedToken.uid,
+      decidedAt: now,
+      decisionNote: adminNote || 'Approved by Super Admin. Email address updated while preserving membership UID and financial records.',
+      updatedAt: now
+    });
+
+    // 5. Create notification for target user
+    try {
+      await firestore.collection('notifications').add({
+        userId: targetUid,
+        title: 'Account Email Updated',
+        body: `Your MAMAS login email was successfully updated to ${normNewEmail} via Account Recovery (${ticket.referenceCode}).`,
+        type: 'approval',
+        targetUrl: '/profile',
+        read: false,
+        createdAt: now
+      });
+    } catch (notifErr) {
+      console.warn('Could not create notification:', notifErr);
+    }
+
+    // 6. Log activity
+    await firestore.collection('activityLogs').add({
+      action: 'ACCOUNT_RECOVERY_APPROVED',
+      adminId: decodedToken.uid,
+      targetId: targetUid,
+      details: `Approved email recovery for ${ticket.fullName} (Ref: ${ticket.referenceCode}). Auth email changed from ${ticket.oldEmail} to ${normNewEmail}. UID ${targetUid} and all ledger history preserved.`,
+      createdAt: now
+    });
+
+    return res.json({
+      success: true,
+      message: `Account recovery approved. Email successfully migrated to ${normNewEmail}. Membership UID and financial ledger preserved.`
+    });
+  } catch (error: any) {
+    console.error('Account recovery approval error:', error);
     return res.status(500).json({ success: false, message: error?.message || 'Internal server error' });
   }
 });

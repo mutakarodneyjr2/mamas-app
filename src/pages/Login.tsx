@@ -4,10 +4,13 @@ import { useNavigate, Link, useSearchParams, useLocation } from 'react-router-do
 import { Logo } from '../components/Logo';
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '../firebase';
-import { Mail, KeyRound, Eye, EyeOff, ShieldCheck, Heart, GraduationCap, ArrowRight, Sparkles, PhoneCall, MessageSquare, HelpCircle } from 'lucide-react';
+import { Mail, KeyRound, Eye, EyeOff, ShieldCheck, Heart, GraduationCap, ArrowRight, Sparkles, PhoneCall, MessageSquare, HelpCircle, ShieldAlert } from 'lucide-react';
 import { GoogleSignInButton } from '../components/GoogleSignInButton';
+import { LostEmailModal } from '../components/LostEmailModal';
 import { getAppSettings } from '../lib/services';
 import { getActiveBanners } from '../lib/bannerService';
+import { getAuthActionSettings } from '../lib/authActionSettings';
+import { openTel, openWhatsApp, openMailto } from '../lib/openExternal';
 
 type LoginStep = 'login' | 'forgot-password';
 
@@ -25,6 +28,7 @@ export default function Login() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isRecoveryOpen, setIsRecoveryOpen] = useState(false);
 
   const [supportPhone, setSupportPhone] = useState<string>('');
   const [supportWhatsApp, setSupportWhatsApp] = useState<string>('');
@@ -108,7 +112,7 @@ export default function Login() {
       if (err.code === 'auth/popup-blocked' || err.message?.includes('popup')) {
         setError('Please allow popups for this site or use email/password login instead.');
       } else if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
-        setError('Failed to sign in with Google.');
+        setError(err.message || 'Failed to sign in with Google.');
       }
     } finally {
       setLoading(false);
@@ -122,7 +126,7 @@ export default function Login() {
     setLoading(true);
 
     try {
-      await sendPasswordResetEmail(auth, email);
+      await sendPasswordResetEmail(auth, email, getAuthActionSettings('/login?mode=resetPassword'));
       setSuccess('Check your email for password reset instructions.');
     } catch (err: any) {
       console.error(err);
@@ -311,15 +315,25 @@ export default function Login() {
 
               </form>
 
-              {/* Bottom Register CTA */}
-              <div className="pt-4 border-t border-slate-100 dark:border-slate-800 text-center text-xs text-slate-600 dark:text-slate-400">
-                Don't have an account yet?{' '}
-                <Link 
-                  to="/register" 
-                  className="font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+              {/* Bottom Register & Recovery CTA */}
+              <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-col items-center gap-2 text-center text-xs text-slate-600 dark:text-slate-400">
+                <div>
+                  Don't have an account yet?{' '}
+                  <Link 
+                    to="/register" 
+                    className="font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                  >
+                    Become a Member
+                  </Link>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsRecoveryOpen(true)}
+                  className="text-[11px] font-semibold text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 transition-colors cursor-pointer flex items-center gap-1 mt-1"
                 >
-                  Become a Member
-                </Link>
+                  <ShieldAlert className="w-3.5 h-3.5" />
+                  <span>Lost access to your email? Recover Account</span>
+                </button>
               </div>
 
             </div>
@@ -356,13 +370,21 @@ export default function Login() {
                 {loading ? 'Sending link...' : 'Send Reset Link'}
               </button>
 
-              <div className="text-center pt-2">
+              <div className="flex flex-col items-center gap-2 pt-2">
                 <button
                   type="button"
                   onClick={() => { setError(''); setSuccess(''); setStep('login'); }}
                   className="text-xs font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-white transition-colors cursor-pointer"
                 >
                   &larr; Back to Login
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsRecoveryOpen(true)}
+                  className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer flex items-center gap-1"
+                >
+                  <ShieldAlert className="w-3.5 h-3.5" />
+                  <span>Lost access to inbox? Recover Account</span>
                 </button>
               </div>
             </form>
@@ -379,39 +401,47 @@ export default function Login() {
               </div>
               <div className="flex flex-wrap items-center justify-center gap-2">
                 {supportPhone && (
-                  <a
-                    href={`tel:${supportPhone}`}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 font-semibold text-xs transition-colors"
+                  <button
+                    type="button"
+                    onClick={() => openTel(supportPhone)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 font-semibold text-xs transition-colors cursor-pointer"
                   >
                     <PhoneCall className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
                     <span>Call Support</span>
-                  </a>
+                  </button>
                 )}
                 {supportWhatsApp && (
-                  <a
-                    href={`https://wa.me/${supportWhatsApp.replace(/[^0-9]/g, '')}?text=${encodeURIComponent('Hello MAMAS Executive, I need assistance with my account access.')}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-50 dark:bg-teal-950/40 border border-teal-200 dark:border-teal-900/60 text-teal-700 dark:text-teal-300 hover:bg-teal-100 dark:hover:bg-teal-900/60 font-semibold text-xs transition-colors"
+                  <button
+                    type="button"
+                    onClick={() => openWhatsApp(supportWhatsApp, 'Hello MAMAS Executive, I need assistance with my account access.')}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-50 dark:bg-teal-950/40 border border-teal-200 dark:border-teal-900/60 text-teal-700 dark:text-teal-300 hover:bg-teal-100 dark:hover:bg-teal-900/60 font-semibold text-xs transition-colors cursor-pointer"
                   >
                     <MessageSquare className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 shrink-0" />
                     <span>WhatsApp</span>
-                  </a>
+                  </button>
                 )}
                 {supportEmail && (
-                  <a
-                    href={`mailto:${supportEmail}?subject=${encodeURIComponent('MAMAS Account Assistance Request')}`}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/60 font-semibold text-xs transition-colors"
+                  <button
+                    type="button"
+                    onClick={() => openMailto(supportEmail, 'MAMAS Account Assistance Request')}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/60 font-semibold text-xs transition-colors cursor-pointer"
                   >
                     <Mail className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
                     <span>Email Us</span>
-                  </a>
+                  </button>
                 )}
               </div>
             </div>
           )}
 
       </div>
+
+      {/* Account & Lost Email Recovery Modal */}
+      <LostEmailModal
+        isOpen={isRecoveryOpen}
+        onClose={() => setIsRecoveryOpen(false)}
+        prefillEmail={email}
+      />
     </div>
   );
 }

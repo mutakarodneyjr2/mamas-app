@@ -39,6 +39,7 @@ import {
 } from 'lucide-react';
 
 import { ConfirmationModal } from '../components/ConfirmationModal';
+import { openTel, openWhatsApp, openMailto, openExternalUrl } from '../lib/openExternal';
 
 export default function Help() {
   const { currentUser, userProfile } = useAuth();
@@ -278,48 +279,48 @@ export default function Help() {
         {/* Quick Direct Contact Buttons */}
         <div className="flex items-center gap-1.5 flex-wrap shrink-0">
           {supportPhone && (
-            <a
-              href={`tel:${supportPhone}`}
+            <button
+              type="button"
+              onClick={() => openTel(supportPhone)}
               className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-full font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer border border-slate-200 dark:border-slate-700"
               title="Call Executive"
             >
               <PhoneCall className="w-3.5 h-3.5 text-blue-600" />
               <span className="hidden sm:inline">Call</span>
-            </a>
+            </button>
           )}
           {supportWhatsApp && (
-            <a
-              href={`https://wa.me/${supportWhatsApp.replace(/[^0-9]/g, '')}?text=Hello%20MAMAS%20Executive,%20I%20have%20an%20inquiry%20regarding%20Matuumu%20Alumni%20Association`}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              type="button"
+              onClick={() => openWhatsApp(supportWhatsApp, 'Hello MAMAS Executive, I have an inquiry regarding Matuumu Alumni Association')}
               className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
               title="WhatsApp Chat"
             >
               <MessageSquare className="w-3.5 h-3.5" />
               <span>WhatsApp</span>
-            </a>
+            </button>
           )}
           {supportEmail && (
-            <a
-              href={`mailto:${supportEmail}?subject=MAMAS%20Executive%20Inquiry`}
+            <button
+              type="button"
+              onClick={() => openMailto(supportEmail, 'MAMAS Executive Inquiry')}
               className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-full font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer border border-slate-200 dark:border-slate-700"
               title="Email Support"
             >
               <Mail className="w-3.5 h-3.5 text-blue-600" />
               <span className="hidden sm:inline">Email</span>
-            </a>
+            </button>
           )}
           {whatsappGroupLink && (
-            <a
-              href={whatsappGroupLink}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              type="button"
+              onClick={() => openExternalUrl(whatsappGroupLink)}
               className="px-3 py-1.5 bg-teal-600 hover:bg-teal-500 text-white rounded-full font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
               title="Join Alumni Group"
             >
               <Users className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Group</span>
-            </a>
+            </button>
           )}
         </div>
       </div>

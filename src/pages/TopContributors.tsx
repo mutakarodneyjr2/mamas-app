@@ -6,12 +6,16 @@ import { User } from '../types';
 import { formatUGX } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../contexts/AuthContext';
+import { useRegisterModal } from '../lib/nativeBack';
+import { openTel, openWhatsApp, openMailto } from '../lib/openExternal';
 
 export default function TopContributors() {
   const { userProfile, isAdminOrCommittee } = useAuth();
   const [contributors, setContributors] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMember, setSelectedMember] = useState<User | null>(null);
+
+  useRegisterModal(!!selectedMember, () => setSelectedMember(null), 'top-contributors-member-modal');
 
   useEffect(() => {
     async function fetchTopContributors() {
@@ -242,21 +246,33 @@ export default function TopContributors() {
                     <div className="flex flex-col gap-2.5">
                       <div className="flex gap-2.5">
                         {canViewField(selectedMember, 'phone') && selectedMember.phoneNumber && (
-                          <a href={`tel:${selectedMember.phoneNumber}`} className="flex-1 flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-900 dark:text-white py-3 rounded-2xl text-sm font-bold transition-all active:scale-[0.98]">
+                          <button 
+                            type="button"
+                            onClick={() => openTel(selectedMember.phoneNumber!)}
+                            className="flex-1 flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-900 dark:text-white py-3 rounded-2xl text-sm font-bold transition-all active:scale-[0.98] cursor-pointer"
+                          >
                             <Phone className="w-4 h-4 text-blue-600 dark:text-blue-400" /> Call
-                          </a>
+                          </button>
                         )}
                         {canViewField(selectedMember, 'whatsapp') && selectedMember.phoneNumber && (
-                          <a href={`https://wa.me/${selectedMember.phoneNumber.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded-2xl text-sm font-bold shadow-xs transition-all active:scale-[0.98]">
+                          <button 
+                            type="button"
+                            onClick={() => openWhatsApp(selectedMember.phoneNumber!)}
+                            className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded-2xl text-sm font-bold shadow-xs transition-all active:scale-[0.98] cursor-pointer"
+                          >
                             <MessageSquare className="w-4 h-4" /> WhatsApp
-                          </a>
+                          </button>
                         )}
                       </div>
                       
                       {canViewField(selectedMember, 'email') && selectedMember.email && (
-                         <a href={`mailto:${selectedMember.email}`} className="w-full flex items-center justify-center gap-2 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/40 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 py-3 rounded-2xl text-sm font-bold transition-all border border-slate-200 dark:border-slate-700/80 active:scale-[0.98]">
+                         <button 
+                           type="button"
+                           onClick={() => openMailto(selectedMember.email!)}
+                           className="w-full flex items-center justify-center gap-2 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/40 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 py-3 rounded-2xl text-sm font-bold transition-all border border-slate-200 dark:border-slate-700/80 active:scale-[0.98] cursor-pointer"
+                         >
                            <Mail className="w-4 h-4 text-blue-500 dark:text-blue-400" /> {selectedMember.email}
-                         </a>
+                         </button>
                       )}
                     </div>
                   ) : (

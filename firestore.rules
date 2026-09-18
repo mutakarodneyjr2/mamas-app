@@ -260,6 +260,19 @@ service cloud.firestore {
       allow create: if true;
       allow read, update, delete: if hasRole(['super_admin', 'chairperson', 'vice_chairperson', 'secretary']);
     }
+
+    // =========================================
+    // 13. Account Recovery Requests Collection
+    // Read/Update/Delete: Super Admin only
+    // Create: Restricted to initial submission states (public intake via server API preferred)
+    // =========================================
+    match /accountRecoveryRequests/{ticketId} {
+      allow read: if isSuperAdmin();
+      allow create: if request.resource.data.type == 'lost_email' && 
+                      request.resource.data.status in ['submitted', 'not_found'] &&
+                      request.resource.data.referenceCode is string;
+      allow update, delete: if isSuperAdmin();
+    }
   }
 }
 

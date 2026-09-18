@@ -6,14 +6,16 @@ import { useAuth } from '../contexts/AuthContext';
 import { approveMember, rejectMember, updateUserRole, suspendUser, unsuspendUser } from '../lib/auth';
 import { logActivity } from '../lib/services';
 import { exportToCSV } from '../lib/utils';
-import { Users, CheckCircle, XCircle, Shield, Search, Filter, Phone, Mail, GraduationCap, MapPin, Download, ChevronDown, ChevronUp, Clock, ArrowRight, Ban, Check, AlertTriangle, UserX } from 'lucide-react';
+import { Users, CheckCircle, XCircle, Shield, Search, Filter, Phone, Mail, GraduationCap, MapPin, Download, ChevronDown, ChevronUp, Clock, ArrowRight, Ban, Check, AlertTriangle, UserX, KeyRound } from 'lucide-react';
 import { SelectDropdown } from '../components/SelectDropdown';
+import { AdminAccountRecoveryQueue } from '../components/AdminAccountRecoveryQueue';
 
 export default function AdminUsers() {
   const { currentUser, userProfile } = useAuth();
   const isSuperAdmin = userProfile?.role === 'super_admin';
   const canApprove = ["super_admin", "chairperson", "vice_chairperson", "secretary"].includes(userProfile?.role || "");
   const canExport = ["super_admin", "chairperson", "vice_chairperson", "treasurer", "auditor", "secretary"].includes(userProfile?.role || "");
+  const [adminTab, setAdminTab] = useState<'members' | 'recovery'>('members');
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -31,6 +33,7 @@ export default function AdminUsers() {
   const [rejectionReason, setRejectionReason] = useState('');
   const [suspendingUser, setSuspendingUser] = useState<{uid: string, name: string} | null>(null);
   const [suspendReason, setSuspendReason] = useState('');
+  const [approvingUnverifiedUser, setApprovingUnverifiedUser] = useState<{ uid: string; name: string; email: string } | null>(null);
 
   useEffect(() => {
     const q = query(collection(db, 'users'));
@@ -51,7 +54,7 @@ export default function AdminUsers() {
     return () => unsubscribe();
   }, []);
 
-  const handleApprove = async (uid: string, name: string) => {
+  const executeApprove = async (uid: string, name: string) => {
     if (!canApprove) return;
     setErrorMsg(''); setSuccessMsg('');
     setActionLoading(uid);
@@ -64,7 +67,17 @@ export default function AdminUsers() {
       setTimeout(() => setErrorMsg(''), 5000);
     } finally {
       setActionLoading(null);
+      setApprovingUnverifiedUser(null);
     }
+  };
+
+  const handleApprove = (user: User) => {
+    if (!canApprove) return;
+    if (!user.emailVerified && user.authProvider === 'email') {
+      setApprovingUnverifiedUser({ uid: user.uid, name: user.fullName, email: user.email });
+      return;
+    }
+    executeApprove(user.uid, user.fullName);
   };
 
   const handleReject = (uid: string, name: string) => {
@@ -225,7 +238,7 @@ export default function AdminUsers() {
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Review registrations, approve new alumni, assign roles, and audit member profiles.</p>
         </div>
-        {canExport && (
+        {canExport && adminTab === 'members' && (
           <button
             onClick={handleExportCSV}
             className="self-start sm:self-auto inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl px-4 py-2.5 text-xs font-bold transition-all shadow-xs active:scale-[0.98] cursor-pointer"
@@ -235,6 +248,40 @@ export default function AdminUsers() {
         )}
       </div>
 
+      {/* Admin Tab Switcher */}
+      {isSuperAdmin && (
+        <div className="flex bg-slate-100 dark:bg-slate-800/80 p-1.5 rounded-2xl max-w-md border border-slate-200/80 dark:border-slate-700/80">
+          <button
+            type="button"
+            onClick={() => setAdminTab('members')}
+            className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+              adminTab === 'members'
+                ? 'bg-white dark:bg-[#0c1731] text-blue-600 dark:text-blue-400 shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <Users className="w-4 h-4" />
+            <span>Members Directory</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setAdminTab('recovery')}
+            className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+              adminTab === 'recovery'
+                ? 'bg-white dark:bg-[#0c1731] text-blue-600 dark:text-blue-400 shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <KeyRound className="w-4 h-4" />
+            <span>Account Recovery</span>
+          </button>
+        </div>
+      )}
+
+      {adminTab === 'recovery' ? (
+        <AdminAccountRecoveryQueue />
+      ) : (
+        <>
       {errorMsg && (
         <div className="bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 text-rose-700 dark:text-rose-300 p-4 rounded-2xl text-sm font-semibold animate-in fade-in">
           {errorMsg}
@@ -415,6 +462,22 @@ export default function AdminUsers() {
                     }`}>
                       {user.status === 'pending_deletion' ? 'Pending Deletion' : user.status}
                     </span>
+                    {user.status === 'pending' && (
+                      user.emailVerified ? (
+                        <span className="bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 rounded-full px-2 py-0.5 text-[10px] font-bold">
+                          Email Verified
+                        </span>
+                      ) : (
+                        <span className="bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800 rounded-full px-2 py-0.5 text-[10px] font-bold">
+                          Email Unverified
+                        </span>
+                      )
+                    )}
+                    {user.reappliedAt && (
+                      <span className="bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-400 border border-purple-200 dark:border-purple-800 rounded-full px-2 py-0.5 text-[10px] font-bold">
+                        Re-applied
+                      </span>
+                    )}
                     <span className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-full px-2.5 py-0.5 text-[10px] font-bold capitalize">
                       {user?.role?.replace('_', ' ') || 'member'}
                     </span>
@@ -481,7 +544,7 @@ export default function AdminUsers() {
                   {user.status === 'pending' && canApprove ? (
                     <div className="flex gap-3 pt-3 border-t border-slate-200/60 dark:border-slate-800">
                       <button
-                        onClick={(e) => { e.stopPropagation(); handleApprove(user.uid, user.fullName); }}
+                        onClick={(e) => { e.stopPropagation(); handleApprove(user); }}
                         disabled={actionLoading === user.uid}
                         className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl py-3 text-xs font-bold shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
                       >
@@ -691,6 +754,59 @@ export default function AdminUsers() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Approving Unverified User Modal */}
+      {approvingUnverifiedUser && (
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#0c1731] border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-amber-100 dark:bg-amber-950/80 rounded-xl text-amber-600 dark:text-amber-400">
+                  <AlertTriangle className="w-5 h-5" />
+                </div>
+                <h3 className="font-extrabold text-base text-slate-900 dark:text-white">Email Unverified Warning</h3>
+              </div>
+              <button
+                onClick={() => setApprovingUnverifiedUser(null)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer"
+              >
+                <XCircle className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-3.5">
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                <span className="font-extrabold text-slate-900 dark:text-white">{approvingUnverifiedUser.name}</span> ({approvingUnverifiedUser.email}) registered with email/password but has not yet confirmed their email address.
+              </p>
+              <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 rounded-xl text-amber-800 dark:text-amber-300 text-xs">
+                Approving unverified accounts is only recommended if you have independently verified this alumnus via phone, school registry, or personal contact.
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-slate-100 dark:border-slate-800 flex items-center gap-3 bg-slate-50/50 dark:bg-slate-900/50">
+              <button
+                onClick={() => setApprovingUnverifiedUser(null)}
+                className="flex-1 px-4 py-3 rounded-2xl font-bold text-xs sm:text-sm text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => executeApprove(approvingUnverifiedUser.uid, approvingUnverifiedUser.name)}
+                disabled={actionLoading === approvingUnverifiedUser.uid}
+                className="flex-1 px-4 py-3 rounded-2xl font-bold text-xs sm:text-sm text-white bg-emerald-600 hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-xs disabled:opacity-50"
+              >
+                {actionLoading === approvingUnverifiedUser.uid ? (
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : <CheckCircle className="w-4 h-4" />}
+                Confirm Approval
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+        </>
       )}
 
     </div>

@@ -1,6 +1,7 @@
 import { getMessaging, getToken, onMessage, isSupported } from "firebase/messaging";
 import { doc, updateDoc, arrayUnion, addDoc, collection, getDocs, query, where, writeBatch } from "firebase/firestore";
 import { app, db } from "../firebase";
+import { apiFetch } from "./apiClient";
 import { NotificationItem, NotificationType } from "../types";
 
 export interface NotificationPayload {
@@ -94,7 +95,7 @@ export const registerFCMToken = async (userId: string): Promise<string | null> =
 export const sendNotification = async (payload: NotificationPayload): Promise<string> => {
   try {
     // Attempt real server-side push notification + in-app notification write via API endpoint
-    const response = await fetch('/api/notifications/send', {
+    const response = await apiFetch('/api/notifications/send', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'

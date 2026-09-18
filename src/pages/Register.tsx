@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
 import { auth, db } from '../firebase';
 import { doc, setDoc, updateDoc } from 'firebase/firestore';
 import { uploadImage } from '../lib/storage';
+import { normalizeEmail } from '../lib/authResolver';
+import { getAuthActionSettings } from '../lib/authActionSettings';
 import { Logo } from '../components/Logo';
 import { 
   Phone, 
@@ -244,7 +246,7 @@ export default function Register() {
       if (err.code === 'auth/popup-blocked' || err.message?.includes('popup')) {
         setError('Please allow popups for this site or use email/password login instead.');
       } else if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
-        setError('Failed to sign in with Google.');
+        setError(err.message || 'Failed to sign in with Google.');
       }
     } finally {
       setLoading(false);
@@ -355,10 +357,16 @@ export default function Register() {
       let finalProfilePicUrl = profilePicPreview;
 
       const performRegistration = async () => {
+        const cleanEmail = normalizeEmail(formData.email);
         if (authProvider === 'email') {
           // 1. Create user in Firebase Auth
-          const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+          const userCredential = await createUserWithEmailAndPassword(auth, cleanEmail, formData.password);
           uid = userCredential.user.uid;
+          try {
+            await sendEmailVerification(userCredential.user, getAuthActionSettings('/pending-approval?mode=verifyEmail'));
+          } catch (verErr) {
+            console.warn("Could not send verification email:", verErr);
+          }
         }
 
         if (!uid) {
@@ -368,7 +376,7 @@ export default function Register() {
         // 2. Immediately create profile in Firestore FIRST with initial/preview photo
         const newProfile: Partial<User> = {
           uid,
-          email: formData.email,
+          email: cleanEmail,
           phoneNumber: formData.phoneNumber,
           fullName: formData.fullName,
           yearLeftSchool: formData.yearLeftSchool,
@@ -388,6 +396,7 @@ export default function Register() {
           },
           status: 'pending', // Requires admin approval
           role: 'member',
+          emailVerified: authProvider === 'google',
           createdAt: new Date().toISOString(),
           authProvider: authProvider
         };
@@ -1057,7 +1066,7 @@ export default function Register() {
                   className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 rounded border-slate-300 dark:border-slate-700 cursor-pointer"
                 />
                 <label htmlFor="terms" className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed cursor-pointer">
-                  I agree to the <Link to="/terms" target="_blank" className="font-bold text-blue-600 dark:text-blue-400 hover:underline">Terms of Service</Link> and <Link to="/privacy" target="_blank" className="font-bold text-blue-600 dark:text-blue-400 hover:underline">Privacy Policy</Link> of the Matuumu Alumni Mutual Aid Association.
+                  I agree to the <Link to="/terms" className="font-bold text-blue-600 dark:text-blue-400 hover:underline">Terms of Service</Link> and <Link to="/privacy" className="font-bold text-blue-600 dark:text-blue-400 hover:underline">Privacy Policy</Link> of the Matuumu Alumni Mutual Aid Association.
                 </label>
               </div>
 
@@ -1107,19 +1116,25 @@ export default function Register() {
                   Welcome to MAMAS!
                 </h2>
                 <p className="text-sm text-slate-600 dark:text-slate-300 mt-2 leading-relaxed">
-                  Your account has been created successfully and is currently under review by our executive committee.
+                  Your registration has been submitted and is currently pending review by the executive committee.
                 </p>
-                <p className="text-xs text-slate-400 mt-1">
-                  You will receive an email notification once approved.
+                {authProvider === 'email' && (
+                  <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 rounded-xl text-left text-xs text-blue-800 dark:text-blue-300">
+                    <p className="font-bold">Check your inbox:</p>
+                    <p className="text-[11px] mt-0.5">We sent a verification link to <strong>{formData.email}</strong>. Please verify your email to facilitate committee approval.</p>
+                  </div>
+                )}
+                <p className="text-xs text-slate-400 mt-2">
+                  You will receive an update once the committee verifies your alumni records.
                 </p>
               </div>
 
               <div className="pt-4">
                 <button
-                  onClick={() => navigate(returnUrl)}
+                  onClick={() => navigate('/pending-approval')}
                   className="w-full py-4 px-8 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-sm shadow-md shadow-blue-500/25 transition-all cursor-pointer flex items-center justify-center gap-2"
                 >
-                  <span>Continue to Workspace</span>
+                  <span>View Application Status</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </div>

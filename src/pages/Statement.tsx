@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { formatUGX, safeGetDate, safeFormatDate } from '../lib/utils';
 import { StatusBadge } from '../components/StatusBadge';
+import { apiFetch } from '../lib/apiClient';
 
 export default function Statement() {
   const { currentUser, userProfile } = useAuth();
@@ -54,7 +55,7 @@ export default function Statement() {
     setRecheckMessage(null);
     try {
       const idToken = await currentUser.getIdToken();
-      const res = await fetch('/api/relworx/reconcile-contribution', {
+      const res = await apiFetch('/api/relworx/reconcile-contribution', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -1,5 +1,6 @@
 import React from 'react';
 import { X, Loader2, AlertTriangle } from 'lucide-react';
+import { useRegisterModal } from '../lib/nativeBack';
 
 interface ConfirmationModalProps {
   isOpen: boolean;
@@ -24,6 +25,8 @@ export function ConfirmationModal({
   isDanger = false,
   isLoading = false
 }: ConfirmationModalProps) {
+  useRegisterModal(isOpen && !isLoading, onCancel, 'confirmation-modal');
+
   if (!isOpen) return null;
 
   return (

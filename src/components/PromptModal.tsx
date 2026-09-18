@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Loader2 } from 'lucide-react';
+import { useRegisterModal } from '../lib/nativeBack';
 
 interface PromptModalProps {
   isOpen: boolean;
@@ -35,6 +36,8 @@ export function PromptModal({
       setValue('');
     }
   }, [isOpen]);
+
+  useRegisterModal(isOpen && !isLoading, onCancel, 'prompt-modal');
 
   if (!isOpen) return null;
 
