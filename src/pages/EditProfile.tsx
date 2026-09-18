@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { db, storage } from '../firebase';
+import { db } from '../firebase';
 import { doc, updateDoc, setDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { uploadImage } from '../lib/storage';
 import { useNavigate } from 'react-router-dom';
 import { 
   User, Phone, MapPin, Briefcase, GraduationCap, 
@@ -16,6 +16,7 @@ export default function EditProfile() {
 
   const [loading, setLoading] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -43,25 +44,37 @@ export default function EditProfile() {
     if (!file || !userProfile?.uid) return;
 
     if (!file.type.startsWith('image/')) {
-      setErrorMsg('Please select an image file');
+      setErrorMsg('Please select a valid image file (JPEG, PNG, WEBP).');
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      setErrorMsg('Image size should be less than 5MB');
+    if (file.size > 10 * 1024 * 1024) {
+      setErrorMsg('Original image size should be less than 10MB.');
       return;
     }
+
+    // Instant local preview
+    const localPreview = URL.createObjectURL(file);
+    setPreviewUrl(localPreview);
 
     setUploadingPhoto(true);
     setErrorMsg('');
     setSuccessMsg('');
+
     try {
-      const storageRef = ref(storage, `profile_pictures/${userProfile.uid}/${Date.now()}`);
-      await uploadBytes(storageRef, file);
-      const downloadURL = await getDownloadURL(storageRef);
+      // Compress to 600px width/height and quality 0.8 with 10s safety timeout & fallback
+      const downloadURL = await uploadImage(file, `profile_pictures/${userProfile.uid}/${Date.now()}.jpg`, {
+        maxDimension: 600,
+        quality: 0.8,
+        timeoutMs: 12000,
+        allowDataUrlFallback: true
+      });
+
+      setPreviewUrl(downloadURL);
 
       await updateDoc(doc(db, 'users', userProfile.uid), {
         profilePictureUrl: downloadURL,
+        updatedAt: Date.now()
       });
 
       await setDoc(doc(db, 'directoryProfiles', userProfile.uid), {
@@ -73,9 +86,12 @@ export default function EditProfile() {
       setTimeout(() => setSuccessMsg(''), 4000);
     } catch (err: any) {
       console.error("Error uploading photo:", err);
-      setErrorMsg('Failed to upload image. Please try again.');
+      setErrorMsg(err.message || 'Failed to upload image. Please try a smaller photo.');
+      setPreviewUrl(userProfile.profilePictureUrl || null);
     } finally {
       setUploadingPhoto(false);
+      // Clean up input value so user can re-select same file if desired
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -171,8 +187,8 @@ export default function EditProfile() {
           />
           <div className="relative shrink-0">
             <div className="w-20 h-20 rounded-2xl bg-slate-800/80 border-2 border-slate-700 overflow-hidden flex items-center justify-center relative">
-              {userProfile.profilePictureUrl ? (
-                <img src={userProfile.profilePictureUrl} alt="Profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+              {(previewUrl || userProfile.profilePictureUrl) ? (
+                <img src={previewUrl || userProfile.profilePictureUrl} alt="Profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
               ) : (
                 <User className="w-10 h-10 text-slate-400" />
               )}

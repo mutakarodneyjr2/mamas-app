@@ -1,15 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { getActiveBanners } from '../lib/bannerService';
-import { X, ChevronLeft, ChevronRight, Megaphone } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useRegisterModal } from '../lib/nativeBack';
+import { motion, AnimatePresence } from 'motion/react';
+
+const AD_TIMEOUT_SECONDS = 15;
 
 export function AdBannerModal() {
   const [bannerUrls, setBannerUrls] = useState<string[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(AD_TIMEOUT_SECONDS);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    // Check if user already closed ad during this session
+    // Check if user already closed ad during this browser session
     const isDismissed = sessionStorage.getItem('mamas_ad_modal_dismissed');
     if (isDismissed) return;
 
@@ -21,6 +26,7 @@ export function AdBannerModal() {
         if (urls.length > 0) {
           setBannerUrls(urls);
           setIsOpen(true);
+          setTimeLeft(AD_TIMEOUT_SECONDS);
         }
       })
       .catch(err => {
@@ -32,7 +38,33 @@ export function AdBannerModal() {
     };
   }, []);
 
+  // 15-second countdown timer
+  useEffect(() => {
+    if (!isOpen) {
+      if (timerRef.current) clearInterval(timerRef.current);
+      return;
+    }
+
+    setTimeLeft(AD_TIMEOUT_SECONDS);
+
+    timerRef.current = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          if (timerRef.current) clearInterval(timerRef.current);
+          handleClose();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [isOpen]);
+
   const handleClose = () => {
+    if (timerRef.current) clearInterval(timerRef.current);
     sessionStorage.setItem('mamas_ad_modal_dismissed', 'true');
     setIsOpen(false);
   };
@@ -54,85 +86,86 @@ export function AdBannerModal() {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md animate-in fade-in duration-200">
-      <div 
-        className="relative w-full max-w-lg bg-white dark:bg-[#0c1731] rounded-3xl overflow-hidden shadow-2xl border border-slate-200/80 dark:border-slate-800 animate-in zoom-in-95 duration-200"
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Header Bar */}
-        <div className="flex items-center justify-between px-5 py-3.5 bg-slate-100/80 dark:bg-slate-800/80 border-b border-slate-200/60 dark:border-slate-700/60">
-          <div className="flex items-center gap-2">
-            <span className="p-1.5 rounded-xl bg-blue-600/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400">
-              <Megaphone className="w-4 h-4" />
-            </span>
-            <span className="text-xs font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">
-              Official Announcement
-            </span>
-          </div>
-
-          <button
-            onClick={handleClose}
-            className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 hover:bg-rose-500 hover:text-white dark:hover:bg-rose-600 text-slate-700 dark:text-slate-200 flex items-center justify-center transition-all cursor-pointer"
-            title="Close Ad (X)"
+    <AnimatePresence>
+      {isOpen && (
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md cursor-pointer select-none"
+          onClick={handleClose}
+        >
+          {/* Frameless Floating Image Container (NO Card, NO Frame, NO Enclosure, Plain Image with X button & 15s Timer) */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.94 }}
+            transition={{ duration: 0.2 }}
+            className="relative max-w-2xl max-h-[85vh] flex items-center justify-center cursor-default"
+            onClick={e => e.stopPropagation()}
           >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+            {/* Floating Top-Right Dismissal Button with 15s Countdown */}
+            <button
+              type="button"
+              onClick={handleClose}
+              className="absolute -top-3.5 -right-3.5 sm:-top-4 sm:-right-4 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/85 hover:bg-rose-600 text-white border border-white/30 backdrop-blur-md shadow-2xl transition-all hover:scale-105 active:scale-95 cursor-pointer group"
+              title="Close Ad"
+            >
+              {/* Countdown badge */}
+              <span className="text-xs font-mono font-bold text-amber-400 group-hover:text-white transition-colors">
+                {timeLeft}s
+              </span>
+              <span className="w-px h-3 bg-white/30" />
+              {/* X icon */}
+              <X className="w-4 h-4 text-white" />
+            </button>
 
-        {/* Banner Display Area */}
-        <div className="relative bg-slate-950 aspect-video flex items-center justify-center overflow-hidden group">
-          <img
-            src={currentUrl}
-            alt="Official Banner Announcement"
-            className="w-full h-full object-contain"
-            referrerPolicy="no-referrer"
-          />
+            {/* Plain Banner Image (Zero card wrapping / zero border frames) */}
+            <div className="relative overflow-hidden rounded-2xl shadow-2xl">
+              <img
+                src={currentUrl}
+                alt="Ad Announcement Banner"
+                className="max-w-full max-h-[80vh] sm:max-h-[85vh] w-auto h-auto object-contain block"
+                referrerPolicy="no-referrer"
+              />
 
-          {/* Controls if multiple banners */}
-          {bannerUrls.length > 1 && (
-            <>
-              <button
-                onClick={handlePrev}
-                className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-slate-900/70 hover:bg-blue-600 text-white flex items-center justify-center transition-all cursor-pointer opacity-90 hover:scale-110"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <button
-                onClick={handleNext}
-                className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-slate-900/70 hover:bg-blue-600 text-white flex items-center justify-center transition-all cursor-pointer opacity-90 hover:scale-110"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-
-              {/* Slide Indicators */}
-              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-slate-900/60 backdrop-blur-md px-3 py-1 rounded-full">
-                {bannerUrls.map((_, idx) => (
+              {/* Multi-banner Navigation Controls (subtle overlay on image only if multiple) */}
+              {bannerUrls.length > 1 && (
+                <>
                   <button
-                    key={idx}
-                    onClick={() => setCurrentIndex(idx)}
-                    className={`h-1.5 rounded-full transition-all cursor-pointer ${
-                      idx === currentIndex ? 'w-5 bg-blue-500' : 'w-1.5 bg-white/40'
-                    }`}
-                  />
-                ))}
-              </div>
-            </>
-          )}
-        </div>
+                    type="button"
+                    onClick={handlePrev}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/60 hover:bg-black/90 text-white flex items-center justify-center transition-all cursor-pointer backdrop-blur-xs border border-white/20 hover:scale-110 active:scale-95"
+                    aria-label="Previous banner"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleNext}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/60 hover:bg-black/90 text-white flex items-center justify-center transition-all cursor-pointer backdrop-blur-xs border border-white/20 hover:scale-110 active:scale-95"
+                    aria-label="Next banner"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
 
-        {/* Footer Bar */}
-        <div className="px-5 py-3.5 flex items-center justify-between bg-slate-50 dark:bg-[#0c1731] border-t border-slate-200/60 dark:border-slate-800">
-          <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-            Matuumu Alumni Association Official Broadcast
-          </span>
-          <button
-            onClick={handleClose}
-            className="px-4 py-2 bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1"
-          >
-            <X className="w-3.5 h-3.5" /> Close
-          </button>
+                  {/* Dot Indicators */}
+                  <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/10">
+                    {bannerUrls.map((_, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setCurrentIndex(idx)}
+                        className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                          idx === currentIndex ? 'w-4 bg-white' : 'w-1.5 bg-white/40'
+                        }`}
+                        aria-label={`Go to slide ${idx + 1}`}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </motion.div>
         </div>
-      </div>
-    </div>
+      )}
+    </AnimatePresence>
   );
 }

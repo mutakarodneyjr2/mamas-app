@@ -88,7 +88,6 @@ function Layout() {
   
   return (
     <div className="h-screen w-screen overflow-hidden bg-mamas-bg flex flex-col font-sans transition-colors duration-200">
-      <AdBannerModal />
       <DeletionBanner />
       {userProfile && userProfile?.status === 'approved' && userProfile?.hasCompletedOnboarding !== true && (
         <OnboardingTour userProfile={userProfile} onComplete={() => {}} />
@@ -331,6 +330,7 @@ export default function App() {
       <ThemeProvider>
         <BrowserRouter>
           <NativeNavigationBridge />
+          <AdBannerModal />
           <Routes>
             <Route path="/login" element={<AuthResolver initialMode="login" />} />
             <Route path="/register" element={<AuthResolver initialMode="register" />} />
